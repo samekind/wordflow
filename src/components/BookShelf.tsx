@@ -5,6 +5,7 @@ import { hasLearned } from '../study'
 import type { CatalogBook } from '../wordbooks'
 import { loadExamFrequency, type ExamFrequencyData } from '../exam-frequency'
 import Sheet from './Sheet'
+import { Segmented } from './Controls'
 import ExamFrequencyView from './ExamFrequencyView'
 import BookDetail from './BookDetail'
 import DailyWordCount, { validDailyCount } from './DailyWordCount'
@@ -16,7 +17,7 @@ type Props = {
   onWord: (id: string) => void;
 }
 export default function BookShelf({ store, catalog, busy, error, onRetry, onLibrary, onActivate, onInstall, onWord }: Props) {
-  const [view, setView] = useState(store.books.length ? 'mine' : 'catalog')
+  const [view, setView] = useState<'mine' | 'catalog' | 'frequency'>(store.books.length ? 'mine' : 'catalog')
   const [selected, setSelected] = useState<CatalogBook | null>(null)
   const [opened, setOpened] = useState<WordBook | null>(null)
   const [preview, setPreview] = useState<ExamFrequencyData>()
@@ -25,10 +26,8 @@ export default function BookShelf({ store, catalog, busy, error, onRetry, onLibr
   const learnedIds = new Set(store.words.filter(hasLearned).map(w => w.id))
   return <div className="book-shelf">
     <p className="page-purpose">选一本词书，按单元学习。每本书的进度分别保留。</p>
-    <div className="shelf-toolbar"><div className="segment-control" aria-label="词书视图">
-      <button aria-pressed={view === 'mine'} onClick={() => setView('mine')}>我的词书</button>
-      <button aria-pressed={view === 'catalog'} onClick={() => setView('catalog')}>添加词书</button>
-    </div></div>
+    <div className="shelf-toolbar"><Segmented<'mine' | 'catalog' | 'frequency'> label="词书视图" value={view} onChange={setView}
+      options={[{ value: 'mine', label: '我的词书' }, { value: 'catalog', label: '添加词书' }]} /></div>
     <div className="shelf-links"><button className="text-button" aria-label="我的单词" onClick={onLibrary}><Search size={16} />查找我的单词</button><button className="text-button" aria-pressed={view === 'frequency'} onClick={() => setView(view === 'frequency' ? 'mine' : 'frequency')}>考频查询<ChevronRight size={15} /></button></div>
     {view === 'frequency' ? <ExamFrequencyView initialExam={catalog.find(book => book.id === store.activeBookId)?.exam || (store.activeBookId === 'ecdict-ky' ? 'ky1' : 'cet4')} /> : view === 'mine' ? <>
       {!store.books.length ? <div className="empty"><BookOpen size={32} /><h2>还没有词书</h2><button className="primary" onClick={() => setView('catalog')}>选择词书<ChevronRight size={17} /></button></div> :

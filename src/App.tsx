@@ -18,6 +18,7 @@ import SettingsPage, { settingsTitles, type AIConfig, type SettingsSection } fro
 import ReadingPage from './components/ReadingPage'
 import type { ArticleAssistMode, ArticleAssistResult } from './platform'
 import MarkDots from './components/MarkDots'
+import { useConfirm } from './components/Controls'
 import { loadExamFrequency, orderPersonalBook } from './exam-frequency'
 import { appRelease, createCloudAccount, downloadCloudState, fetchCloudRelease, recoverCloudAccount, uploadCloudState, CloudConflict } from './cloud'
 import { coreGloss } from './gloss'
@@ -35,6 +36,7 @@ function completionChanges(before: Store, after: Store, ids: string[]): Completi
 }
 export default function App() {
   const reduced = useReducedMotion()
+  const [confirm, confirmDialog] = useConfirm()
   const [store, setStore] = useState<Store>(emptyStore)
   const storeRef = useRef(store)
   const revision = useRef(0)
@@ -77,7 +79,6 @@ export default function App() {
   const [aiError, setAIError] = useState('')
   const [detailId, setDetailId] = useState('')
   const [editWord, setEditWord] = useState<Word | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [restoreCandidate, setRestoreCandidate] = useState<Store | null>(null)
   const [licensesOpen, setLicensesOpen] = useState(false)
   const [licenseText, setLicenseText] = useState('')
@@ -277,7 +278,7 @@ export default function App() {
   function openWord(id: string) { setDetailId(id); setAIError('') }
   async function editDetail(word: Word) {
     const modal = await modalController.getTop()
-    if (modal && await modal.dismiss()) { setEditWord(word); setConfirmDelete(false) }
+    if (modal && await modal.dismiss()) setEditWord(word)
   }
   async function configureFromDetail() { await modalController.dismiss(); navigate('settings', 'ai') }
   function speak(text: string, accent = storeRef.current.pronunciation.accent) {
@@ -446,7 +447,7 @@ export default function App() {
         <button className="primary" disabled={savingNow} onClick={() => void commit(failedSave.next, true)}>重试保存</button>
         <button className="secondary" disabled={savingNow} onClick={() => void exportState(failedSave.next, `拾词待保存-${today}.json`)}>导出待保存备份</button>
         <button className="text-button" disabled={savingNow} onClick={async () => {
-          if (!window.confirm('放弃本页尚未保存的改动，并读取设备中已保存的记录？')) return
+          if (!await confirm({ header: '放弃未保存的改动？', message: '将读取设备中已保存的记录，本页尚未保存的改动会丢失。', confirm: '放弃并重载', destructive: true })) return
           try { const data = await api('state'); if (data.apiVersion !== 7) throw new Error('服务版本不匹配'); const next = validateStore(data.state); revision.current = data.revision; storeRef.current = next; failedSaveRef.current = null; setFailedSave(null); setStore(next); setUndo(null) }
           catch (error) { notify((error as Error).message) }
         }}>放弃改动并重载</button>
@@ -542,10 +543,11 @@ export default function App() {
       <label className="form-label">音标<input value={editWord.phonetic} maxLength={500} onChange={event => setEditWord({ ...editWord, phonetic: event.target.value })} /></label>
       <label className="form-label">例句<textarea maxLength={5000} value={editWord.example} onChange={event => setEditWord({ ...editWord, example: event.target.value })} /></label>
       <p className="source-note">{editWord.batch} · 已复习 {editWord.card.reps} 次</p>
-      <div className="modal-actions"><button type="button" className="text-button danger" disabled={saving} onClick={() => setConfirmDelete(true)}><Trash2 size={16} />删除</button><button type="submit" className="primary" disabled={saving || !editWord.meaning.trim()}><Check size={17} />保存</button></div>
+      <div className="modal-actions"><button type="button" className="text-button danger" disabled={saving} onClick={async () => {
+        if (await confirm({ header: '删除这个单词？', message: '此词将从所有词书中移除，并删除相关复习记录与助记。', confirm: '确认删除', destructive: true })) void deleteWord()
+      }}><Trash2 size={16} />删除</button><button type="submit" className="primary" disabled={saving || !editWord.meaning.trim()}><Check size={17} />保存</button></div>
     </form></Sheet>}
-    <IonAlert isOpen={confirmDelete} header="删除这个单词？" message="此词将从所有词书中移除，并删除相关复习记录与助记。" cssClass="app-alert" animated={!reduced} onDidDismiss={() => setConfirmDelete(false)}
-      buttons={[{ text: '取消', role: 'cancel' }, { text: '确认删除', role: 'destructive', handler: () => { void deleteWord() } }]} />
+    {confirmDialog}
     {restoreCandidate && <Sheet title="恢复学习记录" open dismissible={!saving} onClose={() => setRestoreCandidate(null)} tall><div className="import-body">
       <p>这份记录包含 {restoreCandidate.words.length} 个单词、{restoreCandidate.books.length} 本词书和 {restoreCandidate.stories.length} 篇短文。</p>
       <p className="error-banner">恢复将替换当前学习数据，AI 配置不变。建议先备份当前数据。</p>

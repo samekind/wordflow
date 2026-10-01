@@ -358,8 +358,8 @@ test('a lost save response is reconciled; a conflicting writer is never overwrit
   await expect(page.getByRole('alert')).toContainText('其他操作已更新学习记录')
   expect((await state(page)).profile.nickname).toBe('另一端')
   expect((await state(page)).learning.view).toBe('learn')
-  page.once('dialog', dialog => dialog.accept())
   await page.getByRole('button', { name: '放弃改动并重载' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: '放弃并重载', exact: true }).click()
   await expect(page.locator('.save-problem')).toHaveCount(0)
 })
 

@@ -34,7 +34,7 @@
 .profile-form>.primary{align-self:flex-start}
 .settings-section>.primary{margin-top:22px}
 .settings-section>.setting-row>span:first-child{min-width:0;overflow-wrap:anywhere;font-size: var(--fs-body)}
-.settings-section>.setting-row>span:last-child:not(:first-child){font-size: var(--fs-small);flex-shrink:0;color: var(--text-muted)}
+.settings-section>.setting-row>span:last-child:not(:first-child),.setting-value{font-size: var(--fs-small);flex-shrink:0;color: var(--text-muted)}
 .reading-type-sample{padding:24px 0;margin:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);line-height:1.9;color: var(--text-secondary);font-size: var(--fs-title)}
 .reading-type-sample[data-size=large]{font-size: var(--fs-title)}
 .reading-page[data-size=large]{--reading-font:20px}

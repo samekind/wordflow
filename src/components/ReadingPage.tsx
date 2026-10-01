@@ -10,6 +10,7 @@ import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dict
 import { coreGloss } from '../gloss'
 import ChoiceSheet from './ChoiceSheet'
 import Sheet from './Sheet'
+import { Segmented } from './Controls'
 
 type Props = {
   store: Store; now: number; view: 'story' | 'daily'; onView: (view: 'story' | 'daily') => void;
@@ -21,10 +22,10 @@ type Props = {
 }
 export default function ReadingPage(props: Props) {
   return <div className="reading-page" data-size={props.store.readingPreferences.textSize}>
-    <div className="reading-tabs"><div className="segment-control" aria-label="阅读内容">
-      <button aria-pressed={props.view === 'daily'} onClick={() => props.onView('daily')}><DailyIcon size={16} />英语选读</button>
-      <button aria-pressed={props.view === 'story'} onClick={() => props.onView('story')}><EssayIcon size={16} />自选词短文</button>
-    </div></div>
+    <div className="reading-tabs"><Segmented label="阅读内容" value={props.view} onChange={props.onView} options={[
+      { value: 'daily', label: <><DailyIcon size={16} />英语选读</> },
+      { value: 'story', label: <><EssayIcon size={16} />自选词短文</> },
+    ]} /></div>
     <div className="reading-purpose"><p className="page-purpose">{props.view === 'daily' ? '读一篇英语文章，点单词查义。完成后记录阅读进度。' : '自由选词生成短文，用来扩展阅读。背本组单词请回到学习。'}</p>{props.view === 'story' && <button className="text-button" disabled={props.saving} onClick={props.onStudy}>去本组语境记忆<ChevronRight size={15} /></button>}</div>
     {props.view === 'story' ? props.children : <DailyEnglish {...props} />}
   </div>

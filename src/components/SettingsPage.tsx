@@ -6,6 +6,7 @@ import { dayKey, type Store } from '../model'
 import { hasLearned } from '../study'
 import { prepareAvatar } from '../profile'
 import DailyWordCount, { validDailyCount } from './DailyWordCount'
+import { Segmented, SettingRow } from './Controls'
 
 export type AIConfig = { provider: string; model: string; configured: boolean }
 export type SettingsSection = 'home' | 'profile' | 'learning' | 'appearance' | 'reading' | 'ai' | 'data'
@@ -103,29 +104,36 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
       <button className="primary" disabled={saving || avatarBusy || !profile.nickname.trim()}><Check size={17} />保存资料</button>
     </form>}
     {section === 'learning' && <section className="settings-section">
-      {book && <div className="setting-row"><span>{book.title}</span><span>每单元 {book.dailyCount} 词</span></div>}
-      <label className="setting-row"><span>复习方法</span><select aria-label="复习方法" value={store.reviewMethod} disabled={saving} onChange={event => void onPreferences({ reviewMethod: event.target.value as Store['reviewMethod'] })}>
-        <option value="ebbinghaus">艾宾浩斯式间隔</option><option value="fsrs">FSRS 自适应</option></select></label>
-      <p className="field-note">现有复习日期保留，下次完成时使用新方法。</p>
+      {book && <SettingRow label={book.title}><span className="setting-value">每单元 {book.dailyCount} 词</span></SettingRow>}
+      <SettingRow label="复习方法" note="现有复习日期保留，下次完成时使用新方法。">
+        <select aria-label="复习方法" value={store.reviewMethod} disabled={saving} onChange={event => void onPreferences({ reviewMethod: event.target.value as Store['reviewMethod'] })}>
+          <option value="ebbinghaus">艾宾浩斯式间隔</option><option value="fsrs">FSRS 自适应</option></select>
+      </SettingRow>
       <DailyWordCount label="新词书每单元词量" value={daily} onChange={setDaily} disabled={saving} />
       <p className="field-note">只用于以后添加的词书，现有词书的单元和进度保留。</p>
       <button className="primary" disabled={saving || !validDailyCount(daily) || daily === store.goal} onClick={() => void onPreferences({ goal: daily })}><Check size={17} />保存单元词量</button>
     </section>}
     {section === 'appearance' && <AppearanceSettings appearance={store.appearance} saving={saving} onChange={patch => void onPreferences({ appearance: { ...store.appearance, ...patch } })} />}
     {section === 'reading' && <section className="settings-section">
-      <div className="setting-row"><span>英语发音</span><div className="segment-control" aria-label="英语发音">
-        <button aria-pressed={store.pronunciation.accent === 'us'} disabled={saving} onClick={() => void onPreferences({ pronunciation: { ...store.pronunciation, accent: 'us' } })}>美式</button>
-        <button aria-pressed={store.pronunciation.accent === 'uk'} disabled={saving} onClick={() => void onPreferences({ pronunciation: { ...store.pronunciation, accent: 'uk' } })}>英式</button>
-      </div></div>
-      <label className="setting-row"><span>朗读速度</span><select aria-label="朗读速度" value={store.pronunciation.rate} disabled={saving} onChange={event => void onPreferences({ pronunciation: { ...store.pronunciation, rate: Number(event.target.value) } })}>
-        {[...new Set([.75, .85, 1, 1.15, store.pronunciation.rate])].sort((a, b) => a - b).map(rate => <option key={rate} value={rate}>{rate}x</option>)}</select></label>
+      <SettingRow label="英语发音">
+        <Segmented label="英语发音" value={store.pronunciation.accent} disabled={saving}
+          options={[{ value: 'us', label: '美式' }, { value: 'uk', label: '英式' }]}
+          onChange={accent => void onPreferences({ pronunciation: { ...store.pronunciation, accent } })} />
+      </SettingRow>
+      <SettingRow label="朗读速度">
+        <select aria-label="朗读速度" value={store.pronunciation.rate} disabled={saving} onChange={event => void onPreferences({ pronunciation: { ...store.pronunciation, rate: Number(event.target.value) } })}>
+          {[...new Set([.75, .85, 1, 1.15, store.pronunciation.rate])].sort((a, b) => a - b).map(rate => <option key={rate} value={rate}>{rate}x</option>)}</select>
+      </SettingRow>
       <button className="text-button" onClick={() => onSpeak('A little practice every day makes a difference.')}><Volume2 size={17} />试听发音</button>
-      <label className="setting-row"><span>文章难度</span><select aria-label="文章难度" value={store.readingPreferences.level} disabled={saving} onChange={event => void onPreferences({ readingPreferences: { ...store.readingPreferences, level: event.target.value as Store['readingPreferences']['level'] } })}>
-        <option value="auto">跟随目标词书</option><option value="easy">基础选读</option><option value="standard">进阶选读</option></select></label>
-      <div className="setting-row"><span>正文字号</span><div className="segment-control" aria-label="正文字号">
-        <button aria-pressed={store.readingPreferences.textSize === 'standard'} disabled={saving} onClick={() => void onPreferences({ readingPreferences: { ...store.readingPreferences, textSize: 'standard' } })}>标准</button>
-        <button aria-pressed={store.readingPreferences.textSize === 'large'} disabled={saving} onClick={() => void onPreferences({ readingPreferences: { ...store.readingPreferences, textSize: 'large' } })}>大字</button>
-      </div></div>
+      <SettingRow label="文章难度">
+        <select aria-label="文章难度" value={store.readingPreferences.level} disabled={saving} onChange={event => void onPreferences({ readingPreferences: { ...store.readingPreferences, level: event.target.value as Store['readingPreferences']['level'] } })}>
+          <option value="auto">跟随目标词书</option><option value="easy">基础选读</option><option value="standard">进阶选读</option></select>
+      </SettingRow>
+      <SettingRow label="正文字号">
+        <Segmented label="正文字号" value={store.readingPreferences.textSize} disabled={saving}
+          options={[{ value: 'standard', label: '标准' }, { value: 'large', label: '大字' }]}
+          onChange={textSize => void onPreferences({ readingPreferences: { ...store.readingPreferences, textSize } })} />
+      </SettingRow>
       <p className="reading-type-sample" data-size={store.readingPreferences.textSize} lang="en">Small steps, taken every day, lead to lasting change.</p>
       <p className="field-note">短文朗读使用系统英语语音。</p>
     </section>}
@@ -182,20 +190,22 @@ const weights: { id: Appearance['weight']; label: string }[] = [
 ]
 function AppearanceSettings({ appearance, saving, onChange }: { appearance: Appearance; saving: boolean; onChange: (patch: Partial<Appearance>) => void }) {
   return <section className="settings-section">
-    <div className="setting-row"><span>深色模式</span><div className="segment-control" aria-label="深色模式">
-      <button aria-pressed={appearance.theme === 'light'} disabled={saving} onClick={() => onChange({ theme: 'light' })}>浅色</button>
-      <button aria-pressed={appearance.theme === 'dark'} disabled={saving} onClick={() => onChange({ theme: 'dark' })}>深色</button>
-    </div></div>
-    <label className="setting-row"><span>字体</span><select aria-label="字体" value={appearance.font} disabled={saving} onChange={event => onChange({ font: event.target.value as Appearance['font'] })}>
-      {fonts.map(font => <option key={font.id} value={font.id}>{font.label}</option>)}
-    </select></label>
-    <div className="setting-row"><span>字重</span><div className="segment-control" aria-label="字重">
-      {weights.map(weight => <button key={weight.id} aria-pressed={appearance.weight === weight.id} disabled={saving} onClick={() => onChange({ weight: weight.id })}>{weight.label}</button>)}
-    </div></div>
-    <div className="setting-row"><span>字号</span><div className="segment-control" aria-label="字号">
-      <button aria-pressed={appearance.size === 'standard'} disabled={saving} onClick={() => onChange({ size: 'standard' })}>标准</button>
-      <button aria-pressed={appearance.size === 'large'} disabled={saving} onClick={() => onChange({ size: 'large' })}>大</button>
-    </div></div>
+    <SettingRow label="深色模式">
+      <Segmented label="深色模式" value={appearance.theme} disabled={saving}
+        options={[{ value: 'light', label: '浅色' }, { value: 'dark', label: '深色' }]} onChange={theme => onChange({ theme })} />
+    </SettingRow>
+    <SettingRow label="字体">
+      <Segmented label="字体" value={appearance.font} disabled={saving}
+        options={fonts.map(font => ({ value: font.id, label: font.label }))} onChange={font => onChange({ font })} />
+    </SettingRow>
+    <SettingRow label="字重">
+      <Segmented label="字重" value={appearance.weight} disabled={saving}
+        options={weights.map(weight => ({ value: weight.id, label: weight.label }))} onChange={weight => onChange({ weight })} />
+    </SettingRow>
+    <SettingRow label="字号">
+      <Segmented label="字号" value={appearance.size} disabled={saving}
+        options={[{ value: 'standard', label: '标准' }, { value: 'large', label: '大' }]} onChange={size => onChange({ size })} />
+    </SettingRow>
     <p className="appearance-sample"><span lang="en">perspective</span><span>观点，看待问题的角度</span></p>
     <p className="field-note">字体、字重、字号和深色会用在学习、阅读、词书和详情。</p>
   </section>
