@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { Store } from './model'
 
 export const cloudBase = 'https://wordflow.43.134.190.112.sslip.io'
-export const appRelease = { versionCode: 13, versionName: '0.2.2' }
+export const appRelease = { versionCode: 14, versionName: '0.2.3' }
 const accountKey = 'wordflow-cloud-account'
 const revisionKey = 'wordflow-cloud-revision'
 
