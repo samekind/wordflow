@@ -1,6 +1,6 @@
 .study-topbar>.plan-trigger,.study-topbar>.import-trigger{width:44px;height:44px;background:var(--glass-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-shadow);backdrop-filter:var(--glass-filter);color:var(--accent)}
 .study-tools{position:relative;display:flex;align-items:center;gap:8px;min-height:42px;margin:0}
-.study-tools>.icon-button{width:36px;height:40px;flex:0 0 auto}
+.study-tools>.icon-button{width:var(--tap);height:var(--tap);flex:0 0 auto}
 .study-tools .next-pass{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .study-layout-switch{display:flex;flex:0 0 auto;width:auto;margin-left:auto;padding:2px;border-radius: var(--radius-md);background:var(--glass-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-shadow);backdrop-filter:var(--glass-filter);-webkit-backdrop-filter:var(--glass-filter)}
 .study-layout-switch button{display:flex;align-items:center;justify-content:center;gap:3px;min-height:26px;padding:0 7px;border-radius: var(--radius-sm);font-size: var(--fs-small)}

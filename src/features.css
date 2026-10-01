@@ -17,7 +17,7 @@
 .frequency-count small{font-size: var(--fs-tab);color: var(--text-muted)}
 @media(max-width:360px){.frequency-heading{gap:6px}.frequency-heading h2{font-size: var(--fs-body)}.frequency-heading select{max-width:122px}.frequency-row{grid-template-columns:25px minmax(0,1fr) 68px 35px;gap:7px}}
 .study-date-nav .study-deck-label{display:flex;flex-direction:column;align-items:center;gap:3px;max-width:112px;line-height:1.2}
-.current-book-button{display:flex;align-items:center;justify-content:center;gap:3px;min-height:21px;font-size: var(--fs-tab);font-weight: var(--fw-regular);color: var(--text-muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.current-book-button{display:flex;align-items:center;justify-content:center;gap:3px;min-height:21px;font-size: var(--fs-tab);font-weight: var(--fw-regular);color: var(--text-muted);max-width:100%;white-space:nowrap}
 .current-book-button svg{flex-shrink:0}
 .current-book-button>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .study-day-button{display:flex;align-items:center;justify-content:center;gap:4px;min-height:24px}

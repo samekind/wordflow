@@ -176,7 +176,7 @@ ion-app{
   transition: background .18s,transform .2s;
 }
 .icon-button:active{
-  background: #e6ebf2;
+  background: var(--surface-inset);
   transform: scale(.92);
 }
 .topbar .import-button{
@@ -223,8 +223,8 @@ ion-app{
   color: var(--text-primary);min-width:0;
 }
 .study-date-nav .icon-button{
-  width: 30px;
-  height: 38px;
+  width: var(--tap);
+  height: var(--tap);
   color: var(--text-secondary);
 }
 .deck-title{
@@ -242,6 +242,11 @@ ion-app{
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+}
+/* The study deck label holds the book button; its children ellipsize themselves, and clipping
+   here would cut off the button's 44px hit area. */
+.deck-title>.study-deck-label{
+  overflow: visible;
 }
 .deck-title svg{
   color: var(--text-muted);
@@ -522,26 +527,34 @@ ion-app{
 .study-empty .button-row,.empty .button-row{
   justify-content: center;
 }
+/* ==================== Buttons ====================
+   Four kinds, used everywhere:
+   .primary   filled accent pill, the one main action on a screen
+   .secondary glass pill, alternative actions next to a primary
+   .text-button  inline accent text action
+   .icon-button  round glass-free icon action
+   Every kind reaches a 44px touch area. Visually compact buttons keep their size and
+   extend their hit area with an invisible ::after, so layouts do not change. */
 .primary,.secondary{
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 44px;
+  min-height: var(--tap);
   line-height: 1.4;
   padding: 12px 18px;
   border-radius: var(--radius-lg);
   font-size: var(--fs-meta);
   font-weight: var(--fw-semibold);
-  transition: transform .18s,background .18s;
+  transition: transform .18s,background .18s,box-shadow .18s;
 }
 .primary{
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
   box-shadow: inset 0 1px #ffffff35,0 3px 9px #007aff20;
 }
 .primary:active{
-  background: #0065d4;
+  background: var(--accent-strong);
   transform: scale(.97);
 }
 .secondary{
@@ -552,6 +565,10 @@ ion-app{
   backdrop-filter: var(--glass-filter);
   -webkit-backdrop-filter: var(--glass-filter);
 }
+.secondary:active{
+  transform: scale(.97);
+  background: var(--glass-selected);
+}
 .text-button{
   display: inline-flex;
   align-items: center;
@@ -561,11 +578,46 @@ ion-app{
   color: var(--accent);
   padding: 4px 0;
 }
+.text-button:active{
+  opacity: .6;
+}
 .muted{
   color: var(--text-muted);
 }
 .danger{
-  color: #cd8278;
+  color: var(--danger);
+}
+/* Hit-area extension for compact controls (see header comment). It grows vertically only:
+   an absolutely positioned ::after that pokes sideways past a container counts as horizontal
+   scroll overflow, so it is never wider than the button itself. Narrow icon buttons already
+   sit at 36-40px wide with gaps around them. */
+.icon-button,
+.text-button,
+.segment-control button,
+.study-layout-switch button,
+.meaning-check,
+.current-book-button,
+.study-day-button,
+.article-picker-title,
+.pronunciation-buttons button{
+  position: relative;
+}
+.icon-button::after,
+.text-button::after,
+.segment-control button::after,
+.study-layout-switch button::after,
+.meaning-check::after,
+.current-book-button::after,
+.study-day-button::after,
+.article-picker-title::after,
+.pronunciation-buttons button::after{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: max(100%, var(--tap));
+  transform: translateY(-50%);
 }
 .mobile-nav{
   z-index: 20;
@@ -1492,7 +1544,7 @@ to{
   padding: 0 1px;gap:3px;
 }
 .study-date-nav .icon-button{
-  width: 24px;
+  width: 40px;
 }
 .content{
   padding: 17px 16px calc(94px + var(--ion-safe-area-bottom));
