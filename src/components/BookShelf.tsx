@@ -6,18 +6,19 @@ import type { CatalogBook } from '../wordbooks'
 import { loadExamFrequency, type ExamFrequencyData } from '../exam-frequency'
 import Sheet from './Sheet'
 import { Segmented } from './Controls'
-import ExamFrequencyView from './ExamFrequencyView'
 import BookDetail from './BookDetail'
 import DailyWordCount, { validDailyCount } from './DailyWordCount'
 
+export type ShelfView = 'mine' | 'catalog'
 type Props = {
   store: Store; catalog: CatalogBook[]; busy: boolean; error: string;
-  onRetry: () => void; onLibrary: () => void;
+  /** Owned by the app so the tab survives going to 我的单词 / 考频 and back. */
+  view: ShelfView; onView: (view: ShelfView) => void;
+  onRetry: () => void; onLibrary: () => void; onFrequency: () => void;
   onActivate: (id: string) => void; onInstall: (book: CatalogBook, daily: number) => Promise<boolean>;
   onWord: (id: string) => void;
 }
-export default function BookShelf({ store, catalog, busy, error, onRetry, onLibrary, onActivate, onInstall, onWord }: Props) {
-  const [view, setView] = useState<'mine' | 'catalog' | 'frequency'>(store.books.length ? 'mine' : 'catalog')
+export default function BookShelf({ store, catalog, busy, error, view, onView: setView, onRetry, onLibrary, onFrequency, onActivate, onInstall, onWord }: Props) {
   const [selected, setSelected] = useState<CatalogBook | null>(null)
   const [opened, setOpened] = useState<WordBook | null>(null)
   const [preview, setPreview] = useState<ExamFrequencyData>()
@@ -26,10 +27,10 @@ export default function BookShelf({ store, catalog, busy, error, onRetry, onLibr
   const learnedIds = new Set(store.words.filter(hasLearned).map(w => w.id))
   return <div className="book-shelf">
     <p className="page-purpose">选一本词书，按单元学习。每本书的进度分别保留。</p>
-    <div className="shelf-toolbar"><Segmented<'mine' | 'catalog' | 'frequency'> label="词书视图" value={view} onChange={setView}
+    <div className="shelf-toolbar"><Segmented label="词书视图" value={view} onChange={setView}
       options={[{ value: 'mine', label: '我的词书' }, { value: 'catalog', label: '添加词书' }]} /></div>
-    <div className="shelf-links"><button className="text-button" aria-label="我的单词" onClick={onLibrary}><Search size={16} />查找我的单词</button><button className="text-button" aria-pressed={view === 'frequency'} onClick={() => setView(view === 'frequency' ? 'mine' : 'frequency')}>考频查询<ChevronRight size={15} /></button></div>
-    {view === 'frequency' ? <ExamFrequencyView initialExam={catalog.find(book => book.id === store.activeBookId)?.exam || (store.activeBookId === 'ecdict-ky' ? 'ky1' : 'cet4')} /> : view === 'mine' ? <>
+    <div className="shelf-links"><button className="text-button" aria-label="我的单词" onClick={onLibrary}><Search size={16} />查找我的单词</button><button className="text-button" onClick={onFrequency}>考频查询<ChevronRight size={15} /></button></div>
+    {view === 'mine' ? <>
       {!store.books.length ? <div className="empty"><BookOpen size={32} /><h2>还没有词书</h2><button className="primary" onClick={() => setView('catalog')}>选择词书<ChevronRight size={17} /></button></div> :
         <div className="owned-books">{store.books.map(book => {
           const meta = catalog.find(c => c.id === book.id) || (book.id === 'ecdict-ky' ? catalog.find(c => c.tag === 'ky') : undefined)

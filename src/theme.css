@@ -1053,17 +1053,6 @@ ion-toggle.known-toggle{
   gap: 3px;
   margin: 17px 0 13px;
 }
-.filter-row button{
-  font-size: var(--fs-caption);
-  color: var(--text-muted);
-  border-radius: var(--radius-md);
-  padding: 7px 10px;
-}
-.filter-row button[aria-pressed=true]{
-  background: #e3efff;
-  box-shadow: var(--glass-selected-shadow);
-  color: #006fe8;
-}
 .filter-row>span{
   margin-left: auto;
   font-size: var(--fs-tab);

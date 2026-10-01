@@ -54,6 +54,8 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
   }, [section])
   useEffect(() => () => { avatarRequest.current++ }, [])
 
+  // `section` comes from the screen stack: 'home' is the 我的 tab, every other value is a pushed
+  // subpage, so switching sections remounts this component and its local form state resets.
   if (section === 'home') return <div className="my-page">
     <button className="profile-summary" onClick={() => onSection('profile')} aria-label="编辑个人资料">
       <span className="profile-avatar">{store.profile.avatar ? <img src={store.profile.avatar} alt="" /> : <UserRound size={30} />}</span>
