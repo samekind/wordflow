@@ -26,10 +26,10 @@ export default function BookShelf({ store, catalog, busy, error, view, onView: s
   useEffect(() => { if (selected?.exam) loadExamFrequency().then(setPreview).catch(() => setPreview(undefined)) }, [selected?.id])
   const learnedIds = new Set(store.words.filter(hasLearned).map(w => w.id))
   return <div className="book-shelf">
-    <p className="page-purpose">选一本词书，按天学习，每天的词分成 20 个一组。每本书的进度分别保留。</p>
+    <p className="page-purpose">一次学一本书，按天学，每天的词 20 个一组。换书后原来的进度会保留。</p>
     <div className="shelf-toolbar"><Segmented label="词书视图" value={view} onChange={setView}
       options={[{ value: 'mine', label: '我的词书' }, { value: 'catalog', label: '添加词书' }]} /></div>
-    <div className="shelf-links"><button className="text-button" aria-label="我的单词" onClick={onLibrary}><Search size={16} />查找我的单词</button><button className="text-button" onClick={onFrequency}>考频查询<ChevronRight size={15} /></button></div>
+
     {view === 'mine' ? <>
       {!store.books.length ? <div className="empty"><BookOpen size={32} /><h2>还没有词书</h2><button className="primary" onClick={() => setView('catalog')}>选择词书<ChevronRight size={17} /></button></div> :
         <div className="owned-books">{store.books.map(book => {

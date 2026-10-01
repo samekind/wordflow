@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { BookOpen, Camera, Check, ChevronRight, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, Search, Settings2, Sparkles, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
+import { BookOpen, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, RefreshCw, Settings2, Sparkles, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
 import type { Appearance } from '../model'
-import { loadCloudAccount } from '../cloud'
+import { appRelease, loadCloudAccount } from '../cloud'
 import { dayKey, type Store } from '../model'
 import { hasLearned } from '../study'
 import { prepareAvatar } from '../profile'
@@ -11,7 +11,7 @@ import { Segmented, SettingRow } from './Controls'
 export type AIConfig = { provider: string; model: string; configured: boolean }
 export type SettingsSection = 'home' | 'profile' | 'learning' | 'appearance' | 'reading' | 'ai' | 'data'
 export const settingsTitles: Record<SettingsSection, string> = {
-  home: '我的', profile: '个人资料', learning: '学习设置', appearance: '外观', reading: '发音与阅读', ai: 'AI 服务', data: '数据与备份',
+  home: '我的', profile: '账号与资料', learning: '学习设置', appearance: '外观', reading: '发音与阅读', ai: 'AI 服务', data: '数据与备份',
 }
 const defaults: Record<string, string> = { deepseek: 'deepseek-flash', openai: 'gpt-4.1-mini', qwen: 'qwen-plus' }
 type Props = {
@@ -41,6 +41,13 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
   const [recoveryCode, setRecoveryCode] = useState('')
   const [recoverInput, setRecoverInput] = useState('')
   const [cloudConflict, setCloudConflict] = useState(false)
+  const [updateBusy, setUpdateBusy] = useState(false)
+  const [updateNote, setUpdateNote] = useState('')
+  const appVersion = appRelease.versionName
+  async function checkUpdate() {
+    setUpdateBusy(true); setUpdateNote('')
+    try { setUpdateNote(await onCheckUpdate()) } catch (reason) { setUpdateNote((reason as Error).message) } finally { setUpdateBusy(false) }
+  }
   const avatarInput = useRef<HTMLInputElement>(null)
   const avatarRequest = useRef(0)
   const book = store.books.find(book => book.id === store.activeBookId)
@@ -66,21 +73,25 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
       <div><dt>已学单词</dt><dd>{store.words.filter(hasLearned).length.toLocaleString()}</dd></div>
       <div><dt>已读文章</dt><dd>{new Set(store.readArticleIds).size}</dd></div>
     </dl>
-    <button className="current-book-link" onClick={onBooks} aria-label="管理目标词书"><BookOpen size={21} /><span><small>正在学习 · 管理词书</small><strong>{book?.title || '选择一本词书'}</strong></span><ChevronRight size={17} /></button>
     <div className="settings-menu" aria-label="个人设置">
-      <h2 className="settings-group-title">学习与显示</h2>
+      <h2 className="settings-group-title">学习</h2>
+      <button onClick={onBooks} aria-label="管理目标词书"><BookOpen size={20} /><span>词书管理<small>{book ? `正在学习 ${book.title} · 更换或添加词书` : '选择一本词书'}</small></span><ChevronRight size={16} /></button>
       <button onClick={() => onSection('learning')} aria-label="学习设置"><Settings2 size={20} /><span>学习设置<small>每天词量、复习方法</small></span><ChevronRight size={16} /></button>
+      <h2 className="settings-group-title">显示与声音</h2>
       <button onClick={() => onSection('appearance')} aria-label="外观"><Moon size={20} /><span>外观</span><small>{store.appearance.theme === 'dark' ? '深色' : '浅色'}</small><ChevronRight size={16} /></button>
       <button onClick={() => onSection('reading')} aria-label="发音与阅读"><Volume2 size={20} /><span>发音与阅读</span><ChevronRight size={16} /></button>
-      <button onClick={onLibrary} aria-label="我的单词"><Search size={20} /><span>我的单词</span><small>{store.words.length.toLocaleString()}</small><ChevronRight size={16} /></button>
-      <h2 className="settings-group-title">服务与数据</h2>
+      <h2 className="settings-group-title">账号与数据</h2>
+      <button onClick={() => onSection('profile')} aria-label="账号与资料"><UserRound size={20} /><span>账号与资料<small>昵称、头像、云端账号</small></span><small>{hasCloud ? '已连接' : '未登录'}</small><ChevronRight size={16} /></button>
+      <button onClick={() => onSection('data')} aria-label="数据与备份"><Database size={20} /><span>数据与备份<small>导出、恢复、云端同步</small></span><ChevronRight size={16} /></button>
       <button onClick={() => onSection('ai')} aria-label="AI 服务"><Sparkles size={20} /><span>AI 服务<small>语境短文、单词助记</small></span><small>{ai.configured ? '已配置' : '未配置'}</small><ChevronRight size={16} /></button>
-      <button onClick={() => onSection('data')} aria-label="数据与备份"><Database size={20} /><span>数据与备份<small>导出、恢复、云端保存与更新</small></span><ChevronRight size={16} /></button>
+      <h2 className="settings-group-title">关于</h2>
+      <button disabled={updateBusy} onClick={() => void checkUpdate()} aria-label="检查更新"><RefreshCw size={20} className={updateBusy ? 'spin' : ''} /><span>检查更新<small>{updateNote || `当前版本 ${appVersion}`}</small></span><ChevronRight size={16} /></button>
+      <button onClick={onLicenses} aria-label="来源与开源许可"><FileText size={20} /><span>来源与开源许可</span><ChevronRight size={16} /></button>
     </div>
   </div>
 
   return <div className="settings-layout">
-    <p className="page-purpose">{({ profile: '设置你的昵称、头像和学习目标。', learning: '设置新词书每天学多少词，以及后续复习的方法。', appearance: '调整整个应用的外观，选择后自动保存。', reading: '设置单词和文章的朗读，以及阅读时的显示方式。', ai: '用于生成语境短文和单词助记，普通背词无需配置。', data: '学习记录先保存在本机。可导出文件，或手动备份到云端。', home: '' })[section]}</p>
+    <p className="page-purpose">{({ profile: '设置昵称、头像和学习目标，管理云端账号。', learning: '设置新词书每天学多少词，以及后续复习的方法。', appearance: '调整整个应用的外观，选择后自动保存。', reading: '设置单词和文章的朗读，以及阅读时的显示方式。', ai: '用于生成语境短文和单词助记，普通背词无需配置。', data: '学习记录先保存在本机。可导出文件，或手动备份到云端。', home: '' })[section]}</p>
     {section === 'profile' && <form className="profile-form" onSubmit={async event => {
       event.preventDefault()
       if (avatarBusy || saving || !profile.nickname.trim()) return
@@ -105,6 +116,16 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
       {profileError && <p className="error-banner" role="alert">{profileError}</p>}
       <button className="primary" disabled={saving || avatarBusy || !profile.nickname.trim()}><Check size={17} />保存资料</button>
     </form>}
+    {section === 'profile' && <section className="settings-section account-section" aria-label="云端账号">
+      <h2>云端账号 <span className={hasCloud ? 'configured-label' : 'muted'}>{hasCloud ? '已连接' : '未登录'}</span></h2>
+      <p className="field-note">不需要手机号或邮箱。开通后会给你一个 8 位恢复码，换手机时用它登录同一份记录。</p>
+      {!hasCloud && <button className="secondary" disabled={cloudBusy || saving} onClick={async () => { setCloudBusy(true); setCloudNote(''); try { setRecoveryCode(await onCloudCreate()); setHasCloud(true) } catch (reason) { setCloudNote((reason as Error).message) } finally { setCloudBusy(false) } }}><Cloud size={17} />开通云端账号</button>}
+      {recoveryCode && <p className="field-note" role="status">恢复码 {recoveryCode}。换手机时要用它登录，请现在记下。</p>}
+      <details className="recovery-details"><summary>已有恢复码？在这台设备登录</summary><label className="form-label">恢复码<input aria-label="云端恢复码" value={recoverInput} maxLength={20} placeholder="例如 ABCD-EFGH" onChange={event => setRecoverInput(event.target.value)} />
+        <button type="button" className="secondary" disabled={cloudBusy || saving || recoverInput.replace(/[^a-z0-9]/gi, '').length !== 8} onClick={async () => { setCloudBusy(true); setCloudNote(''); try { await onCloudRecover(recoverInput.trim()); setRecoverInput(''); setHasCloud(true); setCloudNote('已在这台设备登录，原设备需重新输入恢复码') } catch (reason) { setCloudNote((reason as Error).message) } finally { setCloudBusy(false) } }}>用恢复码登录</button>
+      </label></details>
+      {cloudNote && <p className="field-note" role="status">{cloudNote}</p>}
+    </section>}
     {section === 'learning' && <section className="settings-section">
       {book && <SettingRow label={book.title}><span className="setting-value">每天 {book.dailyCount} 词</span></SettingRow>}
       <SettingRow label="复习方法" note="现有复习日期保留，下次完成时使用新方法。">
@@ -161,20 +182,17 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
     {section === 'data' && <section className="settings-section"><p className="data-summary">{store.books.length} 本词书 · {store.words.length.toLocaleString()} 个单词 · {store.stories.length + store.contextStories.length} 篇短文</p>
       <div className="data-block"><h2>本机备份</h2><p className="field-note">保存一份文件到手机。恢复前会让你确认要替换的记录。</p>
       <div className="button-row"><button className="secondary" onClick={onBackup}><Download size={17} />导出备份</button><button className="secondary" onClick={onRestore}><Upload size={17} />恢复备份</button></div>
-      </div><div className="data-block"><h2>云端备份 <span>{hasCloud ? '已连接' : '未开通'}</span></h2><p className="field-note">手动上传当前记录；换设备时，用恢复码连接后恢复。</p>
-      <div className="button-row">
-        {!hasCloud && <button className="secondary" disabled={cloudBusy || saving} onClick={async () => { setCloudBusy(true); setCloudNote(''); try { setRecoveryCode(await onCloudCreate()); setHasCloud(true) } catch (reason) { setCloudNote((reason as Error).message) } finally { setCloudBusy(false) } }}>开通云端保存</button>}
-        {hasCloud && <button className="secondary" disabled={cloudBusy || saving} onClick={async () => { setCloudBusy(true); setCloudConflict(false); setCloudNote(''); try { setCloudNote(await onCloudUpload(false)); setRecoveryCode('') } catch (reason) { if ((reason as Error).message === '云端有更新的记录') setCloudConflict(true); setCloudNote((reason as Error).message) } finally { setCloudBusy(false) } }}><Upload size={17} />上传到云端</button>}
-        {hasCloud && <button className="secondary" disabled={cloudBusy || saving} onClick={async () => { setCloudBusy(true); setCloudNote(''); try { await onCloudRestore(); setCloudNote('') } catch (reason) { setCloudNote((reason as Error).message) } finally { setCloudBusy(false) } }}><Download size={17} />从云端恢复</button>}
-      </div>
-      {cloudConflict && <button className="text-button danger" disabled={cloudBusy || saving} onClick={async () => { setCloudBusy(true); try { setCloudNote(await onCloudUpload(true)); setCloudConflict(false) } catch (reason) { setCloudNote((reason as Error).message) } finally { setCloudBusy(false) } }}>仍要覆盖云端</button>}
-      <details className="recovery-details"><summary>已有恢复码？连接已有备份</summary><label className="form-label">恢复码<input aria-label="云端恢复码" value={recoverInput} maxLength={20} placeholder="例如 ABCD-EFGH" onChange={event => setRecoverInput(event.target.value)} />
-        <button type="button" className="secondary" disabled={cloudBusy || saving || recoverInput.replace(/[^a-z0-9]/gi, '').length !== 8} onClick={async () => { setCloudBusy(true); setCloudNote(''); try { await onCloudRecover(recoverInput.trim()); setRecoverInput(''); setHasCloud(true); setCloudNote('已在这台设备打开云端记录，原设备需重新输入恢复码') } catch (reason) { setCloudNote((reason as Error).message) } finally { setCloudBusy(false) } }}>用恢复码打开</button>
-      </label></details>
-      {recoveryCode && <p className="field-note" role="status">恢复码 {recoveryCode}。换手机时要用它打开同一份记录，请现在记下。</p>}
+      </div><div className="data-block"><h2>云端同步 <span>{hasCloud ? '已连接' : '未登录'}</span></h2>
+      {hasCloud ? <><p className="field-note">手动上传当前记录；换设备时在“账号与资料”里用恢复码登录，再从云端恢复。</p>
+        <div className="button-row">
+          <button className="secondary" disabled={cloudBusy || saving} onClick={async () => { setCloudBusy(true); setCloudConflict(false); setCloudNote(''); try { setCloudNote(await onCloudUpload(false)) } catch (reason) { if ((reason as Error).message === '云端有更新的记录') setCloudConflict(true); setCloudNote((reason as Error).message) } finally { setCloudBusy(false) } }}><Upload size={17} />上传到云端</button>
+          <button className="secondary" disabled={cloudBusy || saving} onClick={async () => { setCloudBusy(true); setCloudNote(''); try { await onCloudRestore(); setCloudNote('') } catch (reason) { setCloudNote((reason as Error).message) } finally { setCloudBusy(false) } }}><Download size={17} />从云端恢复</button>
+        </div>
+        {cloudConflict && <button className="text-button danger" disabled={cloudBusy || saving} onClick={async () => { setCloudBusy(true); try { setCloudNote(await onCloudUpload(true)); setCloudConflict(false) } catch (reason) { setCloudNote((reason as Error).message) } finally { setCloudBusy(false) } }}>仍要覆盖云端</button>}
+      </> : <><p className="field-note">先在“账号与资料”里开通云端账号，或用恢复码登录。</p>
+        <button className="secondary" onClick={() => onSection('profile')}><Cloud size={17} />去开通或登录</button></>}
       {cloudNote && <p className="field-note" role="status">{cloudNote}</p>}
-      </div><div className="data-block"><h2>应用信息</h2><button className="text-button" disabled={cloudBusy} onClick={async () => { setCloudBusy(true); setCloudNote(''); try { setCloudNote(await onCheckUpdate()) } catch (reason) { setCloudNote((reason as Error).message) } finally { setCloudBusy(false) } }}>{cloudBusy ? <LoaderCircle className="spin" size={16} /> : null}检查更新</button>
-      <button className="text-button" onClick={onLicenses}><FileText size={17} />来源与开源许可</button></div>
+      </div>
     </section>}
   </div>
 }

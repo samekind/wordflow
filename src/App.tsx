@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { IonLabel, IonTabBar, IonTabButton, IonToast } from '@ionic/react'
 import { modalController } from '@ionic/core'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { BookOpen, ChevronLeft, LoaderCircle, Plus } from 'lucide-react'
+import { ChartColumn, ChevronLeft, LoaderCircle, Plus } from 'lucide-react'
 import { ProfileIcon, ReadIcon, StudyIcon } from './icons'
 import { dayKey, validateStore, type Store, type Word } from './model'
 import StudyList from './StudyList'
@@ -17,6 +17,7 @@ import ExamFrequencyView from './components/ExamFrequencyView'
 import { useConfirm } from './components/Controls'
 import { EditWordSheet, ImportSheet, LicensesSheet, RestorePicker, RestoreSheet } from './components/AppSheets'
 import LibraryPage from './pages/LibraryPage'
+import StatsPage from './pages/StatsPage'
 import { appRelease, createCloudAccount, downloadCloudState, fetchCloudRelease, recoverCloudAccount, uploadCloudState, CloudConflict } from './cloud'
 import { isTab, screenKey, useNavigation, type Screen, type TabId } from './app/useNavigation'
 import { useStoreSync } from './app/useStoreSync'
@@ -27,8 +28,8 @@ import { useWordActions } from './app/useWordActions'
 import { useAIServices } from './app/useAIServices'
 import { useBackButton } from './app/useBackButton'
 
-const tabs = [{ id: 'today', label: '学习', icon: StudyIcon }, { id: 'books', label: '词书', icon: BookOpen }, { id: 'story', label: '阅读', icon: ReadIcon }, { id: 'settings', label: '我的', icon: ProfileIcon }] as const
-const titles: Record<string, string> = { books: '词书', story: '阅读', settings: '我的', library: '我的单词', frequency: '考频查询' }
+const tabs = [{ id: 'today', label: '学习', icon: StudyIcon }, { id: 'stats', label: '统计', icon: ChartColumn }, { id: 'story', label: '阅读', icon: ReadIcon }, { id: 'settings', label: '我的', icon: ProfileIcon }] as const
+const titles: Record<string, string> = { stats: '统计', books: '词书管理', story: '阅读', settings: '我的', library: '我的单词', frequency: '考频查询' }
 const titleOf = (screen: Screen) => screen.name === 'section' ? settingsTitles[screen.section] : titles[screen.name]
 
 /** App shell: wires the data, study, word and AI hooks to the screens, the tab bar and the sheets.
@@ -115,6 +116,7 @@ export default function App() {
               onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onActivate={study.activateBook} onInstall={words.installCatalogBook} onWord={openWord} />}
             {screen.name === 'frequency' && <ExamFrequencyView initialExam={words.catalog.find(book => book.id === store.activeBookId)?.exam || (store.activeBookId === 'ecdict-ky' ? 'ky1' : 'cet4')} />}
             {screen.name === 'library' && <LibraryPage store={store} onWord={openWord} onBooks={() => go({ name: 'books' })} />}
+            {screen.name === 'stats' && <StatsPage store={store} now={data.clock} onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onBooks={() => go({ name: 'books' })} />}
             {screen.name === 'story' && <ReadingPage store={store} now={data.clock} view={readingView} onView={view => { speech.stop(); setReadingView(view) }} saving={saving} aiConfigured={ai.config.configured} onAssist={ai.assistArticle} onAISettings={openAISettings}
               onStudy={async () => { const current = storeRef.current; const mode = studyView(current); const draft = currentStudyDraft(current, mode === 'review' ? 'review' : 'learn'); if (!draft || await study.changeStudy(draft, { type: 'method', method: 'context' })) goStudy() }}
               onRead={id => {

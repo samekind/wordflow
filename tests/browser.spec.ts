@@ -30,7 +30,9 @@ async function seed(page: Page, next: unknown) {
 async function nav(page: Page, name: string) {
   const tabs = page.getByRole('navigation', { name: '主导航' })
   if (name === '词库') {
-    await tabs.getByRole('tab', { name: '词书', exact: true }).click()
+    // 词书管理 lives under 我的.
+    await tabs.getByRole('tab', { name: '我的', exact: true }).click()
+    await page.getByRole('button', { name: '管理目标词书', exact: true }).click()
   } else {
     await tabs.getByRole('tab', { name: name === '当日助记' ? '阅读' : name === '设置' ? '我的' : name, exact: true }).click()
     if (name === '当日助记') await page.getByRole('button', { name: '自选词短文', exact: true }).click()
@@ -80,7 +82,7 @@ test('recent exam counts are searchable and the study list stays in frequency or
   const initial = studied(importToPersonal(emptyStore(), starterRows.slice(0, 40), '考频测试').store)
   await seed(page, initial)
   await page.goto('/')
-  await nav(page, '词库')
+  await nav(page, '统计')
   await page.getByRole('button', { name: '考频查询', exact: true }).click()
   await expect(page.getByRole('table', { name: '四级近五年考频' })).toBeVisible()
   await expect(page.locator('.frequency-summary')).toContainText('33 套 · 11 个考期')
@@ -114,7 +116,7 @@ test('four tabs, compact memory progress and local profile settings retain their
   await page.goto('/')
   const tabs = page.getByRole('navigation', { name: '主导航' }).getByRole('tab')
   await expect(tabs).toHaveCount(4)
-  expect(await tabs.evaluateAll(elements => elements.map(element => element.getAttribute('aria-label')))).toEqual(['学习', '词书', '阅读', '我的'])
+  expect(await tabs.evaluateAll(elements => elements.map(element => element.getAttribute('aria-label')))).toEqual(['学习', '统计', '阅读', '我的'])
   const first = page.locator('.english-entry').first()
   await expect(first.locator('.mark-grid i')).toHaveCount(6)
   await expect(first.locator('.mark-grid i[data-filled=true]')).toHaveCount(6)
@@ -161,11 +163,14 @@ test('four tabs, compact memory progress and local profile settings retain their
     await page.screenshot({ path: `test-results/my-page-${width}.png`, animations: 'disabled' })
   }
   await page.getByRole('button', { name: '管理目标词书', exact: true }).click()
-  await expect(page.getByRole('heading', { name: '词书', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '词书管理', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '返回', exact: true }).click()
+  await expect(page.locator('.profile-summary')).toBeVisible()
+  await nav(page, '统计')
   await page.getByRole('button', { name: '我的单词', exact: true }).click()
   await expect(page.getByRole('heading', { name: '我的单词', exact: true })).toBeVisible()
   await page.getByRole('button', { name: '返回', exact: true }).click()
-  await expect(page.getByRole('heading', { name: '词书', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '统计', exact: true })).toBeVisible()
   await nav(page, '我的')
   await expect(page.locator('.profile-summary')).toBeVisible()
   expect((await state(page)).books).toEqual(initial.books)
