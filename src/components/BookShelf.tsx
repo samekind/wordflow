@@ -26,7 +26,7 @@ export default function BookShelf({ store, catalog, busy, error, view, onView: s
   useEffect(() => { if (selected?.exam) loadExamFrequency().then(setPreview).catch(() => setPreview(undefined)) }, [selected?.id])
   const learnedIds = new Set(store.words.filter(hasLearned).map(w => w.id))
   return <div className="book-shelf">
-    <p className="page-purpose">选一本词书，按单元学习。每本书的进度分别保留。</p>
+    <p className="page-purpose">选一本词书，按天学习，每天的词分成 20 个一组。每本书的进度分别保留。</p>
     <div className="shelf-toolbar"><Segmented label="词书视图" value={view} onChange={setView}
       options={[{ value: 'mine', label: '我的词书' }, { value: 'catalog', label: '添加词书' }]} /></div>
     <div className="shelf-links"><button className="text-button" aria-label="我的单词" onClick={onLibrary}><Search size={16} />查找我的单词</button><button className="text-button" onClick={onFrequency}>考频查询<ChevronRight size={15} /></button></div>
@@ -39,15 +39,15 @@ export default function BookShelf({ store, catalog, busy, error, view, onView: s
           return <button className="owned-book" key={book.id} disabled={busy} onClick={() => setOpened(book)}>
             <span className="book-cover" style={{ background: meta?.color || '#56a495' }}><BookOpen size={25} /><b>{meta?.label || 'MY WORDS'}</b></span>
             <span className="owned-book-info"><strong>{book.title}{book.id === store.activeBookId && <small className="current-book-badge">正在学习</small>}</strong>
-              <span>{book.wordIds.length.toLocaleString()} 词 · 每单元 {book.dailyCount} 词</span>
+              <span>{book.wordIds.length.toLocaleString()} 词 · 每天 {book.dailyCount} 词</span>
               <progress value={learned} max={Math.max(1, book.wordIds.length)} aria-label={`${book.title} 学习进度`} />
-              <small>已学 {learned} 词 · 第 {Math.min(book.currentDay + 1, Math.max(1, days.length))} / {days.length || 1} 单元</small></span>
+              <small>已学 {learned} 词 · 第 {Math.min(book.currentDay + 1, Math.max(1, days.length))} / {days.length || 1} 天</small></span>
             <ChevronRight size={19} />
           </button>
         })}</div>}
       {store.activeBookId && <button className="primary wide-button shelf-continue" disabled={busy} onClick={() => onActivate(store.activeBookId)}>继续学习 · {store.books.find(book => book.id === store.activeBookId)?.title}<ChevronRight size={17} /></button>}
     </> : <>
-      <p className="source-note">选择词书后可设置每单元词量。词表来自 ECDICT 分类，非官方出版词书。</p>
+      <p className="source-note">选择词书后可设置每天词量。词表来自 ECDICT 分类，非官方出版词书。</p>
       {error && <div className="error-banner" role="alert">{error}<button className="text-button" onClick={onRetry}>重新加载</button></div>}
       {!catalog.length && !error && <div className="empty"><LoaderCircle className="spin" size={24} /></div>}
       <div className="catalog-grid">{catalog.map(book => {
@@ -67,8 +67,8 @@ export default function BookShelf({ store, catalog, busy, error, view, onView: s
       {selected && <div className="book-setup">
         <div className="book-setup-title"><span className="book-cover" style={{ background: selected.color }}><BookOpen size={24} /><b>{selected.label}</b></span>
           <div><h3>{selected.title}</h3><p>{selected.count.toLocaleString()} 词 · 本地词库</p></div></div>
-        <DailyWordCount label="本书每单元词量" value={daily} onChange={setDaily} disabled={busy} />
-        {validDailyCount(daily) && <p className="field-note">{Math.ceil(selected.count / daily)} 个单元 · 最后单元 {selected.count % daily || daily} 词</p>}
+        <DailyWordCount label="每天学多少词" value={daily} onChange={setDaily} disabled={busy} />
+        {validDailyCount(daily) && <p className="field-note">{Math.ceil(selected.count / daily)} 天学完 · 最后一天 {selected.count % daily || daily} 词</p>}
         <p className="source-note">来源：{selected.source}。{selected.exam ? '按 2022–2026 卷面出现试卷数、总词次排序，零命中词保留在后。' : '原词序依据 COCA/BNC。'}已有单词沿用当前记录。</p>
         {selected.exam && preview && <ol className="book-preview">{preview.exams[selected.exam].words.slice(0, 5).map(word => <li key={word.word}><b lang="en">{word.word}</b><span>{word.papers} 套 · {word.occurrences} 次</span></li>)}</ol>}
         <button className="primary wide-button" disabled={busy || !validDailyCount(daily)} onClick={async () => { if (await onInstall(selected, daily)) setSelected(null) }}>{busy ? <LoaderCircle className="spin" size={18} /> : <BookOpen size={18} />}开始学习</button>

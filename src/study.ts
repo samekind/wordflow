@@ -62,12 +62,12 @@ export function currentStudyDraft(store: Store, kind: StudyKind, now = new Date(
 }
 export function selectStudyUnit(store: Store, bookId: string, day: number): Store {
   const book = store.books.find(item => item.id === bookId)
-  if (!book || !Number.isInteger(day) || day < 0 || day >= Math.max(1, bookDays(book).length)) throw new Error('这个学习单元不存在')
+  if (!book || !Number.isInteger(day) || day < 0 || day >= Math.max(1, bookDays(book).length)) throw new Error('这一天不存在')
   const active = store.learning.drafts.learn
   const matching = active?.bookId === bookId && active.day === day ? active : store.learning.parked.find(draft => draft.bookId === bookId && draft.day === day) || null
   const parked = store.learning.parked.filter(draft => draft.id !== matching?.id && draft.id !== active?.id && (!draftComplete(draft) || draft.id === store.learning.undo?.draftId))
   if (active && active.id !== matching?.id && (!draftComplete(active) || active.id === store.learning.undo?.draftId)) parked.push(active)
-  if (parked.length > 200) throw new Error('未完成单元较多，请先完成已有任务后再开始新单元')
+  if (parked.length > 200) throw new Error('未完成的天数较多，请先完成已有任务后再开始新的一天')
   return { ...store, activeBookId: bookId, books: store.books.map(item => item.id === bookId ? { ...item, currentDay: day } : item),
     learning: { ...store.learning, view: store.learning.view === 'practice' ? 'practice' : 'learn', parked, drafts: { ...store.learning.drafts, learn: matching } } }
 }
@@ -103,7 +103,7 @@ export function applyStudyAction(store: Store, proposed: StudyDraft, action: Stu
   if (action.type === 'submit' && store.learning.receipts.some(receipt => receipt.id === action.token)) return store
   if (proposed.kind === 'learn') {
     const book = store.books.find(item => item.id === store.activeBookId)
-    if (proposed.bookId !== book?.id || proposed.day !== book.currentDay) throw new Error('学习单元已切换，请回到原单元继续')
+    if (proposed.bookId !== book?.id || proposed.day !== book.currentDay) throw new Error('学习的天已切换，请回到原来那一天继续')
     const active = store.learning.drafts.learn
     if ((active && (active.bookId !== book.id || active.day !== book.currentDay)) || store.learning.parked.some(draft => draft.bookId === book.id && draft.day === book.currentDay)) store = selectStudyUnit(store, book.id, book.currentDay)
   }

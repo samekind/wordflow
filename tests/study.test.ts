@@ -27,7 +27,7 @@ test('switching units parks independent tasks and restores exact words, position
   assert.ok(resumed.forgotten[first.groups[0][0]])
   assert.equal(state.learning.parked[0].id, second.id)
   assert.equal(state.reviews.length, 0)
-  assert.throws(() => applyStudyAction(state, second, { type: 'submit', token: second.tokens[0] }, now), /单元已切换/)
+  assert.throws(() => applyStudyAction(state, second, { type: 'submit', token: second.tokens[0] }, now), /学习的天已切换/)
 })
 
 test('legacy mismatched selector is repaired without losing its unfinished task', () => {

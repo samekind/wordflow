@@ -39,8 +39,8 @@ export default function BookDetail({ book, store, meta, busy, onClose, onStudy, 
   return <Sheet title={book.title} open tall onClose={onClose}>
     <div className="book-detail">
       <div className="book-detail-summary">
-        <span>{book.wordIds.length.toLocaleString()} 词 · 每单元 {book.dailyCount}</span>
-        <span>已学 {learned.toLocaleString()} · 熟词 {book.wordIds.filter(id => known.has(id)).length} · 第 {Math.min(book.currentDay + 1, Math.max(1, days.length))} / {days.length || 1} 单元</span>
+        <span>{book.wordIds.length.toLocaleString()} 词 · 每天 {book.dailyCount}</span>
+        <span>已学 {learned.toLocaleString()} · 熟词 {book.wordIds.filter(id => known.has(id)).length} · 第 {Math.min(book.currentDay + 1, Math.max(1, days.length))} / {days.length || 1} 天</span>
         <span>{data ? `${scope}考到 ${heard.toLocaleString()} 词` : '正在读取考频'}</span>
       </div>
       <p className="source-note">{meta?.exam ? '学习顺序按这门考试 2022–2026 的卷面试卷数，其次按词次。' : '学习顺序按四级、六级、考研英语一和英语二的合计试卷数，其次按词次。'}</p>

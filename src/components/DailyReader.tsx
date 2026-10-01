@@ -78,7 +78,7 @@ export default function DailyReader({ store, busy, live = '', configured, error,
   }
   const picker = <Sheet title="选择单词" open={pickerOpen} onClose={() => setPickerOpen(false)} tall>
     <div className="picker-bar">
-      <p className="picker-note">{allWords.length > 40 ? `本单元有 ${allWords.length} 个词。短文每次最多写 40 个，当前是第 ${currentPart + 1} / ${totalParts} 组。` : `这一组 ${words.length} 个词。全选和清除都只作用于下面筛出来的词。`}</p>
+      <p className="picker-note">{allWords.length > 40 ? `今天有 ${allWords.length} 个词。短文每次最多写 40 个，当前是第 ${currentPart + 1} / ${totalParts} 组。` : `这一组 ${words.length} 个词。全选和清除都只作用于下面筛出来的词。`}</p>
       {totalParts > 1 && <div className="part-tabs" aria-label="短文分组">{Array.from({ length: totalParts }, (_, index) => <button key={index} aria-pressed={currentPart === index} onClick={() => { setPart(index); setQuery('') }}>第 {index + 1} 组 · {allWords.slice(index * 40, (index + 1) * 40).length}</button>)}</div>}
       <GlassSlider name="按标记筛选" caption="向右拖，只留下标记更高的词" thumbWidth={92} min={0} max={6} value={markFilter} label={value => value === 0 ? '全部' : `≥${value}`} accessory={<MarkDots count={markFilter} />} onChange={setMarkFilter} />
       <input className="picker-search" value={query} placeholder="搜索单词或释义" onChange={event => setQuery(event.target.value)} />
@@ -94,8 +94,8 @@ export default function DailyReader({ store, busy, live = '', configured, error,
     </button>)}{!visibleWords.length && <p className="field-note">这一档没有词，换一个标记或搜索条件。</p>}</div>
     <div className="picker-foot"><button className="primary wide-button" disabled={busy || !selectedWords.length} onClick={generate}>{busy ? <LoaderCircle className="spin" size={18} /> : <Sparkles size={18} />}{busy ? '正在写短文' : configured ? `生成短文 · ${selectedWords.length} 词` : '前往设置 AI'}</button></div>
   </Sheet>
-  const dayNav = <div className="compact-day"><button className="icon-button" aria-label="短文上一单元" title="上一单元" disabled={!day || busy} onClick={() => { onStop(); setSelectedDay(day - 1) }}><ChevronLeft size={18} /></button>
-    <span>第 {day + 1} 单元</span><button className="icon-button" aria-label="短文下一单元" title="下一单元" disabled={day >= days.length - 1 || busy} onClick={() => { onStop(); setSelectedDay(day + 1) }}><ChevronRight size={18} /></button></div>
+  const dayNav = <div className="compact-day"><button className="icon-button" aria-label="短文前一天" title="前一天" disabled={!day || busy} onClick={() => { onStop(); setSelectedDay(day - 1) }}><ChevronLeft size={18} /></button>
+    <span>第 {day + 1} 天</span><button className="icon-button" aria-label="短文后一天" title="后一天" disabled={day >= days.length - 1 || busy} onClick={() => { onStop(); setSelectedDay(day + 1) }}><ChevronRight size={18} /></button></div>
   const article = story ? <>
     <div className="story-head">{dayNav}<button className="text-button" onClick={() => setPickerOpen(true)}>选择单词</button><span className="story-coverage">覆盖 {coverage.length}/{selectedWords.length} 词</span><div className="small-tools">
       <button className="icon-button" aria-label="朗读短文" title="朗读短文" onClick={() => onSpeak(story.paragraphs.map(p => p.english).join('\n'))}><Volume2 size={20} /></button>
@@ -121,8 +121,8 @@ export default function DailyReader({ store, busy, live = '', configured, error,
     {!busy && (story ? article : <div className="story-ready"><section className="story-ready-card">
       {dayNav}
       <h2>选几个词，读一篇短文</h2>
-      <p>从本单元选词后生成。短文会保存在这里，随时回来读。</p>
-      <div className="story-ready-stats"><span><strong>{allWords.length}</strong>本单元词</span><span><strong>{allWords.filter(word => word.markCount > 0).length}</strong>已标记</span></div>
+      <p>从当天的词里选词后生成。短文会保存在这里，随时回来读。</p>
+      <div className="story-ready-stats"><span><strong>{allWords.length}</strong>当天的词</span><span><strong>{allWords.filter(word => word.markCount > 0).length}</strong>已标记</span></div>
       <button className="primary" onClick={() => setPickerOpen(true)}>选择单词</button>
     </section></div>)}
     {picker}

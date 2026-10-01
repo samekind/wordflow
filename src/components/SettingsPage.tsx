@@ -69,7 +69,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
     <button className="current-book-link" onClick={onBooks} aria-label="管理目标词书"><BookOpen size={21} /><span><small>正在学习 · 管理词书</small><strong>{book?.title || '选择一本词书'}</strong></span><ChevronRight size={17} /></button>
     <div className="settings-menu" aria-label="个人设置">
       <h2 className="settings-group-title">学习与显示</h2>
-      <button onClick={() => onSection('learning')} aria-label="学习设置"><Settings2 size={20} /><span>学习设置<small>单元词量、复习方法</small></span><ChevronRight size={16} /></button>
+      <button onClick={() => onSection('learning')} aria-label="学习设置"><Settings2 size={20} /><span>学习设置<small>每天词量、复习方法</small></span><ChevronRight size={16} /></button>
       <button onClick={() => onSection('appearance')} aria-label="外观"><Moon size={20} /><span>外观</span><small>{store.appearance.theme === 'dark' ? '深色' : '浅色'}</small><ChevronRight size={16} /></button>
       <button onClick={() => onSection('reading')} aria-label="发音与阅读"><Volume2 size={20} /><span>发音与阅读</span><ChevronRight size={16} /></button>
       <button onClick={onLibrary} aria-label="我的单词"><Search size={20} /><span>我的单词</span><small>{store.words.length.toLocaleString()}</small><ChevronRight size={16} /></button>
@@ -80,7 +80,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
   </div>
 
   return <div className="settings-layout">
-    <p className="page-purpose">{({ profile: '设置你的昵称、头像和学习目标。', learning: '设置新词书的单元大小，以及后续复习的方法。', appearance: '调整整个应用的外观，选择后自动保存。', reading: '设置单词和文章的朗读，以及阅读时的显示方式。', ai: '用于生成语境短文和单词助记，普通背词无需配置。', data: '学习记录先保存在本机。可导出文件，或手动备份到云端。', home: '' })[section]}</p>
+    <p className="page-purpose">{({ profile: '设置你的昵称、头像和学习目标。', learning: '设置新词书每天学多少词，以及后续复习的方法。', appearance: '调整整个应用的外观，选择后自动保存。', reading: '设置单词和文章的朗读，以及阅读时的显示方式。', ai: '用于生成语境短文和单词助记，普通背词无需配置。', data: '学习记录先保存在本机。可导出文件，或手动备份到云端。', home: '' })[section]}</p>
     {section === 'profile' && <form className="profile-form" onSubmit={async event => {
       event.preventDefault()
       if (avatarBusy || saving || !profile.nickname.trim()) return
@@ -106,14 +106,14 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
       <button className="primary" disabled={saving || avatarBusy || !profile.nickname.trim()}><Check size={17} />保存资料</button>
     </form>}
     {section === 'learning' && <section className="settings-section">
-      {book && <SettingRow label={book.title}><span className="setting-value">每单元 {book.dailyCount} 词</span></SettingRow>}
+      {book && <SettingRow label={book.title}><span className="setting-value">每天 {book.dailyCount} 词</span></SettingRow>}
       <SettingRow label="复习方法" note="现有复习日期保留，下次完成时使用新方法。">
         <select aria-label="复习方法" value={store.reviewMethod} disabled={saving} onChange={event => void onPreferences({ reviewMethod: event.target.value as Store['reviewMethod'] })}>
           <option value="ebbinghaus">艾宾浩斯式间隔</option><option value="fsrs">FSRS 自适应</option></select>
       </SettingRow>
-      <DailyWordCount label="新词书每单元词量" value={daily} onChange={setDaily} disabled={saving} />
-      <p className="field-note">只用于以后添加的词书，现有词书的单元和进度保留。</p>
-      <button className="primary" disabled={saving || !validDailyCount(daily) || daily === store.goal} onClick={() => void onPreferences({ goal: daily })}><Check size={17} />保存单元词量</button>
+      <DailyWordCount label="新词书每天词量" value={daily} onChange={setDaily} disabled={saving} />
+      <p className="field-note">只用于以后添加的词书，现有词书的每天词量和进度保留。</p>
+      <button className="primary" disabled={saving || !validDailyCount(daily) || daily === store.goal} onClick={() => void onPreferences({ goal: daily })}><Check size={17} />保存每天词量</button>
     </section>}
     {section === 'appearance' && <AppearanceSettings appearance={store.appearance} saving={saving} onChange={patch => void onPreferences({ appearance: { ...store.appearance, ...patch } })} />}
     {section === 'reading' && <section className="settings-section">

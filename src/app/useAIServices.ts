@@ -59,7 +59,7 @@ export function useAIServices({ storeRef, pendingSave, commit, notify, changeStu
       const result: DailyStory = { ...content, id: storyKey(bookId, day, part), bookId, day, part, targets, model: data.model, createdAt: new Date().toISOString() }
       const currentWords = words.map(word => current.words.find(item => item.id === word.id)).filter((word): word is Word => !!word)
       if (!book || !storyIsCurrent(result, currentWords)) throw new Error('所选词汇或释义已改变，本次短文未保存，请重新生成')
-      if (await commit({ ...current, stories: [...current.stories.filter(s => s.id !== result.id), result] })) notify(`第 ${day + 1} 单元短文已保存`)
+      if (await commit({ ...current, stories: [...current.stories.filter(s => s.id !== result.id), result] })) notify(`第 ${day + 1} 天短文已保存`)
     }, () => setLive(''))
   }
   async function generateContextStory(draft: StudyDraft) {

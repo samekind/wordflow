@@ -396,23 +396,29 @@ ion-app{
   touch-action: pan-y;
   --reveal: 0;
 }
-.swipe-action{
+.swipe-actions{
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 56px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  opacity: var(--reveal);
+}
+.swipe-action{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
   font-size: var(--fs-caption);
   font-weight: var(--fw-semibold);
   color: #fff;
-  background: var(--warning);
-  opacity: var(--reveal);
 }
-.swipe-row.tone-neutral .swipe-action{
-  background: var(--text-muted);
-}
+.swipe-action.tone-neutral{ background: var(--text-muted); }
+.swipe-action.tone-known{ background: var(--success); }
+.swipe-action:disabled{ opacity: .45; }
 .swipe-layer{
   position: relative;
   height: 100%;
