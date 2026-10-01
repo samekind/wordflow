@@ -1,0 +1,150 @@
+/* Design tokens: the one place colours, type, radii and glass materials are defined.
+   Components use only these variables; dark mode and accessibility modes swap the values here. */
+
+:root {
+  /* Text */
+  --text-primary: #1c1c1e;
+  --text-secondary: #525e70;
+  --text-muted: #6e7681;
+  --text-faint: #98a1ad;
+  --text-on-accent: #fff;
+
+  /* Brand + state */
+  --accent: #007aff;
+  --accent-strong: #0060cc;
+  --accent-soft: rgba(0, 122, 255, .1);
+  --success: #2f8f78;
+  --success-soft: rgba(47, 143, 120, .12);
+  --warning: #b7791f;
+  --danger: #c4554d;
+  --danger-soft: rgba(196, 85, 77, .1);
+  /* Six-dot difficulty marks */
+  --mark-empty: #dfe5e2;
+  --mark-filled: #5d9a7d;
+
+  /* Surfaces */
+  --app-bg: #e9eaee;
+  --page-bg: linear-gradient(160deg, #f4f6fa 0%, #e9ecf2 55%, #eef1f6 100%);
+  --line: rgba(60, 60, 67, .1);
+  --line-strong: rgba(60, 60, 67, .18);
+  --surface-inset: rgba(216, 224, 237, .54);
+  --surface-solid: #fff;
+
+  /* Liquid glass */
+  --glass-fill: rgba(255, 255, 255, .66);
+  --glass-filter: blur(22px) saturate(1.65);
+  --glass-edge: rgba(255, 255, 255, .9);
+  --glass-shadow: 0 8px 28px rgba(23, 31, 50, .08), 0 1px 4px rgba(23, 31, 50, .05), inset 0 1px 0 #fff, inset 0 -1px 0 rgba(60, 75, 98, .08);
+  --glass-card-fill: rgba(255, 255, 255, .58);
+  --glass-card-shadow: 0 2px 8px rgba(23, 31, 50, .04), inset 0 1px 0 rgba(255, 255, 255, .95);
+  --glass-selected: linear-gradient(150deg, #dcebffbf, #e7f0fc94);
+  --glass-selected-shadow: inset 0 1px 2px #fff, 0 1px 5px #185db811;
+  --sheet-fill: rgba(248, 250, 253, .88);
+  --bar-fill: rgba(247, 248, 251, .82);
+
+  /* Type scale (px): 10 tab / 11 caption / 12 small / 13 meta / 14 body / 15 body-l / 16 word / 18 title / 22 page / 28 display */
+  --fs-tab: 10px;
+  --fs-caption: 11px;
+  --fs-small: 12px;
+  --fs-meta: 13px;
+  --fs-body: 14px;
+  --fs-body-l: 15px;
+  --fs-word: 16px;
+  --fs-title: 18px;
+  --fs-page: 22px;
+  --fs-display: 28px;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 650;
+
+  /* Shape */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-bar: 38px;
+  --radius-pill: 999px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 22px;
+  --space-6: 32px;
+  --page-gutter: 22px;
+
+  /* Touch */
+  --tap: 44px;
+  --tap-compact: 36px;
+
+  /* Ionic bridges */
+  --ion-font-family: var(--app-font);
+  --ion-color-primary: #007aff;
+  --ion-color-primary-rgb: 0, 122, 255;
+  --ion-color-primary-contrast: #fff;
+  --ion-color-primary-shade: #0069dc;
+  --ion-color-primary-tint: #1987ff;
+  --ion-color-success: #439e87;
+  --ion-color-success-rgb: 67, 158, 135;
+  --ion-color-success-contrast: #fff;
+  --ion-color-success-shade: #388b76;
+  --ion-color-success-tint: #56aa95;
+  --ion-color-danger: #cd7973;
+  --ion-color-danger-rgb: 205, 121, 115;
+  --ion-color-danger-contrast: #fff;
+  --ion-color-danger-shade: #b26963;
+  --ion-color-danger-tint: #d48b86;
+  --ion-background-color: #f7f8fa;
+  --ion-text-color: var(--text-primary);
+  --ion-safe-area-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --ion-safe-area-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+
+  /* Legacy aliases still referenced by component CSS */
+  --muted: var(--text-muted);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --text-primary: #e8ebf0;
+  --text-secondary: #b1bdcf;
+  --text-muted: #9aa3b2;
+  --text-faint: #6f7888;
+  --accent: #6aafff;
+  --accent-strong: #8ec0ff;
+  --accent-soft: rgba(106, 175, 255, .14);
+  --success: #79bea2;
+  --success-soft: rgba(121, 190, 162, .14);
+  --warning: #e0b15e;
+  --danger: #e58a82;
+  --danger-soft: rgba(229, 138, 130, .14);
+  --mark-empty: #3e5053;
+  --mark-filled: #79bea2;
+  --app-bg: #101318;
+  --page-bg: linear-gradient(155deg, #1c2431, #111822 55%, #1b222e);
+  --line: rgba(255, 255, 255, .08);
+  --line-strong: rgba(255, 255, 255, .14);
+  --surface-inset: rgba(12, 19, 31, .55);
+  --surface-solid: #1b222d;
+  --glass-fill: rgba(38, 48, 65, .68);
+  --glass-edge: rgba(202, 221, 255, .17);
+  --glass-shadow: 0 8px 28px #00000038, 0 1px 4px #00000024, inset 0 1px 0 #e1edff26, inset 0 -1px 0 #00000038;
+  --glass-card-fill: rgba(38, 48, 65, .56);
+  --glass-card-shadow: 0 2px 8px #0000001f, inset 0 1px 0 #e1edff1c;
+  --glass-selected: linear-gradient(150deg, #3a649eaa, #334b7466);
+  --glass-selected-shadow: inset 0 1px 1px #d8e8ff40, 0 1px 5px #00000024;
+  --sheet-fill: rgba(24, 31, 43, .88);
+  --bar-fill: rgba(24, 31, 43, .88);
+  --ion-background-color: #161b22;
+}
+
+/* No backdrop-filter, reduced transparency or more contrast: solid materials. */
+@supports not (backdrop-filter: blur(1px)) {
+  :root { --glass-fill: #f8f9fb; --glass-card-fill: #fbfcfd; --sheet-fill: #f8fafd; --bar-fill: #f7f8fb; }
+  html[data-theme="dark"] { --glass-fill: #263041; --glass-card-fill: #263041; --sheet-fill: #181f2b; --bar-fill: #181f2b; }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :root { --glass-fill: #fbfcfd; --glass-card-fill: #fbfcfd; --glass-filter: none; --glass-edge: #b9c3d0; --glass-selected: #dbe9fb; --sheet-fill: #f8fafd; --bar-fill: #f7f8fb; }
+  html[data-theme="dark"] { --glass-fill: #263041; --glass-card-fill: #263041; --glass-filter: none; --glass-edge: #697c97; --glass-selected: #344f78; --sheet-fill: #181f2b; --bar-fill: #181f2b; }
+}

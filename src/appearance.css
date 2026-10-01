@@ -34,105 +34,43 @@ body {
   border-top: 1px solid var(--line);
 }
 .appearance-sample span:first-child {
-  font-size: 22px;
-  font-weight: 600;
-  color: #1c2430;
-}
-.appearance-sample span:last-child {
-  font-size: 15px;
-  color: #3d4a5c;
-}
-
-html[data-theme="dark"] {
-  color-scheme: dark;
-  background: #101318;
-  color: #e8ebf0;
-  --ion-background-color: #161b22;
-  --ion-text-color: #e8ebf0;
-  --line: rgba(255, 255, 255, .08);
-  --muted: #9aa3b2;
-  --accent: #6aafff;
-  --glass-fill: rgba(38, 48, 65, .68);
-  --glass-edge: rgba(202, 221, 255, .17);
-  --glass-shadow: 0 8px 28px #00000038,0 1px 4px #00000024,inset 0 1px 0 #e1edff26,inset 0 -1px 0 #00000038;
-  --glass-card-fill: rgba(38, 48, 65, .56);
-  --glass-card-shadow: 0 2px 8px #0000001f,inset 0 1px 0 #e1edff1c;
-  --glass-selected: linear-gradient(150deg,#3a649eaa,#334b7466);
-  --glass-selected-shadow: inset 0 1px 1px #d8e8ff40,0 1px 5px #00000024;
-  --sheet-fill: rgba(24, 31, 43, .88);
-  --surface-inset: rgba(12, 19, 31, .55);
-  --text-primary: #e8ebf0;
-  --text-secondary: #b1bdcf;
-}
-html[data-theme="dark"] body,
-html[data-theme="dark"] ion-app {
-  background: #101318;
-  color: #e8ebf0;
-}
-html[data-theme="dark"] .app-shell {
-  background: linear-gradient(155deg,#1c2431,#111822 55%,#1b222e);
+  font-size: var(--fs-page);
+  font-weight: var(--fw-semibold);
   color: var(--text-primary);
 }
-html[data-theme="dark"] .topbar {
-  background: var(--sheet-fill);
+.appearance-sample span:last-child {
+  font-size: var(--fs-body-l);
+  color: var(--text-secondary);
 }
-html[data-theme="dark"] .english-word,
+
+/* Dark mode for components whose light colour is a one-off value rather than a text token. */
 html[data-theme="dark"] .layout-preview .card-meaning,
-html[data-theme="dark"] .chinese-meaning,
-html[data-theme="dark"] .topbar h1,
 html[data-theme="dark"] .study-day-button,
 html[data-theme="dark"] .day-title,
-html[data-theme="dark"] .word-action-meaning,
 html[data-theme="dark"] .profile-summary-text strong,
 html[data-theme="dark"] .profile-statistics dd,
 html[data-theme="dark"] .current-book-link strong,
 html[data-theme="dark"] .owned-book-info > strong,
 html[data-theme="dark"] .catalog-book > strong,
-html[data-theme="dark"] .word-cell strong,
-html[data-theme="dark"] .source-article h2,
-html[data-theme="dark"] .article-paragraphs > p,
-html[data-theme="dark"] .article-block > p,
 html[data-theme="dark"] .story-paragraph > p[lang="en"],
 html[data-theme="dark"] .story-article h2,
-html[data-theme="dark"] .meaning-cell,
-html[data-theme="dark"] .choice-list ion-label h3,
 html[data-theme="dark"] .book-setup-title h3,
-html[data-theme="dark"] .settings-section h2,
 html[data-theme="dark"] .memory-plan-heading h3,
-html[data-theme="dark"] .sheet-heading h2,
 html[data-theme="dark"] .appearance-sample span:first-child,
 html[data-theme="dark"] .settings-menu > button > span,
-html[data-theme="dark"] .setting-row > span,
-html[data-theme="dark"] .setting-row strong {
-  color: #e8ebf0;
+html[data-theme="dark"] .setting-row > span {
+  color: var(--text-primary);
 }
-html[data-theme="dark"] .card-phonetic,
-html[data-theme="dark"] .word-number,
-html[data-theme="dark"] .current-book-button,
-html[data-theme="dark"] .standard-meaning,
-html[data-theme="dark"] .meaning-heading h2,
-html[data-theme="dark"] .profile-summary-text > span,
 html[data-theme="dark"] .appearance-sample span:last-child,
-html[data-theme="dark"] .field-note,
-html[data-theme="dark"] .source-note,
-html[data-theme="dark"] .gloss-label,
-html[data-theme="dark"] .mnemonic-example p,
-html[data-theme="dark"] .word-detail .detail-meaning .word-detail-example,
 html[data-theme="dark"] .dictionary-meaning,
-html[data-theme="dark"] .book-detail-summary,
-html[data-theme="dark"] .settings-form label,
-html[data-theme="dark"] .form-label,
-html[data-theme="dark"] .choice-list ion-label p,
 html[data-theme="dark"] .segment-control button:not([aria-pressed="true"]),
-html[data-theme="dark"] .reading-type-sample,
-html[data-theme="dark"] .story-paragraph > p[lang="zh"],
-html[data-theme="dark"] .article-block > .article-translation {
-  color: #9aa3b2;
+html[data-theme="dark"] .story-paragraph > p[lang="zh"] {
+  color: var(--text-muted);
 }
 html[data-theme="dark"] input,
 html[data-theme="dark"] textarea,
 html[data-theme="dark"] select {
-  color: #e8ebf0;
+  color: var(--text-primary);
   background: var(--glass-fill);
   border-color: var(--glass-edge);
 }
@@ -143,18 +81,9 @@ html[data-theme="dark"] .sort-field select {
 html[data-theme="dark"] .hidden-meaning > span {
   background: #354353;
 }
-html[data-theme="dark"] .mark-grid i {
-  background: #3e5053;
-}
-html[data-theme="dark"] .mark-grid i[data-filled=true] {
-  background: #79bea2;
-}
-html[data-theme="dark"] ion-modal.app-sheet {
-  --ion-text-color: #e8ebf0;
-}
-html[data-theme="dark"] ion-tab-button {
-  --color: #9aa3b2;
-  --color-selected: #8ec0ff;
+ion-tab-button {
+  --color: var(--text-muted);
+  --color-selected: var(--accent);
 }
 html[data-theme="dark"] ion-toggle.known-toggle,
 html[data-theme="dark"] ion-toggle.setting-toggle {
@@ -164,17 +93,4 @@ html[data-theme="dark"] ion-toggle.setting-toggle {
 }
 html[data-theme="dark"] ion-toggle::part(track) {
   box-shadow: inset 0 0 0 1px var(--glass-edge);
-}
-@supports not (backdrop-filter:blur(1px)) {
-  html[data-theme="dark"] { --glass-fill: #263041; --sheet-fill: #181f2b; }
-}
-@media(prefers-reduced-transparency:reduce),(prefers-contrast:more) {
-  html[data-theme="dark"] {
-    --glass-fill: #263041;
-    --glass-card-fill: #263041;
-    --glass-filter: none;
-    --glass-edge: #697c97;
-    --glass-selected: #344f78;
-    --sheet-fill: #181f2b;
-  }
 }
