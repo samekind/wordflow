@@ -387,33 +387,45 @@ ion-app{
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 14px;
 }
-.english-entry ion-item-sliding,.study-card-item{display:block;width:100%;min-width:0}
-.english-entry ion-item-options{width:104px !important}
-.meaning-entry ion-item-options{width:84px !important;
-  border: 0}
-.english-entry ion-item-option{width:52px;min-width:52px;max-width:52px;font-size: var(--fs-tab)}
-.meaning-entry ion-item-option{width:84px;min-width:84px;max-width:84px;font-size: var(--fs-caption)}
-.study-card-item{--background:transparent;--inner-padding-end:0;--inner-padding-start:0;--min-height:0}
-.study-card-item::part(native){padding:0}
-.meaning-entry ion-item-sliding{
-  display: block;
+/* Swipe row (components/SwipeRow.tsx): the card slides left over one 56px action. */
+.swipe-row{
+  position: relative;
+  width: 100%;
   min-width: 0;
-  max-width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+  --reveal: 0;
+}
+.swipe-action{
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 56px;
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: #fff;
+  background: var(--warning);
+  opacity: var(--reveal);
+}
+.swipe-row.tone-neutral .swipe-action{
+  background: var(--text-muted);
+}
+.swipe-layer{
+  position: relative;
+  height: 100%;
+  background: inherit;
+  border-radius: inherit;
+}
+.english-entry .swipe-layer{
+  background: var(--glass-card-fill);
 }
 .meaning-entry{
   scroll-margin-top: 90px;
   min-width: 0;
   border-bottom: 1px solid var(--line);
-}
-.meaning-entry ion-item{
-  --background: transparent;
-  --min-height: 43px;
-  --padding-start: 0;
-  --inner-padding-end: 0;
-  --border-width: 0;
-  --inner-border-width: 0;
-  --padding-end: 0;
-  --inner-padding-start: 0;
 }
 .meaning-row{
   display: grid;
@@ -452,11 +464,6 @@ ion-app{
   height: 7px;
   border-radius: 4px;
   background: #e8efeb;
-}
-.meaning-entry ion-item-option::part(native){
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 .study-pagination{
   display: grid;

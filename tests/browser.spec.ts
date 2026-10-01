@@ -6,6 +6,14 @@ import { emptyStore, importToPersonal, importWords, reviewWord, storyKey, valida
 import { starterRows } from '../src/vocabulary'
 import { newWords } from '../src/study'
 
+/** The study page keeps secondary actions behind ⋯; open it (once) and query inside. */
+async function studyMenu(page: Page) {
+  const more = page.getByRole('button', { name: '更多操作', exact: true })
+  if (await more.getAttribute('aria-expanded') !== 'true') await more.click()
+  return page.getByRole('group', { name: '更多操作' })
+}
+
+
 const examFrequency = frequencySchema.parse(JSON.parse(readFileSync('public/vocabulary/exam-frequency-2022-2026.json', 'utf8')))
 function studied(store: Store) { return orderPersonalBook(store, examFrequency) }
 function listed(store: Store, index: number) { return store.words.find(word => word.id === store.books[0].wordIds[index])! }
@@ -277,7 +285,7 @@ test('custom daily volumes persist, preserve old plans and marks keep a neutral 
     .toEqual(frequency.exams.cet4.words.slice(0, 17).map((word: { word: string }) => word.word.toLowerCase()))
   await page.reload()
   await expect(page.locator('.english-entry')).toHaveCount(17)
-  await page.getByRole('button', { name: '复习计划', exact: true }).click()
+  await (await studyMenu(page)).getByRole('button', { name: '复习计划', exact: true }).click()
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 844 })
     await expect(page.locator('.memory-table tbody tr')).toHaveCount(8)
@@ -290,7 +298,7 @@ test('custom daily volumes persist, preserve old plans and marks keep a neutral 
   await page.getByLabel('复习方法', { exact: true }).selectOption('fsrs')
   await expect.poll(async () => (await state(page)).reviewMethod).toBe('fsrs')
   await nav(page, '学习')
-  await page.getByRole('button', { name: '复习计划', exact: true }).click()
+  await (await studyMenu(page)).getByRole('button', { name: '复习计划', exact: true }).click()
   await expect(page.getByRole('table', { name: 'FSRS 复习规则' })).toBeVisible()
 })
 
@@ -306,7 +314,7 @@ test('card layouts persist and spaced reviews support due completion and undo', 
   await expect(page.locator('.day-title')).toHaveText('到期复习')
   await expect(page.locator('.english-entry')).toHaveCount(1)
   await page.getByRole('button', { name: '新词', exact: true }).click()
-  await page.getByRole('button', { name: /^回看本单元/ }).click()
+  await (await studyMenu(page)).getByRole('button', { name: /^回看本单元/ }).click()
   await expect(page.locator('.english-entry')).toHaveCount(20)
   await expect(page.locator('.card-meaning')).toHaveCount(0)
   await page.getByRole('button', { name: '看词', exact: true }).click()
@@ -317,7 +325,7 @@ test('card layouts persist and spaced reviews support due completion and undo', 
   await expect(page.locator('.meaning-section')).toHaveCount(0)
   await expect(page.locator('.english-entry').nth(1)).toHaveAttribute('data-next', '20 分钟')
   expect((await state(page)).reviews).toHaveLength(1)
-  await page.getByRole('button', { name: '朗读本组', exact: true }).click()
+  await (await studyMenu(page)).getByRole('button', { name: '朗读本组', exact: true }).click()
   expect((await page.evaluate(() => (window as any).__speech)).at(-1).text).toContain(listed(initial, 0).word)
   await page.locator('.english-entry').nth(1).locator('.english-line').click()
   await expect(page.locator('.english-entry').nth(1)).toHaveAttribute('data-mark-count', '1')
@@ -349,7 +357,7 @@ test('card layouts persist and spaced reviews support due completion and undo', 
     await page.screenshot({ path: `test-results/cards-preview-${width}.png`, animations: 'disabled' })
   }
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.getByRole('button', { name: '复习计划', exact: true }).click()
+  await (await studyMenu(page)).getByRole('button', { name: '复习计划', exact: true }).click()
   await expect(page.locator('.memory-table tbody tr')).toHaveCount(8)
   await page.screenshot({ path: 'test-results/memory-plan-390.png', animations: 'disabled' })
   await page.getByRole('button', { name: '开始到期复习 · 1 词', exact: true }).click()
@@ -413,7 +421,7 @@ test('legacy migration, independent pronunciation and marks, known words, day po
   await closeSheet(page)
   await expect(page.locator('.english-entry')).toHaveCount(20)
   await expect(first).toContainText('熟词')
-  await page.getByRole('button', { name: '撤销上一步', exact: true }).click()
+  await (await studyMenu(page)).getByRole('button', { name: '撤销上一步', exact: true }).click()
   await expect(first).toHaveAttribute('data-word-id', id)
   await expect(page.locator('.english-entry')).toHaveCount(20)
   await closeToast(page)
@@ -421,7 +429,7 @@ test('legacy migration, independent pronunciation and marks, known words, day po
   await expect.poll(async () => (await state(page)).books[0].completedWordIds.length).toBe(20)
   await expect(page.locator('.study-submit-area')).toContainText('本组已检查完，下次复习已安排')
   expect((await state(page)).reviews).toHaveLength(20)
-  await page.getByRole('button', { name: '撤销上一步' }).click()
+  await (await studyMenu(page)).getByRole('button', { name: '撤销上一步' }).click()
   await expect.poll(async () => (await state(page)).reviews.length).toBe(0)
   expect((await state(page)).books[0].completedWordIds).toHaveLength(0)
   await page.getByRole('button', { name: '下一单元', exact: true }).click()

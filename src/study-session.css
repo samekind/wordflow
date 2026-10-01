@@ -38,3 +38,57 @@
 .context-reader .story-article h2,.context-reader .story-paragraph>p[lang=en]{color:var(--text-primary)}
 .context-reader .story-translation{color:var(--text-secondary)}
 @media(max-width:360px){.study-task-tabs button{padding:5px 6px;font-size: var(--fs-small)}.study-submit-area button{max-width:100%}}
+
+/* ==================== Study page, simplified ====================
+   One header line (book · unit, then ⋯), an optional new / due switch, the 看词 / 自测 switch
+   with group progress, then the words. Everything else lives in the ⋯ menu. */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.study-head{display:flex;align-items:center;gap:6px;padding-top:calc(10px + var(--ion-safe-area-top));min-height:calc(56px + var(--ion-safe-area-top));flex-shrink:0}
+.study-head .study-scope{flex:1;min-width:0;margin:0}
+.study-menu{position:relative;flex-shrink:0}
+.study-menu-panel{position:absolute;right:0;top:calc(100% + 6px);z-index:30;min-width:216px;display:flex;flex-direction:column;padding:6px;border-radius:var(--radius-md);background:var(--sheet-fill);border:1px solid var(--glass-edge);box-shadow:0 16px 40px rgba(23,31,50,.16),var(--glass-shadow);backdrop-filter:var(--glass-filter);-webkit-backdrop-filter:var(--glass-filter)}
+.study-menu-panel>button{display:flex;align-items:center;gap:10px;min-height:var(--tap);padding:0 12px;border-radius:var(--radius-sm);font-size:var(--fs-body);color:var(--text-primary);text-align:left}
+.study-menu-panel>button svg{color:var(--text-muted)}
+.study-menu-panel>button:active{background:var(--surface-inset)}
+.study-menu-panel>button[aria-pressed=true]{color:var(--accent)}
+.study-menu-note{margin:4px 12px 6px;padding-top:8px;border-top:1px solid var(--line);font-size:var(--fs-caption);color:var(--text-muted)}
+.study-task-tabs{margin:4px 0 10px}
+.study-tools{display:flex;align-items:center;gap:10px;min-height:var(--tap);margin:2px 0 12px}
+.study-tools .study-stage-switch{flex:0 0 auto}
+.study-tools .study-task-progress{flex:1;min-width:0;text-align:right;font-size:var(--fs-small);color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ==================== First run: 选词书 → 定计划 → 看安排 ==================== */
+.start-plan{display:flex;flex-direction:column;gap:16px;padding:calc(18px + var(--ion-safe-area-top)) 0 calc(96px + var(--ion-safe-area-bottom))}
+.start-steps{display:flex;gap:6px;list-style:none;margin:0;padding:0}
+.start-steps li{display:flex;align-items:center;gap:6px;font-size:var(--fs-small);color:var(--text-faint)}
+.start-steps li+li::before{content:"";width:18px;height:1px;background:var(--line-strong);margin-right:2px}
+.start-steps li>svg,.start-steps li{font-variant-numeric:tabular-nums}
+.start-steps li[aria-current=step]{color:var(--accent);font-weight:var(--fw-semibold)}
+.start-steps li[data-done=true]{color:var(--text-muted)}
+.start-title{margin:4px 0 0;font-size:var(--fs-display);line-height:1.25;font-weight:var(--fw-bold);color:var(--text-primary)}
+.start-lead{margin:-6px 0 0;font-size:var(--fs-body);line-height:1.7;color:var(--text-secondary)}
+.start-books{display:flex;flex-direction:column;gap:10px}
+.start-book{display:flex;align-items:center;gap:14px;width:100%;min-height:72px;padding:10px 14px;text-align:left;border-radius:var(--radius-md);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.start-book .book-cover{width:40px;height:52px;gap:6px}
+.start-book .book-cover b{font-size:8px}
+.start-book>span:nth-child(2){flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.start-book strong{font-size:var(--fs-body-l);font-weight:var(--fw-semibold);color:var(--text-primary)}
+.start-book small{font-size:var(--fs-small);color:var(--text-muted)}
+.start-book>svg{color:var(--text-faint)}
+.start-book:active{transform:scale(.99)}
+.start-import{align-self:center}
+.start-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.start-summary>div{display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:var(--radius-sm);background:var(--surface-inset)}
+.start-summary strong{font-size:var(--fs-title);font-variant-numeric:tabular-nums;color:var(--text-primary)}
+.start-summary span{font-size:var(--fs-caption);color:var(--text-muted)}
+.start-actions{display:flex;gap:10px;margin-top:4px}
+.start-actions>.primary{flex:1}
+.start-schedule{width:100%;border-collapse:collapse;font-size:var(--fs-meta);font-variant-numeric:tabular-nums}
+.start-schedule th,.start-schedule td{padding:8px 4px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.start-schedule thead th{font-size:var(--fs-caption);font-weight:var(--fw-medium);color:var(--text-muted)}
+.start-schedule tbody th{font-weight:var(--fw-medium);color:var(--text-secondary)}
+.start-schedule td b{color:var(--accent);font-weight:var(--fw-semibold)}
+.start-schedule .start-review{white-space:normal;color:var(--text-secondary)}
+.start-schedule td:last-child{text-align:right}
+.start-schedule tr[data-today=true] th{color:var(--accent)}
+.start-load{display:inline-block;min-width:44px;padding:2px 8px;border-radius:var(--radius-pill);text-align:center;background:color-mix(in srgb,var(--accent) calc(var(--load,0) * 26%),transparent);color:var(--text-primary)}

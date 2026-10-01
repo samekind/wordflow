@@ -104,6 +104,7 @@ export default function App() {
           </header>}
           <div className={`content ${screen.name === 'today' ? 'study-view' : ''}`}>
             {screen.name === 'today' && <StudyList store={store} now={data.clock} saving={saving} canUndo={study.canUndo}
+              start={{ catalog: words.catalog, busy: words.bookBusy || saving, error: words.catalogError, onRetry: words.refreshCatalog, onInstall: words.installCatalogBook }}
               onMark={study.changeMarks} onStudy={study.changeStudy} onRestart={study.restartStudy} onDay={study.selectDay} onOpenWord={openWord} onUndo={study.undoLastAction}
               onLearning={learning => commit({ ...storeRef.current, learning })}
               onLayout={studyLayout => { void commit({ ...storeRef.current, studyLayout }) }}

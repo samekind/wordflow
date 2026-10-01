@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { IonAlert, IonItem, IonItemOption, IonItemOptions, IonItemSliding } from '@ionic/react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { IonAlert } from '@ionic/react'
 import { motion, useReducedMotion } from 'motion/react'
-import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, Minus, Plus, RotateCcw, Volume2 } from 'lucide-react'
+import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clock3, Ellipsis, Eye, EyeOff, Plus, RotateCcw, Volume2 } from 'lucide-react'
 import { PreviewIcon, RecallIcon } from './icons'
 import { coreGloss } from './gloss'
 import { bookDays, dayKey, ebbNextLabel, intervalLabel, markLevel, memoryIntervals, wordsForDay, type Store, type WordBook } from './model'
@@ -13,8 +13,14 @@ import GlassSlider from './components/GlassSlider'
 import MarkDots from './components/MarkDots'
 import { Segmented } from './components/Controls'
 import ContextReader, { type ContextServices } from './components/ContextReader'
+import SwipeRow from './components/SwipeRow'
+import StartPlan from './components/StartPlan'
+import type { CatalogBook } from './wordbooks'
 
+type StartProps = { catalog: CatalogBook[]; busy: boolean; error: string; onRetry: () => void; onInstall: (book: CatalogBook, daily: number) => Promise<boolean> }
 type Props = {
+  /** First-run plan (choose book, daily count, schedule) shown while there is no wordbook. */
+  start?: StartProps;
   store: Store; now: number; saving: boolean; canUndo: boolean;
   onMark: (id: string, delta: 1 | -1) => Promise<boolean>;
   onStudy: (draft: StudyDraft, action: StudyAction) => Promise<boolean>;
@@ -25,13 +31,29 @@ type Props = {
   onLayout: (layout: Store['studyLayout']) => void; onSpeak: (text: string) => void; onStop: () => void;
   contextServices: ContextServices;
 }
-export default function StudyList({ store, now, saving, canUndo, onMark, onStudy, onRestart, onLearning, onDay, onOpenWord, onUndo, onBooks, onImport, onLayout, onSpeak, onStop, contextServices }: Props) {
+/** ⋯ menu for everything that is not the current word list. */
+function StudyMenu({ children }: { children: (close: () => void) => ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const root = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const away = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false) }
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
+    document.addEventListener('pointerdown', away); document.addEventListener('keydown', key)
+    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', key) }
+  }, [open])
+  return <div className="study-menu" ref={root}>
+    <button className="icon-button" aria-label="更多操作" aria-expanded={open} aria-haspopup="true" onClick={() => setOpen(!open)}><Ellipsis size={20} /></button>
+    {open && <div className="study-menu-panel" role="group" aria-label="更多操作">{children(() => setOpen(false))}</div>}
+  </div>
+}
+
+export default function StudyList({ start, store, now, saving, canUndo, onMark, onStudy, onRestart, onLearning, onDay, onOpenWord, onUndo, onBooks, onImport, onLayout, onSpeak, onStop, contextServices }: Props) {
   const reduced = useReducedMotion()
   const [daysOpen, setDaysOpen] = useState(false), [showMeanings, setShowMeanings] = useState(false), [planOpen, setPlanOpen] = useState(false)
   const [replaceKind, setReplaceKind] = useState<StudyKind | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const press = useRef({ x: 0, y: 0, moved: false, held: false })
-  const cardSlides = useRef(new Map<string, { closeOpened: () => Promise<boolean> }>())
   const book = store.books.find(item => item.id === store.activeBookId), days = book ? bookDays(book) : []
   const day = Math.min(book?.currentDay || 0, Math.max(0, days.length - 1))
   const moment = new Date(now), mode = studyView(store, moment), queue = reviewQueue(store, moment), fresh = newWords(store)
@@ -83,8 +105,11 @@ export default function StudyList({ store, now, saving, canUndo, onMark, onStudy
     else if (book && day + 1 < days.length) void chooseDay(day + 1)
     else switchMode('review')
   }
+  // Swipe does the opposite of a tap when there is something to undo: in 看词 a marked word
+  // loses one mark, in 自测 a word already marked 不熟 is cleared; otherwise it marks.
+  const swipeDelta = (row: typeof rows[number]): 1 | -1 => preview ? (row.markCount > 0 ? -1 : 1) : (row.forgotten ? -1 : 1)
+  const swipeLabel = (row: typeof rows[number]) => preview ? (row.markCount > 0 ? '−1' : '标记') : (row.forgotten ? '取消' : '不熟')
   async function markEntry(id: string, delta: 1 | -1) {
-    await cardSlides.current.get(id)?.closeOpened()
     if (preview) return onMark(id, delta)
     if (mode === 'practice') { const selected = new Set(practice?.forgottenIds || []); if (delta > 0) selected.add(id); else selected.delete(id); return practiceState({ forgottenIds: [...selected], completedAt: null }) }
     return draft && !completed ? onStudy(draft, { type: delta > 0 ? 'forget' : 'cancel', wordId: id }) : false
@@ -106,46 +131,62 @@ export default function StudyList({ store, now, saving, canUndo, onMark, onStudy
     if (draft) void onStudy(draft, stage === 'context' ? { type: 'method', method: 'context' } : { type: stage === 'test' ? 'self-test' : 'preview' })
     else if (mode === 'practice') onLayout(stage === 'test' ? 'test' : 'preview')
   }
+  // First run: no wordbook yet, so 学习 walks through choosing one instead of an empty page.
+  if (!store.books.length && start) return <section className="study-list-view" aria-label="列表背词"><div className="english-page"><StartPlan store={store} {...start} onImport={onImport} /></div></section>
+  const showTasks = mode === 'review' || queue.length > 0
   return <section className={`study-list-view layout-${store.studyLayout}`} aria-label="列表背词">
     <div className="english-page">
-      <header className="study-page-heading"><h1>学习</h1><button className="text-button header-action" aria-label="复习计划" onClick={() => setPlanOpen(true)}><Clock3 size={17} />复习计划</button></header>
-      <Segmented label="学习任务" className="study-task-tabs" disabled={saving}
-        value={mode === 'review' ? 'review' : mode === 'practice' ? 'practice' : 'learn'}
-        onChange={view => switchMode(view === 'review' ? 'review' : 'learn')}
-        options={[
-          // In practice mode the 新词 tab shows as selected and tapping it returns to learning.
-          { value: mode === 'practice' ? 'practice' as const : 'learn' as const, ariaLabel: '新词', title: `本单元待学 ${fresh.length} 词`, label: <>新词 <span>{fresh.length}</span></> },
-          { value: 'review' as const, ariaLabel: '到期复习', title: `全部词书到期 ${queue.length} 词`, label: <>到期复习 <span>{queue.length}</span></> },
-        ]} />
-      <div className="study-scope">
+      {/* One line: what you are studying, and everything else behind ⋯. */}
+      <header className="study-head">
+        <h1 className="sr-only">学习</h1>
+        <div className="study-scope">
         <div className="study-date-nav" data-review={mode === 'review'}>
           {mode !== 'review' && <button className="icon-button" aria-label="上一单元" disabled={!book || !day || saving} onClick={() => void chooseDay(day - 1)}><ChevronLeft size={19} /></button>}
           <div className="deck-title"><span className="study-deck-label">{mode === 'review' ? <><span className="current-book-label">全部词书</span><span className="day-title">到期复习</span></> : <><button className="current-book-button" aria-label="选择目标词书" title={book?.title || '选择目标词书'} disabled={saving} onClick={onBooks}><span>{book?.title || '选择目标词书'}</span><ChevronDown size={11} /></button>
             <button className="study-day-button" aria-label="选择学习单元" disabled={!book || saving} onClick={() => setDaysOpen(true)}><span className="day-title">第 {day + 1} 单元</span><ChevronDown size={12} /></button></>}</span></div>
           {mode !== 'review' && <button className="icon-button" aria-label="下一单元" disabled={!book || day >= days.length - 1 || saving} onClick={() => void chooseDay(day + 1)}><ChevronRight size={19} /></button>}
         </div>
-      </div>
-      {draft && <div className="study-draft-note" aria-label="本次任务进度"><div className="study-task-progress"><strong>第 {currentPage + 1} 组 · {rows.length} 词{completed ? ' · 已提交' : ''}</strong><span>已完成 {draft.completed.length} / {groups.length} 组</span>{mode === 'review' && pendingReviewGroups.length > 0 && laterReviews > 0 && <span className="study-later-reviews">另有 {laterReviews} 词到期，完成本次后继续</span>}</div></div>}
-      {!!rows.length && <><div className="study-tools"><Segmented label="学习方式" className="study-stage-switch"
+        </div>
+        <StudyMenu>{close => <>
+          <button onClick={() => { close(); setPlanOpen(true) }}><Clock3 size={16} />复习计划</button>
+          {!!rows.length && <button disabled={saving} onClick={() => { close(); onSpeak(rows.filter(row => !row.missing).map(row => row.word).join('. ')) }}><Volume2 size={16} />朗读本组</button>}
+          {!!rows.length && mode !== 'practice' && <button aria-pressed={contextMode} disabled={saving || contextServices.busy} onClick={() => { close(); chooseStage('context') }}><BookOpen size={16} />读短文</button>}
+          {book && mode !== 'review' && <button disabled={saving} onClick={() => { close(); switchMode(mode === 'practice' ? 'learn' : 'practice') }}><RotateCcw size={16} />{mode === 'practice' ? '返回本单元新词' : '回看本单元 · 不改变复习计划'}</button>}
+          <button disabled={!canUndo || saving} onClick={() => { close(); onUndo() }} aria-label="撤销上一步"><RotateCcw size={16} />撤销上一步</button>
+          {savedDraft && !draftComplete(draft) && <button disabled={saving} onClick={() => { close(); restart(draft.kind) }}>重新开始本组</button>}
+          <button onClick={() => { close(); onImport() }}><Plus size={16} />导入词表</button>
+          <p className="study-menu-note" aria-label="今日学习统计">今日新学 {stats.newToday} 词 · 复习 {stats.reviewedToday} 词</p>
+        </>}</StudyMenu>
+      </header>
+      {/* New vs due review only matters when something is due. */}
+      {showTasks && <Segmented label="学习任务" className="study-task-tabs" disabled={saving}
+        value={mode === 'review' ? 'review' : mode === 'practice' ? 'practice' : 'learn'}
+        onChange={view => switchMode(view === 'review' ? 'review' : 'learn')}
+        options={[
+          // In practice mode the 新词 tab shows as selected and tapping it returns to learning.
+          { value: mode === 'practice' ? 'practice' as const : 'learn' as const, ariaLabel: '新词', title: `本单元待学 ${fresh.length} 词`, label: <>新词 <span>{fresh.length}</span></> },
+          { value: 'review' as const, ariaLabel: '到期复习', title: `全部词书到期 ${queue.length} 词`, label: <>到期复习 <span>{queue.length}</span></> },
+        ]} />}
+      {!!rows.length && <div className="study-tools"><Segmented label="学习方式" className="study-stage-switch"
         value={contextMode ? 'context' : preview ? 'preview' : 'test'} disabled={saving || contextServices.busy} onChange={chooseStage}
         options={[
           { value: 'preview' as const, label: <><PreviewIcon size={15} />看词</> },
-          ...(mode !== 'practice' ? [{ value: 'context' as const, label: <><BookOpen size={15} />读短文</> }] : []),
           { value: 'test' as const, label: <><RecallIcon size={15} />自测</> },
-        ]} /><button className="icon-button" aria-label="朗读本组" disabled={saving} onClick={() => onSpeak(rows.filter(row => !row.missing).map(row => row.word).join('. '))}><Volume2 size={17} /></button></div>
-      <p className="study-instruction">{mode === 'practice' ? '回看本单元，只练习，不改变复习计划。' : contextMode ? '用本组词读一篇短文，再回到自测。' : preview ? '先熟悉词义，准备好后进入自测。长按单词可查词。' : completed ? '本组已完成，可以继续下一组。' : '先回想词义，点一下标“不熟”，长按查词；核对后提交。'}</p></>}
+        ]} />
+        {draft && <span className="study-task-progress" aria-label="本次任务进度">已完成 {draft.completed.length} / {groups.length} 组{mode === 'review' && pendingReviewGroups.length > 0 && laterReviews > 0 && <span className="study-later-reviews"> · 另有 {laterReviews} 词到期</span>}</span>}
+      </div>}
       {!rows.length ? <div className="study-empty"><BookOpen size={30} /><h2>{mode === 'review' ? '暂无到期复习' : !book ? '从一本词书开始' : '本单元暂无新词'}</h2><p>{mode === 'review' ? nextDue ? `下次复习在 ${intervalLabel(nextDue.card.due, moment)}后` : '完成新词自测后，这里会按计划安排复习。' : !book ? '选词书 → 看词或读短文 → 自测提交。每组最多 20 词，中途退出会保留进度。' : '本单元的词已学过或已标熟，可以回看，或继续下一单元。'}</p><div className="button-row">{mode === 'review' && <button className="primary" disabled={saving} onClick={() => switchMode('learn')}>学习新词</button>}{book && day + 1 < days.length && mode !== 'review' && <button className="primary" onClick={() => void chooseDay(day + 1)}>进入下一单元</button>}{!book && <><button className="primary" onClick={onBooks}>选择词书</button><button className="secondary" onClick={onImport}>导入词表</button></>}</div></div> : <>
         {contextMode && draft ? <ContextReader store={store} draft={draft} now={now} services={contextServices} onWord={onOpenWord} onSpeak={onSpeak} onStop={onStop} onCheck={() => { onStop(); void onStudy(draft, { type: 'self-test' }) }} /> : <><motion.ol className="english-grid" aria-label="编号英文词表" key={currentKey} initial={reduced ? false : { opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .18 }}>
           {rows.map(row => <li className="english-entry" key={row.id} data-word-id={row.id} data-number={number(row.id)} data-mark-count={markLevel(row.markCount)} data-mark-level={markLevel(row.markCount)} data-forgotten={row.forgotten} data-next={store.reviewMethod === 'ebbinghaus' && byId.has(row.id) ? ebbNextLabel(byId.get(row.id)!, row.forgotten) : ''}>
-            <IonItemSliding disabled={saving || row.missing || (!preview && completed)} onIonDrag={() => { press.current.moved = true; cancelPress() }} ref={node => { if (node) cardSlides.current.set(row.id, node); else cardSlides.current.delete(row.id) }}>
-              <IonItem lines="none" className="study-card-item"><button className="english-line" disabled={saving || row.missing} aria-label={`${number(row.id)} ${row.word}，标记 ${markLevel(row.markCount)} / 6${row.forgotten ? '，本轮不熟' : ''}`} title={preview ? '点按加标记，长按查词' : '点按标本轮不熟，长按查词，左滑可取消'}
+            <SwipeRow disabled={saving || row.missing || (!preview && completed)} tone={swipeLabel(row) === '不熟' || swipeLabel(row) === '标记' ? 'warn' : 'neutral'} action={swipeLabel(row)}
+              onSwipeStart={() => { press.current.moved = true; cancelPress() }} onAction={() => void markEntry(row.id, swipeDelta(row))}>
+              <button className="english-line" disabled={saving || row.missing} aria-label={`${number(row.id)} ${row.word}，标记 ${markLevel(row.markCount)} / 6${row.forgotten ? '，本轮不熟' : ''}`} title={preview ? '点按加标记，长按查词' : '点按标本轮不熟，长按查词，左滑可取消'}
                 onPointerDown={event => { if (event.button !== 0) return; cancelPress(); press.current = { x: event.clientX, y: event.clientY, moved: false, held: false }; timer.current = setTimeout(() => { press.current.held = true; onOpenWord(row.id) }, 480) }}
                 onPointerMove={event => { if (Math.hypot(event.clientX - press.current.x, event.clientY - press.current.y) > 8) { press.current.moved = true; cancelPress() } }} onPointerUp={cancelPress} onPointerLeave={cancelPress} onPointerCancel={cancelPress}
                 onContextMenu={event => { event.preventDefault(); cancelPress(); press.current.held = true; onOpenWord(row.id) }} onClick={event => { if (event.detail === 0 || (!press.current.held && !press.current.moved)) { if (completed && !preview) onOpenWord(row.id); else void markEntry(row.id, 1) } }}>
                 <span className="word-index"><span className="word-number">{number(row.id)}</span><MarkDots count={row.markCount} /></span><span className="word-card-content"><span className="english-stack"><span className={`english-word${row.word.length > 14 ? ' long-word' : ''}`} lang="en">{row.word}</span>{row.phonetic && <span className="card-phonetic" lang="en">{row.phonetic}</span>}</span>{preview && <span className="card-meaning">{coreGloss(row.meaning)}</span>}{!!row.status && <span className="study-word-state">{row.status}</span>}{!preview && row.forgotten && <span className="study-word-state">本轮不熟</span>}</span>
-              </button></IonItem>
-              <IonItemOptions side="end"><IonItemOption color="medium" onClick={() => void markEntry(row.id, -1)}><Minus size={16} /><span>{preview ? '−1' : '取消不熟'}</span></IonItemOption><IonItemOption color="warning" onClick={() => void markEntry(row.id, 1)}><Plus size={16} /><span>{preview ? '标记' : '不熟'}</span></IonItemOption></IonItemOptions>
-            </IonItemSliding>
+              </button>
+            </SwipeRow>
           </li>)}
         </motion.ol>
         {!preview && <section className="meaning-section" aria-label="编号中文释义"><div className="meaning-heading"><h2>核对释义</h2><button className="text-button" onClick={() => setShowMeanings(!showMeanings)} aria-label={showMeanings ? '隐藏全部释义' : '显示全部释义'}>{showMeanings ? <EyeOff size={16} /> : <Eye size={16} />}{showMeanings ? '收起释义' : '展开核对'}</button></div>
@@ -159,10 +200,7 @@ export default function StudyList({ store, now, saving, canUndo, onMark, onStudy
         </div>}
         {preview && <div className="study-submit-area"><p>看词和标记会保留，完成自测后才安排复习。</p><button className="primary" disabled={saving} onClick={() => chooseStage('test')}>进入本组自测<ChevronRight size={17} /></button></div>}</>}
         <div className="study-pagination"><button className="icon-button" aria-label="上一组" disabled={saving || !currentPage} onClick={() => move(currentPage - 1)}><ChevronLeft size={19} /></button>{groups.length > 1 ? <GlassSlider name="词组" min={1} max={groups.length} value={currentPage + 1} label={page => `${page}`} thumbWidth={42} onCommit={page => { if (!saving) move(page - 1) }} /> : <span className="page-static" aria-label={`第 ${currentPage + 1} 组，共 ${groups.length} 组`}>{currentPage + 1} / {groups.length}</span>}<button className="icon-button" disabled={saving || currentPage >= groups.length - 1} onClick={() => move(currentPage + 1)} aria-label="下一组"><ChevronRight size={19} /></button></div>
-        <div className="study-secondary-actions"><button className="text-button" disabled={!canUndo || saving} onClick={onUndo} aria-label="撤销上一步"><RotateCcw size={14} />撤销上一步</button>{savedDraft && !draftComplete(draft) && <button className="text-button" disabled={saving} onClick={() => restart(draft.kind)}>重新开始</button>}</div>
       </>}
-      {book && mode !== 'review' && <button className="text-button study-practice-link" disabled={saving} onClick={() => switchMode(mode === 'practice' ? 'learn' : 'practice')}>{mode === 'practice' ? '返回本单元新词' : '回看本单元'}{mode !== 'practice' && <span>不改变复习计划</span>}</button>}
-      <div className="study-daily-summary" aria-label="今日学习统计">今日新学 {stats.newToday} 词 · 复习 {stats.reviewedToday} 词</div>
     </div>
     <ChoiceSheet title="学习单元" open={daysOpen} onClose={() => setDaysOpen(false)} value={String(day)} options={days.map((ids, index) => {
       const task = [store.learning.drafts.learn, ...store.learning.parked].find(item => item && item.bookId === book?.id && item.day === index)

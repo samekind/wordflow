@@ -36,7 +36,9 @@ export function useWordActions({ storeRef, saveLock, commit, notify, clearUndo, 
       const source = book.exam ? `${book.source} · 2022–2026卷面考频` : book.source
       const installed = installBook(storeRef.current, book.id, book.title, source, rows, daily)
       if (!await commit({ ...installed, learning: { ...installed.learning, view: 'learn' } })) return false
-      await modalController.dismiss(undefined, 'saved'); clearUndo(); onStudyBook(); return true
+      // Installed either from the 词书 sheet or inline from the first-run plan (no sheet open).
+      if (await modalController.getTop()) await modalController.dismiss(undefined, 'saved')
+      clearUndo(); onStudyBook(); return true
     } catch (error) { notify((error as Error).message); return false }
     finally { setBookBusy(false) }
   }
