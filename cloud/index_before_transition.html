@@ -1,0 +1,2922 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Wordflow · 拾词 — Repeat them, until they stay.</title>
+  <meta name="description" content="Wordflow 拾词 — 像素风个人单词记忆与短文巩固应用。纯离线优先，本地数据掌控。">
+  <link rel="icon" href="assets/logo.png?v=alpha">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter+Tight:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b14;
+      --fg: #ededeb;
+      --mute: #76767a;
+      --line: rgba(237, 237, 235, 0.12);
+      --line-bright: rgba(237, 237, 235, 0.22);
+      --accent: #3b82f6;
+      --accent-teal: #10b981;
+      --px: clamp(24px, 4.5vw, 64px);
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --font-pixel: "Press Start 2P", monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "Inter Tight", -apple-system, "PingFang SC", "Noto Sans SC", sans-serif;
+      overflow-x: hidden;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; }
+    ::selection { background: var(--accent); color: #fff; }
+
+    .mono {
+      font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .pixel-font { font-family: var(--font-pixel); }
+
+    /* ==================== FIXED BOTTOM HUD ==================== */
+    .hud {
+      position: fixed;
+      right: var(--px);
+      bottom: 28px;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--mute);
+      font-size: 11px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s var(--ease);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(7, 11, 20, 0.72);
+      padding: 7px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+    }
+    .hud i {
+      width: 64px;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.12);
+      position: relative;
+      overflow: hidden;
+      display: block;
+      border-radius: 1px;
+    }
+    .hud b {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      transform-origin: left;
+      transform: scaleX(0);
+      display: block;
+      transition: transform 0.15s linear;
+    }
+    .hud-clip {
+      display: inline-flex;
+      overflow: hidden;
+      height: 1.3em;
+      line-height: 1.3;
+      vertical-align: middle;
+    }
+    .hud-text {
+      display: inline-block;
+      transition: transform 0.35s var(--ease), opacity 0.35s var(--ease);
+    }
+    .hud-text.hud-exit {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    .hud-text.hud-enter {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    .hud #hudIdx { color: var(--fg); font-weight: 600; }
+
+    /* ==================== 00 HERO (Faithful to pebrel-paste-IdMaLS.png) ==================== */
+    .hero-split {
+      position: relative;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      grid-template-columns: minmax(360px, 460px) minmax(0, 1fr);
+      background: #070b14;
+      z-index: 2;
+    }
+    .hero-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 48px 36px 48px max(28px, env(safe-area-inset-left));
+      position: relative;
+      z-index: 2;
+      background: #070b14;
+    }
+    .brand { display: flex; }
+    .brand img {
+      width: 96px;
+      height: 96px;
+      object-fit: contain;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      filter: drop-shadow(0 0 1px rgba(220, 232, 245, .55)) drop-shadow(0 6px 18px rgba(46, 116, 196, .28));
+    }
+    .hero-title {
+      margin: 26px 0 0;
+      font-family: Palatino, "Palatino Linotype", "Iowan Old Style", "Songti SC", Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(38px, 4.4vw, 54px);
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+    }
+    .hero-title em {
+      font-style: italic;
+      font-weight: 450;
+      color: #ffffff;
+      display: block;
+      margin-top: 4px;
+      text-shadow: none;
+    }
+    .hero-lead {
+      margin: 20px 0 0;
+      max-width: 35ch;
+      color: #94a3b8;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+      flex-wrap: nowrap;
+    }
+
+    /* Chunky Arcade Buttons */
+    .px-btn {
+      font-family: var(--font-pixel);
+      font-size: 10.5px;
+      font-weight: 400;
+      padding: 11px 15px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      user-select: none;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: transform 0.16s var(--ease), box-shadow 0.16s var(--ease), filter 0.16s var(--ease);
+    }
+    .px-btn-white {
+      background: repeating-linear-gradient(180deg, #ffffff 0px, #ffffff 2px, #f1f5f9 2px, #f1f5f9 4px);
+      color: #000000;
+      border: 2px solid #000000;
+      box-shadow: 0 4px 0 #000000;
+    }
+    .px-btn-white:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 #000000, 0 8px 20px rgba(255, 255, 255, 0.2);
+      filter: brightness(1.04);
+    }
+    .px-btn-white:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #000000;
+    }
+    .px-btn-blue {
+      background: repeating-linear-gradient(180deg, #4f8cf6 0px, #4f8cf6 2px, #3b82f6 2px, #3b82f6 4px);
+      color: #ffffff;
+      border: 2px solid #2563eb;
+      box-shadow: 0 4px 0 #1e3a8a;
+    }
+    .px-btn-blue:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 #1e3a8a, 0 8px 20px rgba(59, 130, 246, 0.35);
+      filter: brightness(1.06);
+    }
+    .px-btn-blue:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #1e3a8a;
+    }
+
+    /* Vocabulary ticker */
+    .ticker {
+      margin: 22px 0 0;
+      max-width: 324px;
+      overflow: hidden;
+      border: 1px solid #1e293b;
+      background: #040711;
+      padding: 7px 10px;
+      border-radius: 2px;
+    }
+    .ticker-track { display: flex; width: max-content; animation: ticker 30s linear infinite; will-change: transform; }
+    .ticker-set {
+      font-family: "JetBrains Mono", Consolas, monospace;
+      white-space: nowrap;
+      color: #8da1b5;
+      font-size: 11.5px;
+      letter-spacing: .02em;
+    }
+    @keyframes ticker { to { transform: translateX(-50%); } }
+
+    .meta {
+      margin: 18px 0 0;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      color: #64748b;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .meta-dot {
+      width: 7px;
+      height: 7px;
+      background: #10b981;
+      display: inline-block;
+    }
+
+    /* Minimalist Scroll Cue */
+    .hero-scroll-cue {
+      margin-top: 36px;
+    }
+    .scroll-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--mute);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      transition: color 0.25s var(--ease), transform 0.25s var(--ease);
+    }
+    .scroll-link:hover {
+      color: #fff;
+      transform: translateY(2px);
+    }
+    .scroll-link svg {
+      color: var(--accent);
+      animation: bounceDown 2s ease-in-out infinite;
+    }
+    @keyframes bounceDown {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(3px); }
+    }
+
+    /* Hero Right CRT Stage */
+    .hero-art {
+      position: relative;
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow: hidden;
+      background: #040711;
+    }
+    .hero-art > img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    /* ==================== ALTERNATING FULL-BLEED SPLIT SECTIONS ("放大 和第一页那种一样") ==================== */
+    .section-split {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      min-height: 100vh;
+      min-height: 100dvh;
+      position: relative;
+      overflow: hidden;
+      background: #070b14;
+      z-index: 2;
+    }
+
+    /* Silky gradient divider connecting sections seamlessly */
+    .section-split + .section-split,
+    .hero-split + .section-split {
+      border-top: 1px solid transparent;
+      background-image: linear-gradient(90deg, transparent 5%, rgba(59, 130, 246, 0.32) 30%, rgba(237, 237, 235, 0.14) 50%, rgba(59, 130, 246, 0.32) 70%, transparent 95%);
+      background-size: 100% 1px;
+      background-repeat: no-repeat;
+      background-position: top;
+      position: relative;
+    }
+    .section-split + .section-split::before,
+    .hero-split + .section-split::before {
+      content: "";
+      position: absolute;
+      top: -16px;
+      left: 15%;
+      right: 15%;
+      height: 32px;
+      background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.12) 0%, rgba(59, 130, 246, 0.04) 45%, transparent 70%);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* ==================== 16-BIT RETRO PIXEL DITHER SEAM (页面之间像素消融交错带) ==================== */
+    .pixel-rift {
+      position: relative;
+      width: 100%;
+      height: 72px;
+      background: #020409;
+      overflow: hidden;
+      z-index: 8;
+      display: block;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .rift-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 2;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* Hide noisy small text annotations and floating tech HUDs */
+    .hud,
+    .fx-panel-container,
+    .crt-badge-tl,
+    .crt-badge-br,
+    .rift-hud {
+      display: none !important;
+    }
+
+    /* Alternating (左右交错) */
+    .section-split.is-reversed .sec-art {
+      order: 1;
+    }
+    .section-split.is-reversed .sec-copy {
+      order: 2;
+    }
+
+    .sec-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(48px, 6vw, 96px) clamp(36px, 5vw, 84px);
+      position: relative;
+      z-index: 2;
+      background: #070b14;
+    }
+
+    
+    
+
+    /* Section Typography */
+    .label {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--mute);
+      margin-bottom: 16px;
+    }
+    .label span { color: var(--accent); font-weight: 600; }
+
+    .sec__title {
+      font-size: clamp(34px, 4.2vw, 54px);
+      font-weight: 500;
+      line-height: 1.12;
+      letter-spacing: -0.035em;
+      margin-bottom: 16px;
+      font-family: Palatino, "Iowan Old Style", "Songti SC", Georgia, serif;
+    }
+    .sec__title em {
+      font-style: italic;
+      color: var(--accent);
+      font-weight: 400;
+    }
+    .sec__lead {
+      font-size: clamp(15px, 1.4vw, 19px);
+      line-height: 1.6;
+      letter-spacing: -0.015em;
+      color: #94a3b8;
+      margin-bottom: 30px;
+    }
+    .sec__lead em {
+      color: var(--fg);
+      border-bottom: 1px solid var(--accent);
+      font-style: normal;
+    }
+
+    /* ==================== FULL-BLEED CRT ART STAGE ("放大 和第一页那种一样") ==================== */
+    .sec-art {
+      position: relative;
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow: hidden;
+      background: #040711;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    @keyframes pixelArtFloat {
+      0%, 100% {
+        transform: scale(1.008) translateY(0px);
+      }
+      50% {
+        transform: scale(1.018) translateY(-6px);
+      }
+    }
+
+    .sec-art > img,
+    .hero-art > img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      animation: pixelArtFloat 7s ease-in-out infinite;
+      transform-origin: center center;
+      will-change: transform;
+      transition: transform 0.6s var(--ease), filter 0.6s var(--ease);
+    }
+    .sec-art:hover > img,
+    .hero-art:hover > img {
+      transform: scale(1.026) translateY(-6px);
+      filter: brightness(1.04);
+    }
+
+    /* Central Luminous Spotlight Overlay ("聚焦灯") */
+    .crt-spotlight {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at center, transparent 40%, rgba(4, 7, 17, 0.45) 80%, rgba(4, 7, 17, 0.78) 100%);
+      z-index: 4;
+    }
+
+    /* Authentic Horizontal CRT Scanlines */
+    .crt-scanlines {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.16) 0px,
+        rgba(0, 0, 0, 0.16) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      z-index: 3;
+      opacity: 0.65;
+    }
+
+    /* Dynamic Pixel Canvas Animation Layer */
+    /* When Frontend JavaScript Engine is active, stage canvas renders 100% live interactive pixel art */
+    body.js-active .sec-art > img {
+      display: none !important;
+    }
+    .stage-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      pointer-events: auto;
+      cursor: crosshair;
+    }
+    .sec-art {
+      cursor: crosshair;
+    }
+    .console-body .hl {
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .console-body .hl:hover,
+    .console-body .hl.word-active {
+      background: rgba(59, 130, 246, 0.65) !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+    }
+    .s-dot {
+      cursor: pointer;
+    }
+
+    /* Fullscreen Cross-Section Particle Transition Conduit */
+    .transition-canvas {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      pointer-events: none !important;
+      z-index: 85 !important;
+      display: block !important;
+    }
+
+    /* Silky Stage Enter Focus Bloom */
+    .sec-art > img.stage-focus,
+    .hero-art > img.stage-focus {
+      animation: stageFocusBloom 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes stageFocusBloom {
+      0% {
+        filter: brightness(1.24) contrast(1.08);
+      }
+      100% {
+        filter: brightness(1) contrast(1);
+      }
+    }
+
+    /* Retro CRT Badges */
+    .crt-badge-tl {
+      position: absolute;
+      top: 14px;
+      left: 18px;
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      z-index: 5;
+      pointer-events: none;
+    }
+    .crt-badge-br {
+      position: absolute;
+      bottom: 14px;
+      right: 18px;
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    /* Staggered Item Reveal */
+    .reveal-item {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.75s var(--ease), transform 0.75s var(--ease);
+      will-change: opacity, transform;
+    }
+    .section-split.is-visible .reveal-item,
+    .hero-split.is-visible .reveal-item {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .d-1 { transition-delay: 0.04s; }
+    .d-2 { transition-delay: 0.12s; }
+    .d-3 { transition-delay: 0.20s; }
+    .d-4 { transition-delay: 0.28s; }
+    .d-5 { transition-delay: 0.36s; }
+    .d-6 { transition-delay: 0.44s; }
+
+    /* ==================== INTERACTIVE WIDGETS ==================== */
+
+    /* Active Recall Interactive Card */
+    .recall-widget {
+      width: 100%;
+      max-width: 440px;
+      margin: 0;
+    }
+    .recall-card {
+      background: #090e18;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px 22px;
+      cursor: pointer;
+      user-select: none;
+      text-align: left;
+      transition: border-color .3s var(--ease), transform .3s var(--ease), box-shadow .3s var(--ease);
+    }
+    .recall-card:hover {
+      border-color: rgba(96, 165, 250, 0.6);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px -6px rgba(59, 130, 246, 0.25);
+    }
+    .card-row-top { display: flex; justify-content: space-between; align-items: baseline; }
+    .card-head-word { font-size: 20px; font-weight: 600; color: #fff; }
+    .card-head-phonetic { font-size: 12.5px; color: var(--mute); }
+    .card-row-bot {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      min-height: 28px;
+    }
+    .mask-pip {
+      height: 24px;
+      background: repeating-linear-gradient(90deg, rgba(59, 130, 246, 0.3) 0px, rgba(59, 130, 246, 0.3) 6px, rgba(14, 22, 38, 0.8) 6px, rgba(14, 22, 38, 0.8) 12px);
+      border: 1px solid rgba(96, 165, 250, 0.4);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      font-size: 11.5px;
+      color: #93c5fd;
+      transition: opacity 0.25s var(--ease);
+    }
+    .meaning-text {
+      font-size: 14.5px;
+      color: #cbd5e1;
+      display: none;
+      animation: fadeInText 0.35s var(--ease) forwards;
+    }
+    @keyframes fadeInText {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .recall-card.unmasked .mask-pip { display: none; }
+    .recall-card.unmasked .meaning-text { display: block; }
+
+    /* Interactive 6-Dot System */
+    .six-box {
+      width: 100%;
+      max-width: 440px;
+      margin: 0;
+    }
+    .six-dots { display: flex; gap: 10px; align-items: center; justify-content: flex-start; }
+    .s-dot {
+      width: 30px;
+      height: 30px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--line);
+      cursor: pointer;
+      transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.22s var(--ease), border-color 0.22s var(--ease), box-shadow 0.28s var(--ease);
+    }
+    .s-dot:hover {
+      border-color: rgba(255, 255, 255, 0.45);
+      transform: scale(1.16);
+    }
+    .s-dot.on {
+      background: var(--accent);
+      border-color: #60a5fa;
+      box-shadow: 0 0 14px rgba(59, 130, 246, 0.6);
+    }
+    .s-dot:nth-child(5).on, .s-dot:nth-child(6).on {
+      background: var(--accent-teal);
+      border-color: #34d399;
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.6);
+    }
+    .six-desc {
+      margin-top: 14px;
+      font-size: 13px;
+      color: #9cb1c4;
+      transition: color 0.3s var(--ease);
+      text-align: left;
+    }
+
+    /* Ebbinghaus Intervals List */
+    .plist {
+      list-style: none;
+      border-top: 1px solid var(--line);
+      width: 100%;
+      max-width: 440px;
+      margin: 0;
+      text-align: left;
+    }
+    .plist li {
+      border-bottom: 1px solid var(--line);
+      padding: 13px 0;
+      display: grid;
+      grid-template-columns: 60px 1fr auto;
+      align-items: center;
+      transition: background 0.25s var(--ease), padding-left 0.25s var(--ease);
+    }
+    .plist li:hover {
+      background: rgba(255, 255, 255, 0.02);
+      padding-left: 6px;
+    }
+    .plist li span.plist__num { color: var(--accent); font-weight: 700; }
+    .plist li b { font-weight: 500; font-size: 14.5px; }
+    .plist li span.plist__desc { color: var(--mute); font-size: 12.5px; }
+
+    /* Context Reader Console */
+    .retro-console {
+      width: 100%;
+      max-width: 440px;
+      margin: 0;
+      border-radius: 10px;
+      background: #090e18;
+      border: 1px solid var(--line);
+      padding: 16px 20px;
+      text-align: left;
+      transition: border-color 0.3s var(--ease), box-shadow 0.3s var(--ease), transform 0.3s var(--ease);
+    }
+    .retro-console:hover {
+      border-color: rgba(96, 165, 250, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px -4px rgba(59, 130, 246, 0.15);
+    }
+    .console-tag {
+      font-size: 10.5px;
+      color: var(--mute);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .console-tag .ok { color: var(--accent-teal); }
+    .console-body {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13.5px;
+      line-height: 1.7;
+      color: #cbd5e1;
+    }
+    .console-body .hl {
+      color: #fff;
+      background: rgba(59, 130, 246, 0.28);
+      padding: 0 4px;
+      border-radius: 3px;
+    }
+
+    /* 05 Download Finale */
+    .download-block {
+      width: 100%;
+      max-width: 440px;
+      margin: 0;
+      text-align: left;
+    }
+    .release-meta-strip {
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--mute);
+      font-size: 12px;
+    }
+
+    .social-strip {
+      margin-top: 32px;
+      padding-top: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--line);
+      width: 100%;
+      max-width: 440px;
+    }
+    .social-strip a {
+      color: var(--mute);
+      font-size: 12px;
+      transition: color 0.25s var(--ease);
+    }
+    .social-strip a:hover { color: #fff; }
+
+    .foot {
+      display: flex;
+      justify-content: space-between;
+      color: #4b5563;
+      padding-top: 16px;
+      font-size: 11.5px;
+      width: 100%;
+      max-width: 440px;
+    }
+    .foot a:hover { color: var(--fg); }
+
+    /* ==================== RETRO PARTICLE FX CUSTOMIZER ==================== */
+    .fx-panel-container {
+      position: fixed;
+      left: var(--px);
+      bottom: 28px;
+      z-index: 120;
+    }
+    .fx-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      background: rgba(7, 11, 20, 0.78);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--fg);
+      padding: 7px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 11px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      transition: all 0.2s var(--ease);
+      user-select: none;
+    }
+    .fx-toggle-btn:hover {
+      border-color: rgba(96, 165, 250, 0.5);
+      background: rgba(14, 22, 38, 0.88);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(59, 130, 246, 0.2);
+    }
+    .fx-icon {
+      color: var(--accent);
+      animation: spinSlow 8s linear infinite;
+    }
+    @keyframes spinSlow { to { transform: rotate(360deg); } }
+    .fx-mode-badge {
+      background: rgba(59, 130, 246, 0.25);
+      color: #93c5fd;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 9.5px;
+      border: 1px solid rgba(96, 165, 250, 0.3);
+    }
+
+    /* Popup Modal */
+    .fx-popup {
+      position: absolute;
+      left: 0;
+      bottom: 46px;
+      width: 320px;
+      background: #090e18;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 18px 20px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      opacity: 0;
+      transform: translateY(12px) scale(0.96);
+      pointer-events: none;
+      transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
+    }
+    .fx-popup.is-open {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+    .fx-popup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .fx-popup-title {
+      font-size: 11px;
+      color: var(--fg);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .fx-popup-title span { color: var(--accent); }
+    .fx-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--mute);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color 0.2s;
+    }
+    .fx-close-btn:hover { color: #fff; }
+
+    .fx-group { margin-bottom: 14px; }
+    .fx-group:last-child { margin-bottom: 0; }
+    .fx-group-title {
+      font-size: 10px;
+      color: var(--mute);
+      margin-bottom: 7px;
+      letter-spacing: 0.05em;
+    }
+    .fx-btn-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+    .fx-btn-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .fx-opt-btn {
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 10px;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.18s var(--ease);
+      text-align: center;
+      user-select: none;
+      flex: 1;
+      white-space: nowrap;
+    }
+    .fx-opt-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .fx-opt-btn.active {
+      background: rgba(59, 130, 246, 0.22);
+      border-color: #3b82f6;
+      color: #93c5fd;
+      font-weight: 600;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
+    }
+
+    /* ==================== RESPONSIVE DESIGN ==================== */
+    @media (max-width: 960px) {
+      .hero-split,
+      .section-split {
+        grid-template-columns: 1fr;
+        min-height: auto;
+      }
+      .hero-copy,
+      .sec-copy,
+      .section-split.is-reversed .sec-copy {
+        order: 1;
+        padding: 56px 24px 44px;
+        align-items: center;
+        text-align: center;
+      }
+      .hero-art,
+      .sec-art,
+      .section-split.is-reversed .sec-art {
+        order: 2;
+        height: 64vw;
+        min-height: 280px;
+      }
+      .recall-widget,
+      .six-box,
+      .plist,
+      .retro-console,
+      .download-block,
+      .social-strip,
+      .foot {
+        margin: 0 auto;
+      }
+      .six-dots {
+        justify-content: center;
+      }
+      .six-desc {
+        text-align: center;
+      }
+      .crt-monitor-frame {
+        max-width: 520px;
+      }
+      .brand img { width: 88px; height: 88px; }
+      .hero-title { font-size: clamp(32px, 8vw, 44px); }
+      .fx-panel-container { left: 16px; bottom: 20px; }
+      .fx-popup { width: calc(100vw - 32px); max-width: 320px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .ticker-track, .scroll-link svg, .fx-icon { animation: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fullscreen Cross-Section Particle Transition Conduit -->
+  <canvas id="transitionCanvas" class="transition-canvas" aria-hidden="true"></canvas>
+
+  <!-- Fixed Bottom HUD (HongShi style) -->
+  
+
+  <!-- Fixed Bottom HUD (HongShi style) -->
+  <div class="hud mono" aria-hidden="true">
+    <span class="hud-clip"><span id="hudIdx" class="hud-text">00</span></span>
+    <i><b id="hudBar"></b></i>
+    <span class="hud-clip"><span id="hudName" class="hud-text">OVERVIEW</span></span>
+  </div>
+
+  <!-- Retro Particle FX Customizer Tool -->
+  <div class="fx-panel-container">
+    <button class="fx-toggle-btn mono" id="fxToggleBtn" type="button" aria-label="Customize Particle FX">
+      <span class="fx-icon">✦</span>
+      <span>PARTICLE FX</span>
+      <span class="fx-mode-badge" id="fxModeBadge">ASCENT</span>
+    </button>
+
+    <!-- Popup Customization Menu -->
+    <div class="fx-popup" id="fxPopup" aria-hidden="true">
+      <div class="fx-popup-header">
+        <div class="fx-popup-title mono"><span>✦</span> PIXEL FX CONFIG // 粒子定制器</div>
+        <button class="fx-close-btn mono" id="fxCloseBtn" type="button">✕</button>
+      </div>
+
+      <!-- FX Motion Mode -->
+      <div class="fx-group">
+        <div class="fx-group-title mono">MOTION MODE // 动态形态</div>
+        <div class="fx-btn-grid" id="fxModeGrid">
+          <button type="button" class="fx-opt-btn active" data-cfg="mode" data-val="ascent">▲ ASCENT (升腾微光)</button>
+          <button type="button" class="fx-opt-btn" data-cfg="mode" data-val="neural">✦ NEURAL (神经连线)</button>
+          <button type="button" class="fx-opt-btn" data-cfg="mode" data-val="vortex">◎ VORTEX (引力漩涡)</button>
+          <button type="button" class="fx-opt-btn" data-cfg="mode" data-val="rain">▼ RAIN (漫游雨线)</button>
+        </div>
+      </div>
+
+      <!-- FX Density -->
+      <div class="fx-group">
+        <div class="fx-group-title mono">DENSITY // 粒子数量</div>
+        <div class="fx-btn-row" id="fxCountGrid">
+          <button type="button" class="fx-opt-btn" data-cfg="count" data-val="20">SPARSE (20)</button>
+          <button type="button" class="fx-opt-btn active" data-cfg="count" data-val="45">BALANCED (45)</button>
+          <button type="button" class="fx-opt-btn" data-cfg="count" data-val="80">DENSE (80)</button>
+        </div>
+      </div>
+
+      <!-- FX Color Theme -->
+      <div class="fx-group">
+        <div class="fx-group-title mono">COLOR THEME // 配色方案</div>
+        <div class="fx-btn-row" id="fxColorGrid">
+          <button type="button" class="fx-opt-btn active" data-cfg="color" data-val="auto">AUTO (画作原生)</button>
+          <button type="button" class="fx-opt-btn" data-cfg="color" data-val="cyan">CYAN (电青)</button>
+          <button type="button" class="fx-opt-btn" data-cfg="color" data-val="amber">AMBER (琥珀)</button>
+          <button type="button" class="fx-opt-btn" data-cfg="color" data-val="emerald">EMERALD (翠绿)</button>
+          <button type="button" class="fx-opt-btn" data-cfg="color" data-val="neon">NEON (霓虹)</button>
+        </div>
+      </div>
+
+      <!-- FX Pixel Size -->
+      <div class="fx-group">
+        <div class="fx-group-title mono">PIXEL SIZE // 像素大小</div>
+        <div class="fx-btn-row" id="fxSizeGrid">
+          <button type="button" class="fx-opt-btn" data-cfg="size" data-val="2">FINE (2PX)</button>
+          <button type="button" class="fx-opt-btn active" data-cfg="size" data-val="3">RETRO (3PX)</button>
+          <button type="button" class="fx-opt-btn" data-cfg="size" data-val="5">CHUNKY (5PX)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main id="top">
+
+    <!-- ==================== 00 HERO (Faithful to pebrel-paste-IdMaLS.png) ==================== -->
+    <header class="hero-split is-visible" id="hero" data-idx="00" data-name="OVERVIEW">
+      <section class="hero-copy">
+        <div class="brand reveal-item d-1">
+          <img src="assets/logo.png?v=alpha" alt="Wordflow">
+        </div>
+        <h1 class="hero-title reveal-item d-2">Repeat them,<br><em>until they stay.</em></h1>
+        <p class="hero-lead reveal-item d-3">The same words, over and over. See the meaning, hide it, see it again.</p>
+
+        <div class="hero-actions reveal-item d-4">
+          <a class="px-btn px-btn-white" id="hero-dl" href="releases/wordflow.apk">
+            <span>DOWNLOAD APK</span>
+            <span class="px-arrow">↓</span>
+          </a>
+          <a class="px-btn px-btn-blue" href="#mechanism">
+            <span>PIXEL LOG ↓</span>
+          </a>
+        </div>
+
+        <div class="ticker reveal-item d-5" aria-hidden="true">
+          <div class="ticker-track">
+            <span class="ticker-set">serendipity&nbsp;&nbsp;&middot;&nbsp;&nbsp;resilient&nbsp;&nbsp;&middot;&nbsp;&nbsp;ephemeral&nbsp;&nbsp;&middot;&nbsp;&nbsp;deliberate&nbsp;&nbsp;&middot;&nbsp;&nbsp;embrace&nbsp;&nbsp;&middot;&nbsp;&nbsp;subtle&nbsp;&nbsp;&middot;&nbsp;&nbsp;flourish&nbsp;&nbsp;&middot;&nbsp;&nbsp;perspective&nbsp;&nbsp;&middot;&nbsp;&nbsp;tranquil&nbsp;&nbsp;&middot;&nbsp;&nbsp;curiosity&nbsp;&nbsp;&middot;&nbsp;&nbsp;consistent&nbsp;&nbsp;&middot;&nbsp;&nbsp;cherish&nbsp;&nbsp;&middot;&nbsp;&nbsp;</span>
+            <span class="ticker-set">serendipity&nbsp;&nbsp;&middot;&nbsp;&nbsp;resilient&nbsp;&nbsp;&middot;&nbsp;&nbsp;ephemeral&nbsp;&nbsp;&middot;&nbsp;&nbsp;deliberate&nbsp;&nbsp;&middot;&nbsp;&nbsp;embrace&nbsp;&nbsp;&middot;&nbsp;&nbsp;subtle&nbsp;&nbsp;&middot;&nbsp;&nbsp;flourish&nbsp;&nbsp;&middot;&nbsp;&nbsp;perspective&nbsp;&nbsp;&middot;&nbsp;&nbsp;tranquil&nbsp;&nbsp;&middot;&nbsp;&nbsp;curiosity&nbsp;&nbsp;&middot;&nbsp;&nbsp;consistent&nbsp;&nbsp;&middot;&nbsp;&nbsp;cherish&nbsp;&nbsp;&middot;&nbsp;&nbsp;</span>
+          </div>
+        </div>
+
+        <p class="meta reveal-item d-5">
+          <i class="meta-dot"></i>
+          <span id="version-text">Android 7.0+ · Offline Engine</span>
+        </p>
+
+        <!-- Minimalist Scroll Cue -->
+        <div class="hero-scroll-cue reveal-item d-6">
+          <a href="#mechanism" class="scroll-link mono">
+            <span>SCROLL TO EXPLORE</span>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v7M2.5 6l3.5 3.5L9.5 6" stroke="currentColor" stroke-width="1.4"/></svg>
+          </a>
+        </div>
+      </section>
+
+      <!-- Right half: 100% authentic hero.jpg + Canvas Particles -->
+      <section class="hero-art" aria-label="Wordflow Terminal">
+        <img src="assets/hero.jpg?v=en3" alt="Wordflow Room">
+        <canvas class="stage-canvas" data-canvas-idx="00"></canvas>
+        <div class="crt-scanlines"></div>
+        <div class="crt-spotlight"></div>
+      </section>
+    </header>
+
+    <!-- ==================== RIFT 00-01: PIXEL SEAM ==================== -->
+    <div class="pixel-rift" data-from="00" data-to="01">
+      <canvas class="rift-canvas"></canvas>
+    </div>
+
+    <!-- ==================== 01 THE MECHANISM (左右分栏: 左文字 右全幅插画) ==================== -->
+    <section class="section-split" id="mechanism" data-idx="01" data-name="MECHANISM">
+      <div class="sec-copy">
+        <div class="label reveal-item d-1"><span>01</span>认知机制</div>
+        <h2 class="sec__title reveal-item d-2">See it. Hide it.<br><em>Try to recall.</em></h2>
+        <p class="sec__lead reveal-item d-3">看懂释义，并不等于<em>真正掌握</em>。</p>
+
+        <div class="recall-widget reveal-item d-5">
+          <div class="recall-card" id="demo-card">
+            <div class="card-row-top">
+              <span class="card-head-word">ephemeral</span>
+              <span class="card-head-phonetic mono">/ɪˈfem.ər.əl/</span>
+            </div>
+            <div class="card-row-bot">
+              <span class="mask-pip mono">■■■■■ 遮义自测 (点击翻开)</span>
+              <span class="meaning-text">adj. 短暂的；转瞬即逝的；朝生暮死的</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-art" aria-label="Cognitive Mechanism Stage">
+        <img src="assets/art-mechanism.png" alt="认知神经回路像素画" loading="lazy">
+        <canvas class="stage-canvas" data-canvas-idx="01"></canvas>
+        <div class="crt-scanlines"></div>
+        <div class="crt-spotlight"></div>
+      </div>
+    </section>
+
+    <!-- ==================== RIFT 01-02: PIXEL SEAM ==================== -->
+    <div class="pixel-rift" data-from="01" data-to="02">
+      <canvas class="rift-canvas"></canvas>
+    </div>
+
+    <!-- ==================== 02 THE SCALE (左右交错: 左全幅插画 右文字) ==================== -->
+    <section class="section-split is-reversed" id="scale" data-idx="02" data-name="SCALE">
+      <div class="sec-copy">
+        <div class="label reveal-item d-1"><span>02</span>阻力分级</div>
+        <h2 class="sec__title reveal-item d-2">Six quiet dots.<br><em>Never binary.</em></h2>
+        <p class="sec__lead reveal-item d-3">记忆从来不是<em>非黑即白的开关</em>。</p>
+
+        <div class="six-box reveal-item d-5">
+          <div class="six-dots" id="dots-row">
+            <button type="button" class="s-dot on" data-lvl="1" aria-label="Level 1"></button>
+            <button type="button" class="s-dot on" data-lvl="2" aria-label="Level 2"></button>
+            <button type="button" class="s-dot on" data-lvl="3" aria-label="Level 3"></button>
+            <button type="button" class="s-dot" data-lvl="4" aria-label="Level 4"></button>
+            <button type="button" class="s-dot" data-lvl="5" aria-label="Level 5"></button>
+            <button type="button" class="s-dot" data-lvl="6" aria-label="Level 6"></button>
+          </div>
+          <div class="six-desc mono" id="dots-desc">Level 3 · Noticeable resistance (Review in 2 days)</div>
+        </div>
+      </div>
+
+      <div class="sec-art" aria-label="Memory Scale Stage">
+        <img src="assets/art-scale.png" alt="6阶抗遗忘阶梯像素画" loading="lazy">
+        <canvas class="stage-canvas" data-canvas-idx="02"></canvas>
+        <div class="crt-scanlines"></div>
+        <div class="crt-spotlight"></div>
+      </div>
+    </section>
+
+    <!-- ==================== RIFT 02-03: PIXEL SEAM ==================== -->
+    <div class="pixel-rift" data-from="02" data-to="03">
+      <canvas class="rift-canvas"></canvas>
+    </div>
+
+    <!-- ==================== 03 THE RHYTHM (左右分栏: 左文字 右全幅插画) ==================== -->
+    <section class="section-split" id="rhythm" data-idx="03" data-name="RHYTHM">
+      <div class="sec-copy">
+        <div class="label reveal-item d-1"><span>03</span>记忆曲线</div>
+        <h2 class="sec__title reveal-item d-2">Spaced in time,<br><em>until it hardens.</em></h2>
+        <p class="sec__lead reveal-item d-3">只有真正完成整组，才<em>更新复习计划</em>。</p>
+
+        <ul class="plist mono reveal-item d-5">
+          <li data-interval="0">
+            <span class="plist__num">20m</span>
+            <b>Initial consolidation</b>
+            <span class="plist__desc">突触沉淀</span>
+          </li>
+          <li data-interval="1">
+            <span class="plist__num">1-7d</span>
+            <b>Spaced intervals</b>
+            <span class="plist__desc">抗遗忘阶梯</span>
+          </li>
+          <li data-interval="2">
+            <span class="plist__num">30d</span>
+            <b>Long-term mastery</b>
+            <span class="plist__desc">稳固长时记忆</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="sec-art" aria-label="Ebbinghaus Rhythm Stage">
+        <img src="assets/art-rhythm.png" alt="艾宾浩斯记忆曲线波浪像素画" loading="lazy">
+        <canvas class="stage-canvas" data-canvas-idx="03"></canvas>
+        <div class="crt-scanlines"></div>
+        <div class="crt-spotlight"></div>
+      </div>
+    </section>
+
+    <!-- ==================== RIFT 03-04: PIXEL SEAM ==================== -->
+    <div class="pixel-rift" data-from="03" data-to="04">
+      <canvas class="rift-canvas"></canvas>
+    </div>
+
+    <!-- ==================== 04 THE CONTEXT (左右交错: 左全幅插画 右文字) ==================== -->
+    <section class="section-split is-reversed" id="context" data-idx="04" data-name="CONTEXT">
+      <div class="sec-copy">
+        <div class="label reveal-item d-1"><span>04</span>语境短文</div>
+        <h2 class="sec__title reveal-item d-2">Isolated words die.<br><em>Sentences breathe.</em></h2>
+        <p class="sec__lead reveal-item d-3">词汇只有活在句子中，才<em>具备语感生命</em>。</p>
+
+        <div class="retro-console reveal-item d-5">
+          <p class="console-body">
+            The young <span class="hl" data-word="0">author</span> decided to <span class="hl" data-word="1">deliberate</span> on every <span class="hl" data-word="2">subtle</span> shift in human perspective...
+          </p>
+        </div>
+      </div>
+
+      <div class="sec-art" aria-label="Lexicon Context Stage">
+        <img src="assets/art-context.png" alt="语境短文与精选阅读像素画" loading="lazy">
+        <canvas class="stage-canvas" data-canvas-idx="04"></canvas>
+        <div class="crt-scanlines"></div>
+        <div class="crt-spotlight"></div>
+      </div>
+    </section>
+
+    <!-- ==================== RIFT 04-05: PIXEL SEAM ==================== -->
+    <div class="pixel-rift" data-from="04" data-to="05">
+      <canvas class="rift-canvas"></canvas>
+    </div>
+
+    <!-- ==================== 05 DOWNLOAD FINALE (左右分栏: 左文字 右全幅插画) ==================== -->
+    <section class="section-split" id="download" data-idx="05" data-name="DOWNLOAD">
+      <div class="sec-copy">
+        <div class="label reveal-item d-1"><span>05</span>安装体验</div>
+        <h2 class="sec__title reveal-item d-2">Repeat them,<br><em>until they stay.</em></h2>
+        <p class="sec__lead reveal-item d-3">纯离线优先，本地数据完全掌控。</p>
+
+        <div class="download-block reveal-item d-5">
+          <div class="download-actions">
+            <a class="px-btn px-btn-white" id="main-download-link" href="releases/wordflow.apk" style="padding: 13px 24px; font-size: 11.5px;">
+              <span>DOWNLOAD APK</span>
+              <span class="px-arrow">↓</span>
+            </a>
+          </div>
+
+          <div class="release-meta-strip mono">
+            <span id="release-version">Android · 0.1.7</span>
+            <span>·</span>
+            <span>~35 MB APK</span>
+            <span>·</span>
+            <span>100% Local SQLite</span>
+          </div>
+
+          <div class="social-strip">
+            <a href="#top" class="mono">Wordflow · 拾词</a>
+            <a href="https://wordflow.43.134.190.112.sslip.io/releases/wordflow.apk" class="mono">Direct Release ↗</a>
+            <a href="#top" class="mono">Top ↑</a>
+          </div>
+
+          <footer class="foot mono">
+            <span>© <span id="yr">2026</span> Wordflow</span>
+            <a href="#top">Back to top ↑</a>
+          </footer>
+        </div>
+      </div>
+
+      <div class="sec-art" aria-label="Arcade Cartridge Stage">
+        <img src="assets/art-download.png" alt="复古卡带下载像素画" loading="lazy">
+        <canvas class="stage-canvas" data-canvas-idx="05"></canvas>
+        <div class="crt-scanlines"></div>
+        <div class="crt-spotlight"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      // ==================== 1. GLOBAL FX CONFIGURATION ====================
+      var DEFAULT_FX = {
+        mode: "ascent",   // "ascent", "neural", "vortex", "rain"
+        count: 32,        // 20, 32, 60
+        color: "auto",     // "auto", "cyan", "amber", "emerald", "neon"
+        size: 8           // 8px chunky retro pixel blocks
+      };
+
+      var fxConfig = Object.assign({}, DEFAULT_FX);
+      try {
+        var saved = localStorage.getItem("wordflow_fx_config");
+        if (saved) {
+          Object.assign(fxConfig, JSON.parse(saved));
+        }
+      } catch (e) {}
+
+      // Section focal origins (centered at 0.5, 0.5 in the spotlight!)
+      var THEMES = {
+        "00": { // Hero: dissolving 'W' pixels floating leftward
+          xRange: [0.30, 0.48],
+          yRange: [0.35, 0.65],
+          colors: ["#7eb6e4", "#a8d5fa", "#3b82f6", "#ffffff", "#60a5fa"]
+        },
+        "01": { // Mechanism: living cognitive brain cortex
+          xRange: [0.38, 0.62],
+          yRange: [0.36, 0.64],
+          colors: ["#38bdf8", "#818cf8", "#60a5fa", "#34d399", "#bae6fd"]
+        },
+        "02": { // Scale: 6 resistance pedestals with rising XP motes
+          xRange: [0.26, 0.74],
+          yRange: [0.46, 0.70],
+          colors: ["#34d399", "#fbbf24", "#60a5fa", "#a7f3d0", "#fde68a"]
+        },
+        "03": { // Rhythm: Ebbinghaus curve crest waves
+          xRange: [0.24, 0.76],
+          yRange: [0.42, 0.64],
+          colors: ["#22d3ee", "#38bdf8", "#818cf8", "#e0f2fe", "#a5f3fc"]
+        },
+        "04": { // Context: glowing open lexicon tome with ascending runes
+          xRange: [0.36, 0.64],
+          yRange: [0.44, 0.66],
+          colors: ["#fef08a", "#6ee7b7", "#93c5fd", "#ffffff", "#f59e0b"]
+        },
+        "05": { // Download: 16-bit arcade cartridge connector pins
+          xRange: [0.38, 0.62],
+          yRange: [0.44, 0.66],
+          colors: ["#f59e0b", "#60a5fa", "#ffffff", "#fde047", "#3b82f6"]
+        }
+      };
+
+      var PALETTES = {
+        cyan: ["#38bdf8", "#7dd3fc", "#0284c7", "#ffffff", "#67e8f9"],
+        amber: ["#fbbf24", "#f59e0b", "#d97706", "#fef3c7", "#fef08a"],
+        emerald: ["#34d399", "#10b981", "#059669", "#d1fae5", "#6ee7b7"],
+        neon: ["#f43f5e", "#a855f7", "#38bdf8", "#ffffff", "#e879f9"]
+      };
+
+      function randBetween(min, max) {
+        return min + Math.random() * (max - min);
+      }
+
+      function getColorsFor(themeKey) {
+        if (fxConfig.color !== "auto" && PALETTES[fxConfig.color]) {
+          return PALETTES[fxConfig.color];
+        }
+        var t = THEMES[themeKey] || THEMES["00"];
+        return t.colors;
+      }
+
+      // ==================== 2. DYNAMIC 60FPS PIXEL ART ATMOSPHERE ENGINE ====================
+      // Every illustration is an authentic high-definition animated pixel-art loop (APNG).
+      // The canvas engine renders the retro CRT monitor phosphor beam sweep and organic drifting pixel particles.
+      // ==================== 2. LIVE FRONTEND PIXEL ART & LINKING ENGINE ====================
+      // The artwork is rendered live in HTML5 Canvas and bidirectionally linked with UI widgets.
+      document.body.classList.add("js-active");
+
+      var linkingState = {
+        // Section 01: Mechanism (Brain)
+        cardHovered: false,
+        cardUnmasked: false,
+        brainShockwave: 0,
+        brainSparks: [],
+
+        // Section 02: Scale (6 Resistance Pillars)
+        activeLevel: 3,
+        hoveredLevel: null,
+        crownBurstTime: 0,
+        xpOrbs: [],
+
+        // Section 03: Rhythm (Ebbinghaus Waves)
+        hoveredInterval: null,
+        waveHoverX: null,
+        waveProbeText: "",
+
+        // Section 04: Context (Tome & Words)
+        hoveredWordIdx: null,
+
+        // Section 05: Download (Cartridge)
+        downloadHovered: false,
+        cartridgeDocked: false,
+        dockProgress: 0,
+        dockSparks: []
+      };
+      window.linkingState = linkingState;
+
+      // 1. Brain cells (Theme 01)
+      var brainRadius = 30;
+      var brainCells = [];
+      for (var bgy = -brainRadius - 2; bgy <= brainRadius + 4; bgy++) {
+        for (var bgx = -brainRadius - 6; bgx <= brainRadius + 6; bgx++) {
+          var bdx = bgx / (brainRadius * 1.08);
+          var bdy = bgy / (brainRadius * 0.92);
+          var bdist = Math.sqrt(bdx * bdx + bdy * bdy);
+          var isBrain = false;
+          if (bdist < 0.94) {
+            var bwave = 0.08 * Math.sin(bdx * 8) + 0.06 * Math.cos(bdy * 6);
+            if (bdist + bwave < 0.90) isBrain = true;
+          }
+          if (!isBrain && bdx > -0.4 && bdx < 0.2 && bdy > 0.65 && bdy < 1.12) {
+            isBrain = true;
+          }
+          if (isBrain) {
+            var bfold = Math.sin(bgx * 0.42) * Math.cos(bgy * 0.36) + Math.sin((bgx + bgy) * 0.28);
+            var isNode = Math.sin(bgx * 9.2 + bgy * 7.1) > 0.92;
+            var baseCol = "#3b82f6";
+            if (bfold > 0.8) baseCol = "#60a5fa";
+            else if (bfold > 0.3) baseCol = "#3b82f6";
+            else if (bfold > -0.2) baseCol = "#2563eb";
+            else if (bfold > -0.6) baseCol = "#1d4ed8";
+            else baseCol = "#1e3a8a";
+
+            brainCells.push({
+              gx: bgx,
+              gy: bgy,
+              dx: bdx,
+              dy: bdy,
+              fold: bfold,
+              isNode: isNode,
+              baseColor: baseCol
+            });
+          }
+        }
+      }
+
+      var brainPerimeterSparks = [];
+      for (var bs = 0; bs < 70; bs++) {
+        brainPerimeterSparks.push({
+          ang: Math.random() * Math.PI * 2,
+          r: brainRadius * (0.92 + Math.random() * 0.38),
+          phase: Math.random() * Math.PI * 2,
+          speed: Math.random() > 0.5 ? 1.5 : 2.5
+        });
+      }
+
+      // 2. Scale 6 Pillars (Theme 02)
+      var stepColors = ["#475569", "#2563eb", "#3b82f6", "#6366f1", "#10b981", "#f59e0b"];
+      var stepHeights = [9, 15, 21, 27, 33, 40];
+      var stepW = 9, stepGap = 2;
+      var totalStepsW = 6 * stepW + 5 * stepGap; // 64 cells
+
+      // 3. Rhythm Wave Columns (Theme 03)
+      var rhythmSegments = [
+        { start: 0, end: 16, initH: 36, decay: 0.18, segIdx: 0 },
+        { start: 16, end: 32, initH: 30, decay: 0.14, segIdx: 1 },
+        { start: 32, end: 50, initH: 26, decay: 0.10, segIdx: 1 },
+        { start: 50, end: 70, initH: 21, decay: 0.06, segIdx: 1 },
+        { start: 70, end: 86, initH: 17, decay: 0.03, segIdx: 2 }
+      ];
+      var rhythmColumns = [];
+      rhythmSegments.forEach(function (seg) {
+        for (var rdx = 0; rdx < seg.end - seg.start; rdx++) {
+          var colX = seg.start + rdx;
+          var rh = Math.max(3, seg.initH * Math.exp(-rdx * seg.decay));
+          rhythmColumns.push({
+            x: colX,
+            h: rh,
+            isReset: rdx === 0,
+            segIdx: seg.segIdx
+          });
+        }
+      });
+
+      // 4. Context Floating Words (Theme 04)
+      var floatingWords = [
+        { label: "AUTHOR",     gx: -24, gy: -22, w: 14, h: 4, color: "#2563eb", wordIdx: 0 },
+        { label: "DELIBERATE", gx: 8,   gy: -26, w: 16, h: 4, color: "#3b82f6", wordIdx: 1 },
+        { label: "SUBTLE",     gx: -16, gy: -34, w: 14, h: 4, color: "#10b981", wordIdx: 2 },
+        { label: "RESILIENT",  gx: 12,  gy: -42, w: 15, h: 4, color: "#6366f1", wordIdx: -1 },
+        { label: "CHERISH",    gx: -6,  gy: -50, w: 13, h: 4, color: "#f59e0b", wordIdx: -1 }
+      ];
+
+      var stageCanvases = [];
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      function initStageCanvas(canvas) {
+        var themeKey = canvas.getAttribute("data-canvas-idx") || "00";
+        var ctx = canvas.getContext("2d");
+        var cw = 0, ch = 0;
+        var particles = [];
+        var isVisible = false;
+        var mouse = { x: null, y: null };
+        var animClock = Math.random() * 10;
+
+        function makeParticle() {
+          var t = THEMES[themeKey] || THEMES["00"];
+          var colors = getColorsFor(themeKey);
+          var size = Math.random() > 0.4 ? 8 : 6;
+          var maxAge = randBetween(2.0, 4.0);
+
+          var vx = randBetween(-0.25, 0.25);
+          var vy = randBetween(-0.55, -0.15);
+          if (fxConfig.mode === "rain") {
+            vy = randBetween(1.2, 2.5);
+            vx = randBetween(-0.25, 0.25);
+          } else if (fxConfig.mode === "vortex") {
+            vy = randBetween(-0.2, 0.2);
+          } else if (themeKey === "00") {
+            vx = randBetween(-0.60, -0.18);
+            vy = randBetween(-0.25, 0.25);
+          }
+
+          return {
+            x: randBetween(t.xRange[0], t.xRange[1]) * cw,
+            y: randBetween(t.yRange[0], t.yRange[1]) * ch,
+            vx: vx,
+            vy: vy,
+            size: size,
+            color: colors[(Math.random() * colors.length) | 0],
+            age: Math.random() * maxAge * 0.7,
+            maxAge: maxAge,
+            alpha: 0
+          };
+        }
+
+        function resize() {
+          var rect = canvas.getBoundingClientRect();
+          cw = rect.width;
+          ch = rect.height;
+          if (cw <= 0 || ch <= 0) return;
+          canvas.width = Math.round(cw * dpr);
+          canvas.height = Math.round(ch * dpr);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.imageSmoothingEnabled = false;
+
+          particles = [];
+          for (var i = 0; i < fxConfig.count; i++) {
+            particles.push(makeParticle());
+          }
+        }
+
+        var stageContainer = canvas.parentElement;
+
+        stageContainer.addEventListener("mousemove", function (e) {
+          var rect = canvas.getBoundingClientRect();
+          mouse.x = e.clientX - rect.left;
+          mouse.y = e.clientY - rect.top;
+
+          // Theme 03: track scanline probe
+          if (themeKey === "03") {
+            linkingState.waveHoverX = mouse.x;
+          }
+          // Theme 04: check hover on floating word cubes
+          if (themeKey === "04") {
+            var gSize = Math.max(7, Math.min(13, Math.floor(Math.min(cw, ch) / 82)));
+            var cX = cw * 0.5, cY = ch * 0.5;
+            var hitWord = null;
+            floatingWords.forEach(function (fw) {
+              var wScreenX = cX + fw.gx * gSize;
+              var wScreenY = cY + fw.gy * gSize;
+              var wScreenW = fw.w * gSize;
+              var wScreenH = fw.h * gSize;
+              if (mouse.x >= wScreenX - 10 && mouse.x <= wScreenX + wScreenW + 10 &&
+                  mouse.y >= wScreenY - 10 && mouse.y <= wScreenY + wScreenH + 10) {
+                hitWord = fw.wordIdx;
+              }
+            });
+            if (hitWord !== null && hitWord >= 0) {
+              document.querySelectorAll(".console-body .hl").forEach(function (hl) {
+                if (parseInt(hl.getAttribute("data-word"), 10) === hitWord) hl.classList.add("word-active");
+                else hl.classList.remove("word-active");
+              });
+            } else {
+              document.querySelectorAll(".console-body .hl").forEach(function (hl) {
+                hl.classList.remove("word-active");
+              });
+            }
+          }
+        }, { passive: true });
+
+        stageContainer.addEventListener("mouseleave", function () {
+          mouse.x = null;
+          mouse.y = null;
+          if (themeKey === "03") linkingState.waveHoverX = null;
+        });
+
+        // Stage click bindings (bidirectional linking)
+        stageContainer.addEventListener("click", function (e) {
+          var rect = canvas.getBoundingClientRect();
+          var clickX = e.clientX - rect.left;
+          var clickY = e.clientY - rect.top;
+          var cX = cw * 0.5, cY = ch * 0.5;
+          var gSize = Math.max(7, Math.min(13, Math.floor(Math.min(cw, ch) / 82)));
+
+          // Section 01: Click on brain toggles recall card
+          if (themeKey === "01") {
+            var distToBrain = Math.hypot(clickX - cX, clickY - cY);
+            if (distToBrain < brainRadius * gSize * 1.2) {
+              var demoCard = document.getElementById("demo-card");
+              if (demoCard) demoCard.click();
+            }
+          }
+
+          // Section 02: Click on pillar selects that dot level
+          if (themeKey === "02") {
+            var startGX = -Math.round(totalStepsW * 0.5);
+            for (var p = 0; p < 6; p++) {
+              var pGX = startGX + p * (stepW + stepGap);
+              var pScreenX = cX + pGX * gSize;
+              var pScreenW = stepW * gSize;
+              if (clickX >= pScreenX - 4 && clickX <= pScreenX + pScreenW + 4) {
+                var dots = document.querySelectorAll("#dots-row .s-dot");
+                if (dots[p]) dots[p].click();
+                break;
+              }
+            }
+          }
+        });
+
+        // ------------------ STAGE DRAWING ROUTINES ------------------
+        function drawThematicPixelArt(t, cX, cY, dt) {
+          // If Theme 00 (Hero), keep hero.jpg untouched!
+          if (themeKey === "00") return;
+
+          var gSize = Math.max(7, Math.min(13, Math.floor(Math.min(cw, ch) / 82)));
+          var cSize = gSize - 2;
+
+          function drawCell(gx, gy, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(Math.round(cX + gx * gSize), Math.round(cY + gy * gSize), cSize, cSize);
+          }
+
+          // 1. Central Luminous CRT Background matching pebrel-paste-FoWQcZ.png
+          var bgGrad = ctx.createRadialGradient(cX, cY, 0, cX, cY, Math.max(cw, ch) * 0.62);
+          bgGrad.addColorStop(0, "rgba(240, 246, 254, 1)");
+          bgGrad.addColorStop(0.35, "rgba(230, 238, 248, 1)");
+          bgGrad.addColorStop(0.70, "rgba(215, 226, 240, 1)");
+          bgGrad.addColorStop(1, "rgba(196, 212, 230, 1)");
+          ctx.fillStyle = bgGrad;
+          ctx.fillRect(0, 0, cw, ch);
+
+          // Subtle horizontal CRT scanlines
+          ctx.fillStyle = "rgba(200, 212, 228, 0.45)";
+          for (var sy = 0; sy < ch; sy += 4) {
+            ctx.fillRect(0, sy, cw, 1.5);
+          }
+
+          // ------------------ THEME 01: COGNITIVE BRAIN ------------------
+          if (themeKey === "01") {
+            // Speed up neural impulses 3x when user hovers recall card!
+            var impulseSpeed = linkingState.cardHovered ? 7.2 : 2.2;
+            var impulsePhase = t * impulseSpeed;
+
+            // Expand radial shockwave on unmasking definition
+            if (linkingState.brainShockwave > 0) {
+              linkingState.brainShockwave += dt * 1.8;
+              if (linkingState.brainShockwave > 1.8) linkingState.brainShockwave = 0;
+            }
+
+            // Draw brain cells
+            for (var bi = 0; bi < brainCells.length; bi++) {
+              var cell = brainCells[bi];
+              var cellDist = Math.sqrt(cell.dx * cell.dx + cell.dy * cell.dy);
+              var cellScreenX = cX + cell.gx * gSize;
+              var cellScreenY = cY + cell.gy * gSize;
+
+              // Proximity excitation
+              var distMouse = mouse.x !== null ? Math.hypot(cellScreenX - mouse.x, cellScreenY - mouse.y) : 999;
+              var isMouseNear = distMouse < 75;
+
+              // Fissure pulse
+              var fissurePulse = Math.sin(impulsePhase - cell.fold * 3.5 + cell.dx * 2.0);
+              var isFissureFiring = Math.abs(cell.fold) > 0.45 && fissurePulse > 0.86;
+
+              // Shockwave intersection
+              var isShock = (linkingState.brainShockwave > 0 && Math.abs(cellDist - linkingState.brainShockwave) < 0.14);
+
+              var cellCol = cell.baseColor;
+              if (isShock) {
+                cellCol = Math.random() > 0.3 ? "#fef08a" : "#38bdf8"; // Blinding white-gold energy shockwave!
+              } else if (isMouseNear) {
+                cellCol = "#38bdf8"; // Electric cyan proximity excitation!
+              } else if (cell.isNode) {
+                if (linkingState.cardUnmasked) {
+                  cellCol = "#10b981"; // Fully illuminated memory nodes!
+                } else {
+                  cellCol = Math.sin(t * 3.5 + cell.fold * 5.0) > 0.2 ? "#34d399" : "#059669";
+                }
+              } else if (isFissureFiring) {
+                cellCol = linkingState.cardHovered ? "#ffffff" : "#93c5fd";
+              }
+
+              ctx.fillStyle = cellCol;
+              ctx.fillRect(Math.round(cellScreenX), Math.round(cellScreenY), cSize, cSize);
+            }
+
+            // Drifting perimeter sparks
+            for (var ps = 0; ps < brainPerimeterSparks.length; ps++) {
+              var sp = brainPerimeterSparks[ps];
+              var rCur = sp.r + Math.sin(t * sp.speed + sp.phase) * 1.5;
+              var spGX = Math.cos(sp.ang) * rCur * 1.08;
+              var spGY = Math.sin(sp.ang) * rCur * 0.92;
+              var spScreenX = cX + spGX * gSize;
+              var spScreenY = cY + spGY * gSize;
+
+              // Proximity attraction to mouse
+              if (mouse.x !== null) {
+                var dM = Math.hypot(spScreenX - mouse.x, spScreenY - mouse.y);
+                if (dM < 85) {
+                  spScreenX += (mouse.x - spScreenX) * 0.15;
+                  spScreenY += (mouse.y - spScreenY) * 0.15;
+                }
+              }
+
+              var spColor = Math.sin(t * 2 + sp.phase) > 0 ? "#ffffff" : "#38bdf8";
+              ctx.fillStyle = spColor;
+              ctx.fillRect(Math.round(spScreenX), Math.round(spScreenY), Math.max(2, cSize - 1), Math.max(2, cSize - 1));
+            }
+
+            // Render cognitive shockwave burst sparks
+            if (linkingState.brainSparks.length > 0) {
+              for (var bsi = linkingState.brainSparks.length - 1; bsi >= 0; bsi--) {
+                var bsp = linkingState.brainSparks[bsi];
+                bsp.age += dt;
+                if (bsp.age >= bsp.maxLife) {
+                  linkingState.brainSparks.splice(bsi, 1);
+                  continue;
+                }
+                bsp.x += bsp.vx * (dt * 60);
+                bsp.y += bsp.vy * (dt * 60);
+                ctx.fillStyle = bsp.color;
+                ctx.globalAlpha = 1 - bsp.age / bsp.maxLife;
+                ctx.fillRect(Math.round(cX + bsp.x), Math.round(cY + bsp.y), cSize, cSize);
+                ctx.globalAlpha = 1;
+              }
+            }
+          }
+
+          // ------------------ THEME 02: SCALE 6 PILLARS ------------------
+          if (themeKey === "02") {
+            var startGX = -Math.round(totalStepsW * 0.5);
+            var baseGY = 20;
+
+            for (var pIdx = 0; pIdx < 6; pIdx++) {
+              var pActive = (pIdx < linkingState.activeLevel) || (linkingState.hoveredLevel !== null && pIdx < linkingState.hoveredLevel);
+              var pCol = stepColors[pIdx];
+              var pH = pActive ? stepHeights[pIdx] : Math.round(stepHeights[pIdx] * 0.45);
+              var pStartGX = startGX + pIdx * (stepW + stepGap);
+
+              for (var sx = 0; sx < stepW; sx++) {
+                for (var sy = 0; sy < pH; sy++) {
+                  var curGX = pStartGX + sx;
+                  var curGY = baseGY - sy;
+                  var cellC = pActive ? pCol : "#334155";
+
+                  // Energy surge traveling upwards in active pillars
+                  if (pActive) {
+                    var surgePulse = (sy % 4 === (Math.floor(t * 14) % 4));
+                    if (sy === pH - 1) cellC = "#ffffff"; // Top cap beacon
+                    else if (surgePulse) cellC = "#e0f2fe";
+                    else if (sx === 0 || sx === stepW - 1) cellC = "#1e293b"; // Bevel
+                  }
+
+                  drawCell(curGX, curGY, cellC);
+                }
+              }
+
+              // Pillar 6 Golden Crown
+              if (pIdx === 5) {
+                var crownGY = baseGY - pH - 4;
+                var crownGlow = Math.sin(t * 4) > 0 ? "#fef08a" : "#fbbf24";
+                for (var cgx = pStartGX + 2; cgx < pStartGX + stepW - 2; cgx++) {
+                  drawCell(cgx, crownGY, crownGlow);
+                  drawCell(cgx, crownGY - 1, "#ffffff");
+                }
+                // Crown bursts if Level 6 is active
+                if (linkingState.activeLevel === 6 && Math.random() > 0.4) {
+                  drawCell(pStartGX + Math.floor(Math.random() * stepW), crownGY - 3 - Math.floor(Math.random() * 4), "#fef08a");
+                }
+              }
+            }
+
+            // Ascending XP motes from active pillars
+            if (Math.random() > 0.3) {
+              var activeP = Math.floor(Math.random() * linkingState.activeLevel);
+              var activePStartGX = startGX + activeP * (stepW + stepGap);
+              var xpGX = activePStartGX + Math.floor(Math.random() * stepW);
+              var xpH = stepHeights[activeP];
+              var xpGY = baseGY - xpH - Math.floor(Math.random() * 12);
+              drawCell(xpGX, xpGY, "#fde68a");
+            }
+          }
+
+          // ------------------ THEME 03: RHYTHM EBBINGHAUS WAVE ------------------
+          if (themeKey === "03") {
+            var waveStartGX = -43;
+            var baselineGY = 18;
+            var travelingWaveX = (t * 18) % 86;
+
+            for (var rc = 0; rc < rhythmColumns.length; rc++) {
+              var col = rhythmColumns[rc];
+              var curColGX = waveStartGX + col.x;
+              var isHitByWave = Math.abs(col.x - travelingWaveX) < 3.5;
+              var isIntervalHovered = (linkingState.hoveredInterval !== null && col.segIdx === linkingState.hoveredInterval);
+
+              for (var cy = 0; cy < col.h; cy++) {
+                var curGY = baselineGY - cy;
+                var waveC = "#3b82f6";
+                if (isIntervalHovered) {
+                  waveC = cy === Math.floor(col.h - 1) ? "#ffffff" : "#38bdf8";
+                } else if (isHitByWave) {
+                  waveC = "#bae6fd";
+                } else if (cy === Math.floor(col.h - 1)) {
+                  waveC = col.isReset ? "#ffffff" : "#22d3ee";
+                } else {
+                  waveC = cy > col.h * 0.6 ? "#2563eb" : "#1e40af";
+                }
+                drawCell(curColGX, curGY, waveC);
+              }
+            }
+
+            // Interactive CRT Scanline Probe
+            if (mouse.x !== null) {
+              ctx.strokeStyle = "rgba(56, 189, 248, 0.75)";
+              ctx.lineWidth = 1;
+              ctx.setLineDash([4, 4]);
+              ctx.beginPath();
+              ctx.moveTo(mouse.x, cY - 120);
+              ctx.lineTo(mouse.x, cY + 120);
+              ctx.stroke();
+              ctx.setLineDash([]);
+
+              // Digital HUD reading badge
+              var frac = Math.max(0, Math.min(1, (mouse.x - (cX - 200)) / 400));
+              var retentionVal = Math.round(98 * Math.exp(-frac * 1.6) + 38 * frac);
+              ctx.fillStyle = "rgba(7, 11, 20, 0.85)";
+              ctx.fillRect(mouse.x + 8, mouse.y - 24, 130, 22);
+              ctx.strokeStyle = "#38bdf8";
+              ctx.strokeRect(mouse.x + 8, mouse.y - 24, 130, 22);
+              ctx.fillStyle = "#38bdf8";
+              ctx.font = "10px monospace";
+              ctx.fillText("RETENTION: " + retentionVal + "%", mouse.x + 14, mouse.y - 10);
+            }
+          }
+
+          // ------------------ THEME 04: CONTEXT TOME & WORDS ------------------
+          if (themeKey === "04") {
+            var bookW = 64, bookH = 26;
+            var bookCenterGY = 14;
+
+            // Draw book pages
+            for (var by = 0; by < bookH; by++) {
+              for (var bx = 0; bx < bookW; bx++) {
+                var bgx = -Math.round(bookW * 0.5) + bx;
+                var distSpine = Math.abs(bx - bookW * 0.5);
+                var curve = Math.sin(distSpine / 11.0) * 4.5;
+                var bgy = Math.round(bookCenterGY - bookH * 0.5 + by - curve);
+
+                var pageCol = "#f8fafc";
+                if (by % 3 === 0 && distSpine > 3) {
+                  // Text lines
+                  var isReadingGleam = (by === 9 || by === 18) && Math.abs(distSpine - ((t * 8) % 24)) < 2;
+                  pageCol = isReadingGleam ? "#3b82f6" : "#cbd5e1";
+                }
+                drawCell(bgx, bgy, pageCol);
+              }
+            }
+
+            // Spine
+            for (var spy = 0; spy < bookH; spy++) {
+              drawCell(0, Math.round(bookCenterGY - bookH * 0.5 + spy), spy % 4 === 0 ? "#fbbf24" : "#1e293b");
+            }
+
+            // 5 Floating Word Cubes
+            floatingWords.forEach(function (fw) {
+              var isWordHovered = (linkingState.hoveredWordIdx === fw.wordIdx);
+              var bobY = Math.sin(t * 2.2 + fw.wordIdx * 1.4) * 2.0;
+              var curGY = fw.gy + (isWordHovered ? -8 : Math.round(bobY));
+
+              for (var wx = 0; wx < fw.w; wx++) {
+                for (var wy = 0; wy < fw.h; wy++) {
+                  var wCol = isWordHovered ? "#fef08a" : fw.color;
+                  if (wy === 1 && (wx === (Math.floor(t * 8) % fw.w))) wCol = "#ffffff";
+                  drawCell(fw.gx + wx, curGY + wy, wCol);
+                }
+              }
+
+              // Trailing rune sparks if hovered
+              if (isWordHovered && Math.random() > 0.4) {
+                drawCell(fw.gx + Math.floor(Math.random() * fw.w), curGY + fw.h + Math.floor(Math.random() * 4), "#fef08a");
+              }
+            });
+          }
+
+          // ------------------ THEME 05: DOWNLOAD CARTRIDGE ------------------
+          if (themeKey === "05") {
+            var cartW = 54, cartH = 56;
+            var cartCenterGY = 0;
+
+            // Docking animation
+            if (linkingState.cartridgeDocked && linkingState.dockProgress < 1) {
+              linkingState.dockProgress += dt * 3.5;
+              if (linkingState.dockProgress > 1) linkingState.dockProgress = 1;
+            }
+            var dockShiftY = Math.round(linkingState.dockProgress * 12);
+            var speedMultiplier = linkingState.downloadHovered ? 4.5 : 1.2;
+
+            // Cartridge body
+            for (var ccy = 0; ccy < cartH; ccy++) {
+              for (var ccx = 0; ccx < cartW; ccx++) {
+                if ((ccx < 4 || ccx >= cartW - 4) && ccy < 5) continue;
+                var cartGX = -Math.round(cartW * 0.5) + ccx;
+                var cartGY = cartCenterGY - Math.round(cartH * 0.5) + ccy + dockShiftY;
+
+                var bodyCol = "#1e293b";
+                // Label
+                if (ccx >= 7 && ccx < cartW - 7 && ccy >= 10 && ccy < cartH - 12) {
+                  bodyCol = ccy < 18 ? "#2563eb" : "#f1f5f9";
+                }
+                // Gold PCB Connector Pins
+                if (ccy >= cartH - 4 && (ccx % 3 !== 0)) {
+                  var pinIdx = Math.floor(ccx / 3);
+                  var pinLightIdx = Math.floor((t * 12 * speedMultiplier) % 18);
+                  bodyCol = pinIdx === pinLightIdx ? "#ffffff" : (pinIdx === pinLightIdx - 1 ? "#fef08a" : "#f59e0b");
+                }
+                drawCell(cartGX, cartGY, bodyCol);
+              }
+            }
+
+            // Downward insertion arrow
+            var arrowPulse = Math.floor(t * 12 * speedMultiplier) % 18;
+            for (var ay = 0; ay < 12; ay++) {
+              var isArrowPulse = Math.abs(ay - arrowPulse) <= 1;
+              var aCol = isArrowPulse ? "#ffffff" : (linkingState.downloadHovered ? "#38bdf8" : "#2563eb");
+              for (var ax = -3; ax <= 3; ax++) {
+                drawCell(ax, cartCenterGY - 6 + ay + dockShiftY, aCol);
+              }
+            }
+            for (var ah = 0; ah < 7; ah++) {
+              var span = 8 - ah;
+              var isHeadPulse = Math.abs(12 + ah - arrowPulse) <= 1;
+              var hCol = isHeadPulse ? "#ffffff" : (linkingState.downloadHovered ? "#38bdf8" : "#2563eb");
+              for (var hx = -span; hx <= span; hx++) {
+                drawCell(hx, cartCenterGY + 6 + ah + dockShiftY, hCol);
+              }
+            }
+
+            // Status LED
+            var ledCol = linkingState.downloadHovered ? "#34d399" : (Math.sin(t * 4) > 0 ? "#fbbf24" : "#b45309");
+            drawCell(-Math.round(cartW * 0.5) + 6, cartCenterGY - Math.round(cartH * 0.5) + 6 + dockShiftY, ledCol);
+          }
+        }
+
+        function drawThematicAnimation(t, centerX, centerY) {
+          // Soft CRT phosphor sweep beam
+          var beamY = ((t * 90) % (ch + 120)) - 60;
+          var beamGrad = ctx.createLinearGradient(0, beamY, 0, beamY + 45);
+          beamGrad.addColorStop(0, "rgba(56, 189, 248, 0)");
+          beamGrad.addColorStop(0.5, "rgba(255, 255, 255, 0.05)");
+          beamGrad.addColorStop(1, "rgba(56, 189, 248, 0)");
+          ctx.fillStyle = beamGrad;
+          ctx.fillRect(0, Math.round(beamY), cw, 45);
+        }
+
+        function tick(dt) {
+          if (!isVisible || cw <= 0 || ch <= 0 || document.hidden) return;
+
+          ctx.clearRect(0, 0, cw, ch);
+          var centerX = cw * 0.5;
+          var centerY = ch * 0.5;
+          animClock += dt;
+
+          // 1. Draw Live 16-Bit Frontend Pixel Artwork with UI Linkages
+          drawThematicPixelArt(animClock, centerX, centerY, dt);
+
+          // 2. Draw CRT Monitor Atmosphere Sweep
+          drawThematicAnimation(animClock, centerX, centerY);
+
+          // 3. Draw Customizable Atmospheric Pixel Particles
+          for (var i = 0; i < particles.length; i++) {
+            var p = particles[i];
+            p.age += dt;
+
+            if (p.age >= p.maxAge) {
+              particles[i] = makeParticle();
+              continue;
+            }
+
+            if (fxConfig.mode === "vortex") {
+              var targetX = mouse.x !== null ? mouse.x : centerX;
+              var targetY = mouse.y !== null ? mouse.y : centerY;
+              var dx = p.x - targetX;
+              var dy = p.y - targetY;
+              var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+              var angle = Math.atan2(dy, dx) + 0.045;
+              var speed = Math.max(15, dist - 0.45);
+              p.x = targetX + Math.cos(angle) * speed;
+              p.y = targetY + Math.sin(angle) * speed;
+            } else if (fxConfig.mode === "rain") {
+              p.x += p.vx * (dt * 60);
+              p.y += p.vy * (dt * 60);
+              if (p.y > ch + 10) p.y = -8;
+            } else if (fxConfig.mode === "ascent") {
+              p.x += Math.sin(p.age * 2.2 + i) * 0.35;
+              p.y += p.vy * (dt * 60);
+            } else {
+              p.x += p.vx * (dt * 60);
+              p.y += p.vy * (dt * 60);
+              if (mouse.x !== null && mouse.y !== null) {
+                var mdx = p.x - mouse.x;
+                var mdy = p.y - mouse.y;
+                var mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+                if (mdist < 75 && mdist > 0) {
+                  var f = (75 - mdist) / 75;
+                  p.x += (mdx / mdist) * f * 2.4;
+                  p.y += (mdy / mdist) * f * 2.4;
+                }
+              }
+            }
+
+            var progress = p.age / p.maxAge;
+            p.alpha = Math.sin(progress * Math.PI) * 0.88;
+
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = Math.max(0, Math.min(1, p.alpha));
+            var snapPX = Math.round(p.x / 6) * 6;
+            var snapPY = Math.round(p.y / 6) * 6;
+            ctx.fillRect(snapPX, snapPY, p.size, p.size);
+          }
+          ctx.globalAlpha = 1;
+        }
+
+        resize();
+
+        return {
+          canvas: canvas,
+          resize: resize,
+          tick: tick,
+          reset: function () { resize(); },
+          setVisible: function (v) { isVisible = v; }
+        };
+      }
+
+      var canvasEls = document.querySelectorAll(".stage-canvas");
+      canvasEls.forEach(function (c) {
+        stageCanvases.push(initStageCanvas(c));
+      });
+
+      window.addEventListener("resize", function () {
+        stageCanvases.forEach(function (inst) { inst.resize(); });
+      }, { passive: true });
+
+      // IntersectionObserver pauses offscreen canvases (saves 100% CPU)
+      var canvasVisibilityObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          var targetCanvas = entry.target.querySelector(".stage-canvas");
+          if (!targetCanvas) return;
+          for (var i = 0; i < stageCanvases.length; i++) {
+            if (stageCanvases[i].canvas === targetCanvas) {
+              stageCanvases[i].setVisible(entry.isIntersecting);
+            }
+          }
+        });
+      }, { threshold: 0.05 });
+
+      document.querySelectorAll(".hero-split, .section-split").forEach(function (sec) {
+        canvasVisibilityObserver.observe(sec);
+      });
+
+      var rifts = [];
+      var lastTime = performance.now();
+      function globalRender(time) {
+        var dt = Math.min((time - lastTime) / 1000, 0.1);
+        lastTime = time;
+        for (var i = 0; i < stageCanvases.length; i++) {
+          stageCanvases[i].tick(dt);
+        }
+        for (var r = 0; r < rifts.length; r++) {
+          rifts[r].tick(dt, time);
+        }
+        requestAnimationFrame(globalRender);
+      }
+      requestAnimationFrame(globalRender);
+
+      // ==================== 2.5 UI WIDGET LINKING EVENT LISTENERS ====================
+      // 1. Recall Card (Section 01)
+      var demoCardEl = document.getElementById("demo-card");
+      if (demoCardEl) {
+        demoCardEl.addEventListener("mouseenter", function () {
+          linkingState.cardHovered = true;
+        });
+        demoCardEl.addEventListener("mouseleave", function () {
+          linkingState.cardHovered = false;
+        });
+        demoCardEl.addEventListener("click", function () {
+          var isUnmasked = this.classList.toggle("unmasked");
+          linkingState.cardUnmasked = isUnmasked;
+          linkingState.brainShockwave = 0.01; // Triggers radial cognitive breakthrough shockwave!
+          // Spawn sparks
+          for (var i = 0; i < 35; i++) {
+            var ang = Math.random() * Math.PI * 2;
+            var spd = 2 + Math.random() * 4.5;
+            linkingState.brainSparks.push({
+              x: 0, y: 0,
+              vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+              age: 0, maxLife: 0.6 + Math.random() * 0.4,
+              color: Math.random() > 0.4 ? "#34d399" : (Math.random() > 0.5 ? "#fef08a" : "#38bdf8")
+            });
+          }
+        });
+      }
+
+      // 2. 6-Dot System (Section 02)
+      var dotsRowEl = document.getElementById("dots-row");
+      var dotsDescEl = document.getElementById("dots-desc");
+      if (dotsRowEl && dotsDescEl) {
+        var dotsList = dotsRowEl.querySelectorAll(".s-dot");
+        var descList = [
+          "Level 1 · Slight friction (Relearn scheduled in 20m)",
+          "Level 2 · Moderate recall delay (Review in 1 day)",
+          "Level 3 · Noticeable resistance (Review in 2 days)",
+          "Level 4 · Deep retrieval required (Review in 4 days)",
+          "Level 5 · Solid recognition emerging (Review in 7 days)",
+          "Level 6 · Fluid response (Next scheduled in 15-30 days)"
+        ];
+        dotsList.forEach(function (dot) {
+          dot.addEventListener("click", function () {
+            var lvl = parseInt(this.getAttribute("data-lvl"), 10);
+            linkingState.activeLevel = lvl;
+            linkingState.userLockedLevel = true;
+            dotsList.forEach(function (d, i) {
+              if (i < lvl) d.classList.add("on");
+              else d.classList.remove("on");
+            });
+            dotsDescEl.textContent = descList[lvl - 1];
+          });
+          dot.addEventListener("mouseenter", function () {
+            linkingState.hoveredLevel = parseInt(this.getAttribute("data-lvl"), 10);
+          });
+          dot.addEventListener("mouseleave", function () {
+            linkingState.hoveredLevel = null;
+          });
+        });
+      }
+
+      // 3. Ebbinghaus Intervals (Section 03)
+      document.querySelectorAll(".plist li").forEach(function (li, idx) {
+        li.addEventListener("mouseenter", function () {
+          linkingState.hoveredInterval = idx;
+        });
+        li.addEventListener("mouseleave", function () {
+          linkingState.hoveredInterval = null;
+        });
+      });
+
+      // 4. Context Console Words (Section 04)
+      document.querySelectorAll(".console-body .hl").forEach(function (hl) {
+        hl.addEventListener("mouseenter", function () {
+          var wIdx = parseInt(this.getAttribute("data-word"), 10);
+          linkingState.hoveredWordIdx = wIdx;
+        });
+        hl.addEventListener("mouseleave", function () {
+          linkingState.hoveredWordIdx = null;
+        });
+      });
+
+      // 5. Download Button Links (Section 05)
+      var mainDlBtn = document.getElementById("main-download-link");
+      var heroDlBtn = document.getElementById("hero-dl");
+      [mainDlBtn, heroDlBtn].forEach(function (btn) {
+        if (!btn) return;
+        btn.addEventListener("mouseenter", function () {
+          linkingState.downloadHovered = true;
+        });
+        btn.addEventListener("mouseleave", function () {
+          linkingState.downloadHovered = false;
+        });
+        btn.addEventListener("click", function () {
+          linkingState.cartridgeDocked = true;
+        });
+      });
+
+      // ==================== 3. FX CUSTOMIZER CONTROLLER ====================
+      var fxToggleBtn = document.getElementById("fxToggleBtn");
+      var fxPopup = document.getElementById("fxPopup");
+      var fxCloseBtn = document.getElementById("fxCloseBtn");
+      var fxModeBadge = document.getElementById("fxModeBadge");
+
+      function updateActiveUIButtons() {
+        document.querySelectorAll(".fx-opt-btn").forEach(function (btn) {
+          var cfg = btn.getAttribute("data-cfg");
+          var val = btn.getAttribute("data-val");
+          if (cfg === "size" || cfg === "count") val = parseInt(val, 10);
+          if (fxConfig[cfg] === val) {
+            btn.classList.add("active");
+          } else {
+            btn.classList.remove("active");
+          }
+        });
+        if (fxModeBadge) {
+          fxModeBadge.textContent = fxConfig.mode.toUpperCase();
+        }
+      }
+
+      function applyFxConfig() {
+        updateActiveUIButtons();
+        stageCanvases.forEach(function (inst) { inst.reset(); });
+        try {
+          localStorage.setItem("wordflow_fx_config", JSON.stringify(fxConfig));
+        } catch (e) {}
+      }
+
+      if (fxToggleBtn && fxPopup) {
+        fxToggleBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          fxPopup.classList.toggle("is-open");
+        });
+      }
+      if (fxCloseBtn && fxPopup) {
+        fxCloseBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          fxPopup.classList.remove("is-open");
+        });
+      }
+      document.addEventListener("click", function (e) {
+        if (fxPopup && !fxPopup.contains(e.target) && e.target !== fxToggleBtn && !fxToggleBtn.contains(e.target)) {
+          fxPopup.classList.remove("is-open");
+        }
+      });
+
+      document.querySelectorAll(".fx-opt-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var cfg = this.getAttribute("data-cfg");
+          var val = this.getAttribute("data-val");
+          if (cfg === "size" || cfg === "count") val = parseInt(val, 10);
+          fxConfig[cfg] = val;
+          applyFxConfig();
+        });
+      });
+
+      updateActiveUIButtons();
+
+      window.wordflowFX = {
+        setMode: function (mode) { if (["neural", "ascent", "vortex", "rain"].includes(mode)) { fxConfig.mode = mode; applyFxConfig(); } },
+        setCount: function (cnt) { fxConfig.count = cnt; applyFxConfig(); },
+        setColor: function (col) { fxConfig.color = col; applyFxConfig(); },
+        setSize: function (sz) { fxConfig.size = sz; applyFxConfig(); },
+        getConfig: function () { return Object.assign({}, fxConfig); }
+      };
+
+      // ==================== 4. CROSS-SECTION PARTICLE TRANSITION ENGINE ====================
+      var transCanvas = document.getElementById("transitionCanvas");
+      var transCtx = transCanvas ? transCanvas.getContext("2d") : null;
+      var transWidth = 0, transHeight = 0;
+      var transParticles = [];
+      var isTransActive = false;
+      var lastTransTime = performance.now();
+      var lastSeamInjectTime = 0;
+
+      function resizeTransCanvas() {
+        if (!transCanvas) return;
+        transWidth = window.innerWidth;
+        transHeight = window.innerHeight;
+        transCanvas.width = Math.round(transWidth * dpr);
+        transCanvas.height = Math.round(transHeight * dpr);
+        if (transCtx) {
+          transCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          transCtx.imageSmoothingEnabled = false;
+        }
+      }
+      window.addEventListener("resize", resizeTransCanvas, { passive: true });
+      resizeTransCanvas();
+
+      var SECTION_PALETTES = {
+        "00": ["#7eb6e4", "#3b82f6", "#60a5fa", "#a8d5fa", "#ffffff"],
+        "01": ["#38bdf8", "#60a5fa", "#34d399", "#818cf8", "#bae6fd"],
+        "02": ["#fbbf24", "#34d399", "#6366f1", "#f59e0b", "#fde68a"],
+        "03": ["#22d3ee", "#38bdf8", "#0284c7", "#818cf8", "#a5f3fc"],
+        "04": ["#fef08a", "#6ee7b7", "#93c5fd", "#f59e0b", "#ffffff"],
+        "05": ["#f59e0b", "#60a5fa", "#fde047", "#3b82f6", "#ffffff"]
+      };
+
+      // ==================== 4.1 16-BIT RETRO PIXEL DITHER SEAM ENGINE (纯正像素风交错消融) ====================
+      function PixelRift(el) {
+        this.el = el;
+        this.canvas = el.querySelector(".rift-canvas");
+        this.ctx = this.canvas ? this.canvas.getContext("2d") : null;
+        this.fromIdx = el.getAttribute("data-from") || "00";
+        this.toIdx = el.getAttribute("data-to") || "01";
+        this.width = 0;
+        this.height = 0;
+        this.isActive = false;
+        this.isInCenter = false;
+        this.mousePos = { x: null, y: null };
+        this.cascadeClock = 0;
+
+        this.palA = SECTION_PALETTES[this.fromIdx] || ["#38bdf8", "#60a5fa", "#ffffff"];
+        this.palB = SECTION_PALETTES[this.toIdx] || ["#fbbf24", "#34d399", "#ffffff"];
+
+        this.grid = 8; // 8px chunky retro pixel grid
+        this.particles = [];
+        this.sparks = [];
+
+        var self = this;
+        el.addEventListener("mousemove", function (e) {
+          var rect = el.getBoundingClientRect();
+          self.mousePos.x = e.clientX - rect.left;
+          self.mousePos.y = e.clientY - rect.top;
+        });
+        el.addEventListener("mouseleave", function () {
+          self.mousePos.x = null;
+          self.mousePos.y = null;
+        });
+        el.addEventListener("click", function (e) {
+          var rect = el.getBoundingClientRect();
+          self.spawnPixelSparks(e.clientX - rect.left, e.clientY - rect.top, 24);
+        });
+
+        this.init();
+      }
+
+      PixelRift.prototype.init = function () {
+        this.resize();
+        this.particles = [];
+        for (var i = 0; i < 32; i++) {
+          this.particles.push(this.makeParticle(true));
+        }
+      };
+
+      PixelRift.prototype.resize = function () {
+        if (!this.canvas) return;
+        this.width = this.el.clientWidth || window.innerWidth;
+        this.height = this.el.clientHeight || 72;
+        this.canvas.width = Math.round(this.width * dpr);
+        this.canvas.height = Math.round(this.height * dpr);
+        if (this.ctx) {
+          this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          this.ctx.imageSmoothingEnabled = false;
+        }
+      };
+
+      PixelRift.prototype.makeParticle = function (randomAge) {
+        var isTop = Math.random() > 0.5;
+        var pCol = isTop ? this.palA[(Math.random() * this.palA.length) | 0] : this.palB[(Math.random() * this.palB.length) | 0];
+        var sz = (Math.random() > 0.35) ? 8 : 6;
+        var gx = Math.floor((Math.random() * this.width) / this.grid) * this.grid;
+        var gy = Math.floor((Math.random() * this.height) / this.grid) * this.grid;
+        return {
+          x: gx,
+          y: gy,
+          vx: (Math.random() > 0.5 ? 1 : -1) * (Math.random() > 0.6 ? this.grid : 0),
+          vy: (Math.random() > 0.5 ? 1 : -1) * (Math.random() > 0.5 ? this.grid : 0),
+          size: sz,
+          color: pCol,
+          age: randomAge ? Math.random() * 4 : 0,
+          maxAge: 3 + Math.random() * 4,
+          twinkle: Math.random() > 0.4
+        };
+      };
+
+      PixelRift.prototype.spawnPixelSparks = function (x, y, count) {
+        var num = count || 16;
+        var snapX = Math.round(x / this.grid) * this.grid;
+        var snapY = Math.round(y / this.grid) * this.grid;
+        var dirs = [
+          { dx: 1, dy: 0 }, { dx: -1, dy: 0 }, { dx: 0, dy: 1 }, { dx: 0, dy: -1 },
+          { dx: 1, dy: 1 }, { dx: -1, dy: -1 }, { dx: 1, dy: -1 }, { dx: -1, dy: 1 }
+        ];
+        for (var i = 0; i < num; i++) {
+          var dir = dirs[i % dirs.length];
+          var spd = (1 + Math.floor(Math.random() * 3)) * this.grid;
+          var useA = Math.random() > 0.5;
+          this.sparks.push({
+            x: snapX,
+            y: snapY,
+            vx: dir.dx * spd * 0.15,
+            vy: dir.dy * spd * 0.15,
+            size: this.grid,
+            color: Math.random() > 0.3 ? (useA ? this.palA[0] : this.palB[0]) : "#ffffff",
+            age: 0,
+            maxAge: 0.35 + Math.random() * 0.3
+          });
+        }
+      };
+
+      PixelRift.prototype.tick = function (dt, now) {
+        if (!this.ctx || this.width <= 0 || this.height <= 0) return;
+
+        var vh = window.innerHeight;
+        var rect = this.el.getBoundingClientRect();
+
+        // 1. Offscreen Cull: 0% CPU consumption when scrolled past
+        if (rect.bottom < -30 || rect.top > vh + 30) {
+          if (this.isActive) this.isActive = false;
+          return;
+        }
+
+        this.isActive = true;
+        this.cascadeClock += dt;
+
+        var distFromCenter = Math.abs((rect.top + rect.height * 0.5) - (vh * 0.5));
+        var inCenter = distFromCenter < (vh * 0.4);
+        if (inCenter !== this.isInCenter) {
+          this.isInCenter = inCenter;
+          if (inCenter) {
+            this.spawnPixelSparks(this.width * 0.5, this.height * 0.5, 16);
+          }
+        }
+
+        var ctx = this.ctx;
+        ctx.clearRect(0, 0, this.width, this.height);
+
+        // 2. Base Dark Void (#020409)
+        ctx.fillStyle = "#020409";
+        ctx.fillRect(0, 0, this.width, this.height);
+
+        var grid = this.grid; // 8px
+        var numCols = Math.ceil(this.width / grid);
+        var numRows = Math.ceil(this.height / grid);
+
+        // 3. Top Row Dither Matrix (上方页面像素消融阶梯)
+        for (var col = 0; col < numCols; col++) {
+          var px = col * grid;
+          var pseudo0 = ((col * 17 + 3) % 10) / 10;
+          if (pseudo0 < 0.85) {
+            ctx.fillStyle = this.palA[col % this.palA.length];
+            ctx.fillRect(px, 0, grid, grid);
+          }
+          var pseudo1 = ((col * 29 + 7) % 10) / 10;
+          if (pseudo1 < 0.45) {
+            ctx.fillStyle = this.palA[(col + 1) % this.palA.length];
+            ctx.fillRect(px, grid, grid, grid);
+          }
+          var pseudo2 = ((col * 43 + 11) % 10) / 10;
+          if (pseudo2 < 0.18) {
+            ctx.fillStyle = this.palA[(col + 2) % this.palA.length];
+            ctx.fillRect(px, grid * 2, grid, grid);
+          }
+        }
+
+        // 4. Bottom Row Dither Matrix (下方页面像素浮现阶梯)
+        var lastRowY = (numRows - 1) * grid;
+        for (var bcol = 0; bcol < numCols; bcol++) {
+          var bpx = bcol * grid;
+          var bpseudo0 = ((bcol * 19 + 5) % 10) / 10;
+          if (bpseudo0 < 0.85) {
+            ctx.fillStyle = this.palB[bcol % this.palB.length];
+            ctx.fillRect(bpx, lastRowY, grid, grid);
+          }
+          var bpseudo1 = ((bcol * 31 + 9) % 10) / 10;
+          if (bpseudo1 < 0.45) {
+            ctx.fillStyle = this.palB[(bcol + 1) % this.palB.length];
+            ctx.fillRect(bpx, lastRowY - grid, grid, grid);
+          }
+          var bpseudo2 = ((bcol * 47 + 13) % 10) / 10;
+          if (bpseudo2 < 0.18) {
+            ctx.fillStyle = this.palB[(bcol + 2) % this.palB.length];
+            ctx.fillRect(bpx, lastRowY - grid * 2, grid, grid);
+          }
+        }
+
+        // 5. Middle Floating Chunky 16-Bit Pixel Shards
+        for (var pi = 0; pi < this.particles.length; pi++) {
+          var p = this.particles[pi];
+          p.age += dt;
+          if (p.age >= p.maxAge) {
+            this.particles[pi] = this.makeParticle(false);
+            continue;
+          }
+
+          if (Math.random() < 0.08) {
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.x < 0) p.x = this.width - grid;
+            if (p.x >= this.width) p.x = 0;
+            if (p.y < grid * 2) p.y = this.height - grid * 3;
+            if (p.y > this.height - grid * 3) p.y = grid * 2;
+          }
+
+          var pAlpha = Math.sin((p.age / p.maxAge) * Math.PI);
+          var drawCol = p.color;
+          if (p.twinkle && (Math.floor(this.cascadeClock * 8 + pi) % 4 === 0)) {
+            drawCol = "#ffffff";
+          }
+
+          ctx.fillStyle = drawCol;
+          ctx.globalAlpha = Math.max(0.2, Math.min(1, pAlpha));
+          ctx.fillRect(Math.round(p.x / grid) * grid, Math.round(p.y / grid) * grid, p.size, p.size);
+        }
+        ctx.globalAlpha = 1;
+
+        // 6. Cascading Pixel Columns when scrolled in center
+        if (this.isInCenter) {
+          var stepFrame = Math.floor(this.cascadeClock * 6);
+          for (var cc = 2; cc < numCols - 2; cc += 6) {
+            var cy = ((stepFrame + cc) % (numRows - 2) + 1) * grid;
+            ctx.fillStyle = (cc % 2 === 0) ? this.palA[0] : this.palB[0];
+            ctx.fillRect(cc * grid, cy, grid, grid);
+          }
+        }
+
+        // 7. Chunky 8px Retro Sparks
+        for (var si = this.sparks.length - 1; si >= 0; si--) {
+          var sp = this.sparks[si];
+          sp.age += dt;
+          if (sp.age >= sp.maxAge) {
+            this.sparks.splice(si, 1);
+            continue;
+          }
+          sp.x += sp.vx;
+          sp.y += sp.vy;
+          var spAlpha = 1 - (sp.age / sp.maxAge);
+          ctx.fillStyle = sp.color;
+          ctx.globalAlpha = Math.max(0, Math.min(1, spAlpha));
+          var sx = Math.round(sp.x / grid) * grid;
+          var sy = Math.round(sp.y / grid) * grid;
+          ctx.fillRect(sx, sy, sp.size, sp.size);
+        }
+        ctx.globalAlpha = 1;
+      };
+
+      // Initialize all pixel rifts
+      document.querySelectorAll(".pixel-rift").forEach(function (el) {
+        rifts.push(new PixelRift(el));
+      });
+      window.rifts = rifts;
+      window.addEventListener("resize", function () {
+        rifts.forEach(function (r) { r.resize(); });
+      }, { passive: true });
+
+      function getStageFocalPoint(sec) {
+        if (!sec) return { x: transWidth * 0.5, y: transHeight * 0.5 };
+        var artEl = sec.querySelector(".hero-art, .sec-art");
+        if (artEl) {
+          var rect = artEl.getBoundingClientRect();
+          return {
+            x: Math.max(50, Math.min(transWidth - 50, rect.left + rect.width * 0.5)),
+            y: Math.max(50, Math.min(transHeight - 50, rect.top + rect.height * 0.5))
+          };
+        }
+        var sRect = sec.getBoundingClientRect();
+        return {
+          x: sRect.left + sRect.width * 0.5,
+          y: sRect.top + sRect.height * 0.5
+        };
+      }
+
+      // Authentic 16-Bit Stepped Pixel Relay Conduit
+      function spawnPixelRelayStream(fromSec, toSec, count, customColA, customColB) {
+        if (!transCtx || !fromSec || !toSec) return;
+        var pFrom = getStageFocalPoint(fromSec);
+        var pTo = getStageFocalPoint(toSec);
+        var fromIdx = fromSec.getAttribute("data-idx") || "00";
+        var toIdx = toSec.getAttribute("data-idx") || "01";
+        var palA = customColA ? [customColA] : (SECTION_PALETTES[fromIdx] || SECTION_PALETTES["00"]);
+        var palB = customColB ? [customColB] : (SECTION_PALETTES[toIdx] || SECTION_PALETTES["01"]);
+
+        var numP = count || 45;
+        for (var i = 0; i < numP; i++) {
+          var pLife = randBetween(0.85, 1.45);
+          var spreadX = (Math.random() - 0.5) * 80;
+          var spreadY = (Math.random() - 0.5) * 50;
+          var stepOffset = (Math.random() - 0.5) * 120;
+          var pSize = Math.random() > 0.4 ? 8 : 6;
+
+          transParticles.push({
+            startX: pFrom.x + spreadX,
+            startY: pFrom.y + spreadY,
+            endX: pTo.x + spreadX * 0.4,
+            endY: pTo.y + spreadY * 0.4,
+            stepOffset: stepOffset,
+            age: 0,
+            maxLife: pLife,
+            size: pSize,
+            colorA: palA[(Math.random() * palA.length) | 0],
+            colorB: palB[(Math.random() * palB.length) | 0],
+            delay: Math.random() * 0.40
+          });
+        }
+
+        if (!isTransActive) {
+          isTransActive = true;
+          lastTransTime = performance.now();
+          requestAnimationFrame(transTick);
+        }
+      }
+      window.spawnPixelRelayStream = spawnPixelRelayStream;
+      window.spawnTransitionStream = spawnPixelRelayStream;
+
+      function triggerStageFocus(sec) {
+        if (!sec) return;
+        var img = sec.querySelector(".hero-art > img, .sec-art > img");
+        if (img) {
+          img.classList.remove("stage-focus");
+          void img.offsetWidth; // trigger reflow
+          img.classList.add("stage-focus");
+        }
+      }
+
+      function transTick(now) {
+        var dt = Math.min((now - lastTransTime) / 1000, 0.1);
+        lastTransTime = now;
+
+        if (!transCtx || transWidth <= 0 || transHeight <= 0) {
+          isTransActive = false;
+          return;
+        }
+
+        transCtx.clearRect(0, 0, transWidth, transHeight);
+
+        var activeCount = 0;
+        for (var i = 0; i < transParticles.length; i++) {
+          var p = transParticles[i];
+          if (p.delay > 0) {
+            p.delay -= dt;
+            activeCount++;
+            continue;
+          }
+
+          p.age += dt;
+          if (p.age >= p.maxLife) continue;
+
+          activeCount++;
+          var frac = p.age / p.maxLife;
+          var easeFrac = frac * frac * (3 - 2 * frac);
+
+          // 16-bit stepped circuit conduit path (orthogonal + 45-deg bevel)
+          var midX = p.startX + (p.endX - p.startX) * 0.5 + p.stepOffset * Math.sin(frac * Math.PI);
+          var curX = frac < 0.5 ? p.startX + (midX - p.startX) * (frac * 2) : midX + (p.endX - midX) * ((frac - 0.5) * 2);
+          var curY = p.startY + (p.endY - p.startY) * easeFrac;
+
+          // Snap to 8px integer pixel grid for pure 16-bit retro arcade aesthetic!
+          var snapX = Math.round(curX / 8) * 8;
+          var snapY = Math.round(curY / 8) * 8;
+
+          var curColor = frac < 0.45 ? p.colorA : p.colorB;
+          var alpha = Math.sin(frac * Math.PI) * 0.95;
+
+          transCtx.fillStyle = curColor;
+          transCtx.globalAlpha = Math.max(0, Math.min(1, alpha));
+          transCtx.fillRect(snapX, snapY, p.size, p.size);
+
+          // Trailing micro-pixel crumbs
+          var trailFrac = Math.max(0, frac - 0.06);
+          var trailEase = trailFrac * trailFrac * (3 - 2 * trailFrac);
+          var trailY = p.startY + (p.endY - p.startY) * trailEase;
+          var trailSnapX = Math.round((p.startX + (p.endX - p.startX) * trailEase) / 8) * 8;
+          var trailSnapY = Math.round(trailY / 8) * 8;
+          transCtx.globalAlpha = alpha * 0.35;
+          transCtx.fillRect(trailSnapX, trailSnapY, 4, 4);
+        }
+
+        transCtx.globalAlpha = 1;
+
+        if (transParticles.length > 200) {
+          transParticles = transParticles.filter(function (p) { return p.age < p.maxLife; });
+        }
+
+        if (activeCount > 0) {
+          requestAnimationFrame(transTick);
+        } else {
+          transParticles = [];
+          isTransActive = false;
+        }
+      }
+
+      // ==================== 4.5 PURE SCROLL-DRIVEN PIXEL ANIMATION CHAIN (自己滑动串联) ====================
+      // Zero auto-pilot timers. The pixel animations seamlessly chain and evolve as the user scrolls naturally.
+      var descList = [
+        "Level 1 · Slight friction (Relearn scheduled in 20m)",
+        "Level 2 · Moderate recall delay (Review in 1 day)",
+        "Level 3 · Noticeable resistance (Review in 2 days)",
+        "Level 4 · Deep retrieval required (Review in 4 days)",
+        "Level 5 · Solid recognition emerging (Review in 7 days)",
+        "Level 6 · Fluid response (Next scheduled in 15-30 days)"
+      ];
+
+      var lastScrollY = window.pageYOffset || 0;
+      var scrollVelocity = 0;
+
+      window.addEventListener("scroll", function () {
+        var currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
+        scrollVelocity = Math.abs(currentScrollY - lastScrollY);
+        lastScrollY = currentScrollY;
+
+        var vh = window.innerHeight;
+
+        // Drive stage animations organically based on where user scrolls
+        sections.forEach(function (sec) {
+          var rect = sec.getBoundingClientRect();
+          var idx = sec.getAttribute("data-idx");
+
+          // Calculate section scroll progress: 0 when entering bottom, 0.5 at center, 1 when leaving top
+          var enterFrac = (vh - rect.top) / (vh + rect.height);
+          var progress = Math.max(0, Math.min(1, enterFrac));
+
+          // 01 Mechanism (Brain): Fissure impulses speed up as you scroll in
+          if (idx === "01") {
+            if (rect.top < vh * 0.65 && rect.bottom > vh * 0.35) {
+              linkingState.cardHovered = true;
+            } else {
+              linkingState.cardHovered = false;
+            }
+          }
+
+          // 02 Scale (6 Resistance Pillars): Pillars organically rise and energize as you scroll through!
+          // Only auto-scale if user hasn't manually clicked a dot to lock their preference
+          if (idx === "02" && !linkingState.userLockedLevel) {
+            if (rect.top < vh * 0.85 && rect.bottom > vh * 0.15) {
+              // Map center visibility to Level 1..6
+              var centerProgress = Math.max(0, Math.min(1, (vh * 0.85 - rect.top) / (vh * 0.70)));
+              var autoLvl = Math.max(1, Math.min(6, Math.ceil(centerProgress * 6)));
+              if (autoLvl !== linkingState.activeLevel) {
+                linkingState.activeLevel = autoLvl;
+                var dots = document.querySelectorAll("#dots-row .s-dot");
+                var descEl = document.getElementById("dots-desc");
+                if (dots && descEl) {
+                  dots.forEach(function (d, i) {
+                    if (i < autoLvl) d.classList.add("on");
+                    else d.classList.remove("on");
+                  });
+                  descEl.textContent = descList[autoLvl - 1];
+                }
+              }
+            }
+          }
+
+          // 03 Rhythm: Ebbinghaus wave segments highlight in rhythm with scroll position
+          if (idx === "03") {
+            if (rect.top < vh * 0.75 && rect.bottom > vh * 0.25) {
+              var waveFrac = Math.max(0, Math.min(1, (vh * 0.75 - rect.top) / (vh * 0.50)));
+              if (waveFrac < 0.35) linkingState.hoveredInterval = 0;
+              else if (waveFrac < 0.70) linkingState.hoveredInterval = 1;
+              else linkingState.hoveredInterval = 2;
+            } else {
+              linkingState.hoveredInterval = null;
+            }
+          }
+
+          // 04 Context: Floating word cubes illuminate sequentially as you scroll
+          if (idx === "04") {
+            if (rect.top < vh * 0.75 && rect.bottom > vh * 0.25) {
+              var wordFrac = Math.max(0, Math.min(1, (vh * 0.75 - rect.top) / (vh * 0.50)));
+              if (wordFrac < 0.35) linkingState.hoveredWordIdx = 0;
+              else if (wordFrac < 0.70) linkingState.hoveredWordIdx = 1;
+              else linkingState.hoveredWordIdx = 2;
+            } else {
+              linkingState.hoveredWordIdx = null;
+            }
+          }
+
+          // 05 Download: Cartridge descends and pins charge as you reach the download area
+          if (idx === "05") {
+            if (rect.top < vh * 0.8) {
+              linkingState.downloadHovered = true;
+            } else {
+              linkingState.downloadHovered = false;
+            }
+          }
+        });
+      }, { passive: true });
+
+      // ==================== 5. SMOOTH SCROLL & REVEALS ====================
+      document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
+        anchor.addEventListener("click", function (e) {
+          var targetId = this.getAttribute("href");
+          if (!targetId || targetId === "#") return;
+          var targetEl = document.querySelector(targetId);
+          if (targetEl) {
+            e.preventDefault();
+            var curSec = null;
+            sections.forEach(function (sec) {
+              if (sec.getAttribute("data-idx") === currentIdx) curSec = sec;
+            });
+            if (curSec && targetEl !== curSec) {
+              spawnTransitionStream(curSec, targetEl, 48);
+              triggerStageFocus(targetEl);
+            }
+            targetEl.scrollIntoView({ behavior: "smooth" });
+          }
+        });
+      });
+
+      var revealObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+          }
+        });
+      }, { rootMargin: "0px 0px -10% 0px", threshold: 0.12 });
+
+      var sections = document.querySelectorAll(".hero-split, .section-split");
+      sections.forEach(function (sec) {
+        revealObserver.observe(sec);
+      });
+
+      // HUD Tracking & Cross-Section Transition
+      var hudIdx = document.getElementById("hudIdx");
+      var hudBar = document.getElementById("hudBar");
+      var hudName = document.getElementById("hudName");
+      var hudEl = document.querySelector(".hud");
+      var currentIdx = "00";
+
+      function updateHUD(newIdx, newName) {
+        if (!hudIdx || !hudName || newIdx === currentIdx) return;
+        var prevIdx = currentIdx;
+        currentIdx = newIdx;
+
+        // Trigger Cross-Section Particle Transition Stream
+        var prevSec = null, activeSec = null;
+        sections.forEach(function (sec) {
+          if (sec.getAttribute("data-idx") === prevIdx) prevSec = sec;
+          if (sec.getAttribute("data-idx") === newIdx) activeSec = sec;
+        });
+
+        if (prevSec && activeSec) {
+          spawnTransitionStream(prevSec, activeSec, 38);
+          triggerStageFocus(activeSec);
+        }
+
+        hudIdx.classList.add("hud-exit");
+        hudName.classList.add("hud-exit");
+        setTimeout(function () {
+          hudIdx.textContent = newIdx;
+          hudName.textContent = newName;
+          hudIdx.classList.remove("hud-exit");
+          hudName.classList.remove("hud-exit");
+          hudIdx.classList.add("hud-enter");
+          hudName.classList.add("hud-enter");
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              hudIdx.classList.remove("hud-enter");
+              hudName.classList.remove("hud-enter");
+            });
+          });
+        }, 180);
+      }
+
+      function onScroll() {
+        var scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        var totalH = document.documentElement.scrollHeight - window.innerHeight;
+        var progress = totalH > 0 ? Math.min(1, Math.max(0, scrollY / totalH)) : 0;
+        if (hudBar) hudBar.style.transform = "scaleX(" + progress + ")";
+
+        if (hudEl) {
+          if (scrollY < 40) {
+            hudEl.style.opacity = "0";
+          } else {
+            hudEl.style.opacity = Math.min(1, (scrollY - 40) / 160).toFixed(2);
+          }
+        }
+
+        // Continuous seam transition streaming during active scroll
+        var now = performance.now();
+        if (now - lastSeamInjectTime > 140) {
+          for (var s = 0; s < sections.length - 1; s++) {
+            var sA = sections[s];
+            var sB = sections[s + 1];
+            var rB = sB.getBoundingClientRect();
+            if (rB.top > 0 && rB.top < window.innerHeight) {
+              spawnTransitionStream(sA, sB, 4);
+              lastSeamInjectTime = now;
+              break;
+            }
+          }
+        }
+
+        var viewportThreshold = window.innerHeight * 0.46;
+        var activeSec = sections[0];
+        sections.forEach(function (sec) {
+          var rect = sec.getBoundingClientRect();
+          if (rect.top <= viewportThreshold) {
+            activeSec = sec;
+          }
+        });
+
+        if (activeSec) {
+          var newIdx = activeSec.getAttribute("data-idx");
+          var newName = activeSec.getAttribute("data-name");
+          if (newIdx !== currentIdx) {
+            updateHUD(newIdx, newName);
+          }
+        }
+      }
+
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+
+      // ==================== 5. INTERACTIVE APPS & API ====================
+      fetch("/v1/release")
+        .then(function (res) { return res.json(); })
+        .then(function (release) {
+          var url = release.url || "releases/wordflow.apk";
+          var hBtn = document.getElementById("hero-dl");
+          var mBtn = document.getElementById("main-download-link");
+          var vEl = document.getElementById("version-text");
+          var rVer = document.getElementById("release-version");
+          if (hBtn) hBtn.href = url;
+          if (mBtn) mBtn.href = url;
+          if (vEl && release.versionName) vEl.textContent = "Android " + release.versionName + " · Offline Engine";
+          if (rVer && release.versionName) rVer.textContent = "Android · " + release.versionName;
+        })
+        .catch(function () {});
+
+      var yr = document.getElementById("yr");
+      if (yr) yr.textContent = new Date().getFullYear();
+    })();
+  </script>
+</body>
+</html>

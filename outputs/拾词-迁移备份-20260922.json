@@ -1,0 +1,226 @@
+{
+  "version": 1,
+  "words": [
+    {
+      "id": "f536841b-174a-440b-a9cb-5a382e9781cc",
+      "word": "accomplish",
+      "meaning": "v. 完成；实现",
+      "phonetic": "/əˈkʌmplɪʃ/",
+      "example": "We can accomplish this goal together.",
+      "addedAt": "2026-09-22T10:34:24.872Z",
+      "batch": "导入测试",
+      "failures": 0,
+      "card": {
+        "due": "2026-09-22T10:50:35.318Z",
+        "stability": 1.2931,
+        "difficulty": 5.11217071,
+        "elapsed_days": 0,
+        "scheduled_days": 0,
+        "reps": 1,
+        "lapses": 0,
+        "state": 1,
+        "learning_steps": 0,
+        "last_review": "2026-09-22T10:44:35.318Z"
+      }
+    },
+    {
+      "id": "42f26023-aa95-4c2b-a0ab-dc0034a9f561",
+      "word": "adapt",
+      "meaning": "v. 适应；调整",
+      "phonetic": "/əˈdæpt/",
+      "example": "It takes time to adapt to a new routine.",
+      "addedAt": "2026-09-22T10:34:24.872Z",
+      "batch": "导入测试",
+      "failures": 0,
+      "card": {
+        "due": "2026-09-22T10:34:24.872Z",
+        "stability": 0,
+        "difficulty": 0,
+        "elapsed_days": 0,
+        "scheduled_days": 0,
+        "reps": 0,
+        "lapses": 0,
+        "state": 0,
+        "learning_steps": 0
+      }
+    },
+    {
+      "id": "e1263ea1-47f1-4a02-912b-1d4b9cebb6b1",
+      "word": "concentrate",
+      "meaning": "v. 集中注意力",
+      "phonetic": "/ˈkɒnsəntreɪt/",
+      "example": "I find it easier to concentrate in a quiet room.",
+      "addedAt": "2026-09-22T10:34:24.872Z",
+      "batch": "导入测试",
+      "failures": 0,
+      "card": {
+        "due": "2026-09-22T10:34:24.872Z",
+        "stability": 0,
+        "difficulty": 0,
+        "elapsed_days": 0,
+        "scheduled_days": 0,
+        "reps": 0,
+        "lapses": 0,
+        "state": 0,
+        "learning_steps": 0
+      }
+    },
+    {
+      "id": "bdd544a4-b1c0-4b5a-bc91-7e13f872cdca",
+      "word": "efficient",
+      "meaning": "adj. 高效的",
+      "phonetic": "/ɪˈfɪʃənt/",
+      "example": "A clear plan saves time, making our work more efficient.",
+      "addedAt": "2026-09-22T10:34:24.872Z",
+      "batch": "导入测试",
+      "failures": 0,
+      "card": {
+        "due": "2026-09-22T10:34:24.872Z",
+        "stability": 0,
+        "difficulty": 0,
+        "elapsed_days": 0,
+        "scheduled_days": 0,
+        "reps": 0,
+        "lapses": 0,
+        "state": 0,
+        "learning_steps": 0
+      }
+    },
+    {
+      "id": "01d81a07-6381-48fc-b793-03df5b19f454",
+      "word": "essential",
+      "meaning": "adj. 必不可少的；本质的",
+      "phonetic": "/ɪˈsenʃəl/",
+      "example": "Regular practice is essential for improvement.",
+      "addedAt": "2026-09-22T10:34:24.872Z",
+      "batch": "导入测试",
+      "failures": 0,
+      "card": {
+        "due": "2026-09-22T10:34:24.872Z",
+        "stability": 0,
+        "difficulty": 0,
+        "elapsed_days": 0,
+        "scheduled_days": 0,
+        "reps": 0,
+        "lapses": 0,
+        "state": 0,
+        "learning_steps": 0
+      }
+    },
+    {
+      "id": "54c87367-e66b-4f53-84ff-f7cc9043160c",
+      "word": "maintain",
+      "meaning": "v. 维持；保养",
+      "phonetic": "/meɪnˈteɪn/",
+      "example": "Try to maintain a healthy balance between work and rest.",
+      "addedAt": "2026-09-22T10:34:24.872Z",
+      "batch": "导入测试",
+      "failures": 0,
+      "card": {
+        "due": "2026-09-22T10:34:24.872Z",
+        "stability": 0,
+        "difficulty": 0,
+        "elapsed_days": 0,
+        "scheduled_days": 0,
+        "reps": 0,
+        "lapses": 0,
+        "state": 0,
+        "learning_steps": 0
+      }
+    },
+    {
+      "id": "45e90ceb-0438-4a4b-b557-55322642d77d",
+      "word": "opportunity",
+      "meaning": "n. 机会；时机",
+      "phonetic": "/ˌɒpəˈtjuːnəti/",
+      "example": "Every conversation is an opportunity to learn.",
+      "addedAt": "2026-09-22T10:34:24.872Z",
+      "batch": "导入测试",
+      "failures": 0,
+      "card": {
+        "due": "2026-09-22T10:34:24.872Z",
+        "stability": 0,
+        "difficulty": 0,
+        "elapsed_days": 0,
+        "scheduled_days": 0,
+        "reps": 0,
+        "lapses": 0,
+        "state": 0,
+        "learning_steps": 0
+      }
+    },
+    {
+      "id": "d5a7fd58-347f-4185-8b16-623b8a3ae8f4",
+      "word": "persistent",
+      "meaning": "adj. 坚持不懈的；持续的",
+      "phonetic": "/pəˈsɪstənt/",
+      "example": "Her persistent efforts finally paid off.",
+      "addedAt": "2026-09-22T10:34:24.872Z",
+      "batch": "导入测试",
+      "failures": 0,
+      "card": {
+        "due": "2026-09-22T10:34:24.872Z",
+        "stability": 0,
+        "difficulty": 0,
+        "elapsed_days": 0,
+        "scheduled_days": 0,
+        "reps": 0,
+        "lapses": 0,
+        "state": 0,
+        "learning_steps": 0
+      }
+    },
+    {
+      "id": "a5807910-da41-40b7-a9eb-bd55edeead53",
+      "word": "priority",
+      "meaning": "n. 优先事项；优先权",
+      "phonetic": "",
+      "example": "Sleep should be a priority during a busy week.",
+      "addedAt": "2026-09-22T10:34:24.872Z",
+      "batch": "导入测试",
+      "failures": 0,
+      "card": {
+        "due": "2026-09-22T10:34:24.872Z",
+        "stability": 0,
+        "difficulty": 0,
+        "elapsed_days": 0,
+        "scheduled_days": 0,
+        "reps": 0,
+        "lapses": 0,
+        "state": 0,
+        "learning_steps": 0
+      }
+    },
+    {
+      "id": "6e69a933-4976-4251-985f-b23fc7d04763",
+      "word": "reflect",
+      "meaning": "v. 反思；反映",
+      "phonetic": "/rɪˈflekt/",
+      "example": "Take a moment to reflect on what you learned today.",
+      "addedAt": "2026-09-22T10:34:24.872Z",
+      "batch": "导入测试",
+      "failures": 0,
+      "card": {
+        "due": "2026-09-22T10:34:24.872Z",
+        "stability": 0,
+        "difficulty": 0,
+        "elapsed_days": 0,
+        "scheduled_days": 0,
+        "reps": 0,
+        "lapses": 0,
+        "state": 0,
+        "learning_steps": 0
+      }
+    }
+  ],
+  "reviews": [
+    {
+      "id": "eb7e9cfc-7b1a-4b80-9f53-5caad879cb0b",
+      "wordId": "f536841b-174a-440b-a9cb-5a382e9781cc",
+      "rating": 2,
+      "at": "2026-09-22T10:44:35.318Z"
+    }
+  ],
+  "lessons": [],
+  "goal": 20
+}

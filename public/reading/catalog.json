@@ -1,0 +1,440 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-23T09:37:07.830Z",
+  "articles": [
+    {
+      "id": "simple-library",
+      "title": "Library",
+      "wikiTitle": "Library",
+      "lang": "simple",
+      "level": "easy",
+      "topic": "文化",
+      "paragraphs": [
+        "A library is a place where many books are kept. Most libraries are public and let people take the books to use in their home. Most libraries let people borrow books for several weeks. Some belong to institutions, for example, companies, churches, schools, and universities. The people who work in libraries are librarians. Librarians are people who take care of the library.",
+        "Other libraries keep famous or rare books. There are a few \"Copyright libraries\" which have a copy of every book which has been written in that country. Some libraries also have other things that people might like, such as magazines, music on CDs, or computers where people can use the Internet. In schools, they offer software to learn the alphabet and other things.",
+        "With the spread of literacy, libraries have become essential tools for learning. Libraries are very important for the progress and development of a society. Libraries are collections of books and other informational materials, however a library can also be a collection of items or media. People come to libraries for reading, study or reference. Libraries contain a variety of materials. They contain printed materials, films, sound and video recordings, maps, photographs, computer software, online databases, and other media.",
+        "A library is not a bookstore (a store that sells books). Libraries and bookstores are two different things.",
+        "The prime purpose of a library is to provide access to knowledge and information. To fulfil this mission, libraries preserve a valuable record of culture. Then they pass down this to the coming generations. Therefore, they are an essential link between the past, present and future."
+      ],
+      "source": "Simple English Wikipedia",
+      "sourceUrl": "https://simple.wikipedia.org/wiki/Library",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:36:00.401Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/simple-library.jpg",
+        "alt": "Library",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Graz_University-Library_reading-room.jpg",
+        "credit": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Dr._Marcus_Gossler&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User:Dr. Marcus Gossler (page does not exist)\">Dr. Marcus Gossler</a>",
+        "license": {
+          "name": "CC BY-SA 3.0",
+          "url": "https://creativecommons.org/licenses/by-sa/3.0/"
+        }
+      }
+    },
+    {
+      "id": "simple-bicycle",
+      "title": "Bicycle",
+      "wikiTitle": "Bicycle",
+      "lang": "simple",
+      "level": "easy",
+      "topic": "城市",
+      "paragraphs": [
+        "A bicycle (or bike) is a small, human powered land vehicle with a seat, two wheels, two pedals, and a metal chain connected to cogs on the pedals and rear wheel. A frame gives the bike strength, and the other parts are attached to the frame. The name comes from the prefix bi (meaning two) and the suffix cycle (meaning wheel). It is powered by a person riding on top, who pushes the pedals around with his or her feet.",
+        "Riding bicycles, which is also called cycling, is an important way to travel in several parts of the world. The most popular type of cycling is Utility cycling. It is also a common kind of recreation, a good form of low-impact exercise, and a popular sport. According to one study, road bicycle racing is the eighth most popular spectator sport in the world.",
+        "In 1817 a German professor, Baron Karl von Drais, created the first two-wheeled bicycle. It was made of wood and had two wheels. The front wheel could be turned using the handlebars in order to steer the bike. However, it did not have pedals, so the rider would have to push their feet on the ground to make it move.",
+        "In the 1860s, French inventors added pedals to the front wheel. However, it took a lot of effort to turn the pedals. Later inventors made bikes out of metal only, and made the front wheel very big, giving higher speed. This design was called the penny-farthing bicycle. However, it was difficult to ride and any fall would be a long, dangerous fall ."
+      ],
+      "source": "Simple English Wikipedia",
+      "sourceUrl": "https://simple.wikipedia.org/wiki/Bicycle",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:36:02.370Z",
+      "revision": ""
+    },
+    {
+      "id": "simple-rainbow",
+      "title": "Rainbow",
+      "wikiTitle": "Rainbow",
+      "lang": "simple",
+      "level": "easy",
+      "topic": "自然",
+      "paragraphs": [
+        "A rainbow is an arc of colour in the sky that can be seen when the sun shines through falling rain. The pattern of colours, called a spectrum, starts with red on the outside and changes through orange, yellow, green, blue, indigo, and violet on the inside. Sometimes a second, larger, dimmer rainbow is seen.",
+        "A rainbow is created when white light is bent (refracted) while entering a droplet of water, split into separate colours, and reflected back. A rainbow is actually round like a circle. On the ground, the bottom part is hidden, but in the sky, like from a flying airplane, it can be seen as a circle around the point opposite the Sun. Rainbows often appear after storms, and are popular symbols for peace in many cultures.",
+        "The rainbow effect can be seen when there are water drops in the air and the sun is giving light at the back of the observer at a low distance up or angle. Rainbows always appear opposite the Sun: they form circles around the shadow of your head (which is the point opposite the Sun).",
+        "While sunlight is white, all white light is actually a blend of many different colours. Water and other materials bend the different colours at different angles, some more strongly than others. This is called dispersion. By splitting up white light into its separate colours, rainbows appear colourful even though the source of light hitting them is white."
+      ],
+      "source": "Simple English Wikipedia",
+      "sourceUrl": "https://simple.wikipedia.org/wiki/Rainbow",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:36:04.136Z",
+      "revision": ""
+    },
+    {
+      "id": "simple-moon",
+      "title": "Moon",
+      "wikiTitle": "Moon",
+      "lang": "simple",
+      "level": "easy",
+      "topic": "探索",
+      "paragraphs": [
+        "The Moon, also known as Luna, is Earth's only natural satellite (the only object which orbits the Earth and is not man-made). It is usually visible in the night sky, but is sometimes seen during the day.",
+        "The Moon is about one-fourth of the width of Earth. Because it is so far away it looks small in the sky, about half a degree wide.",
+        "The gravity on the Moon is one-sixth of the Earth's gravity. It means that an object will be one-sixth as heavy on the Moon compared to Earth.",
+        "The Moon is a rocky and dusty place. It moves slowly away from the Earth at a rate of 3.8 centimeters per year due to the effect of tidal dissipation.",
+        "Some other planets also have moons or natural satellites. The giant impact hypothesis is a common explanation for how the Moon formed.",
+        "The giant impact hypothesis is the most common theory among scientists to explain how the Moon formed. According to this hypothesis, Earth collided with a Mars-sized proto-planet around 4.5 billion years ago, and the debris from the collision created the Moon."
+      ],
+      "source": "Simple English Wikipedia",
+      "sourceUrl": "https://simple.wikipedia.org/wiki/Moon",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:36:06.722Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/simple-moon.jpg",
+        "alt": "Moon",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Moon_merged_small.jpg",
+        "credit": "Wikimedia Commons",
+        "license": {
+          "name": "CC BY-SA 3.0",
+          "url": "https://creativecommons.org/licenses/by-sa/3.0/"
+        }
+      }
+    },
+    {
+      "id": "simple-tea",
+      "title": "Tea",
+      "wikiTitle": "Tea",
+      "lang": "simple",
+      "level": "easy",
+      "topic": "生活",
+      "paragraphs": [
+        "Tea is a caffeinated drink made from steeping the leaves of the Camellia sinensis plant. Tea can have other herbs, spices, or fruit flavors in it, like lemon.",
+        "Sometimes, tea is used for other drinks that have been made by soaking fruit or herbs in hot water, like \"rosehip tea\" or \"chamomile tea\". These are called \"herbal teas\". After water, tea is the most widely consumed drink in the world.",
+        "There are three main types of tea: black tea, oolong, and green tea.",
+        "To make black tea, leaves are dried with hot air until they turn brown or black. Next, they are broken into pieces and put into a room where they absorb oxygen, or oxidize. Chemical reactions change the taste and style of the tea.",
+        "Most black tea comes from Sri Lanka, Indonesia and eastern Africa. Another name used for black tea, especially in China, is red tea. That is because when black tea leaves are brewed in boiling water, the tea made from them looks deep dark red.",
+        "Oolong tea is a traditional semi-oxidized Chinese tea. It is produced by withering the leaves under strong sun."
+      ],
+      "source": "Simple English Wikipedia",
+      "sourceUrl": "https://simple.wikipedia.org/wiki/Tea",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:36:09.178Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/simple-tea.jpg",
+        "alt": "Tea",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Tea_leaves_steeping_in_a_zhong_%C4%8Daj_05.jpg",
+        "credit": "<a href=\"//commons.wikimedia.org/wiki/User:Wikimol\" title=\"User:Wikimol\">Wikimol</a>",
+        "license": {
+          "name": "CC BY-SA 3.0",
+          "url": "https://creativecommons.org/licenses/by-sa/3.0/"
+        }
+      }
+    },
+    {
+      "id": "simple-photography",
+      "title": "Photography",
+      "wikiTitle": "Photography",
+      "lang": "simple",
+      "level": "easy",
+      "topic": "艺术",
+      "paragraphs": [
+        "Photography is a way of making a picture using a camera. A person who makes pictures using a camera is called a photographer. A picture made using a camera is called a photograph or photo. Photography became popular in the middle 19th century with Daguerreotype. Later wet plate and dry plate methods were invented. Most photography in the 20th century was on photographic film and most in the 21st uses digital cameras.",
+        "A camera is, in its simplest form, a box with a hole in its front. There is a special piece of glass in front of the hole called a lens. To take a photograph, the lens makes a small picture of the object inside the camera, which it does by focusing light. A lens in a camera works like a lens in glasses (spectacles) or a magnifying glass. One type of camera called the Pinhole camera has no lens but uses a very small hole to focus light.",
+        "To make a photograph with a camera, the shutter release button is pressed. Pressing the button opens the shutter. The shutter is like a door. It covers the hole in the camera box. The shutter is behind the lens. When the shutter is closed no light can enter the camera box. When the shutter is open light can enter the camera. When the button is pressed the shutter opens and then closes. This happens very fast. The amount of time the shutter stays open for is called the shutter speed. The shutter speed can change between 1/1000th of a second (0.001 s) to a few seconds. Normally the time taken for the shutter to open and close is far less than 1 second."
+      ],
+      "source": "Simple English Wikipedia",
+      "sourceUrl": "https://simple.wikipedia.org/wiki/Photography",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:36:12.552Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/simple-photography.png",
+        "alt": "Photography",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:View_from_the_Window_at_Le_Gras,_Joseph_Nic%C3%A9phore_Ni%C3%A9pce,_uncompressed_UMN_source.png",
+        "credit": "Joseph Nicéphore Niépce",
+        "license": {
+          "name": "Public domain",
+          "url": "https://creativecommons.org/publicdomain/mark/1.0/"
+        }
+      }
+    },
+    {
+      "id": "simple-national-park",
+      "title": "National park",
+      "wikiTitle": "National park",
+      "lang": "simple",
+      "level": "easy",
+      "topic": "自然",
+      "paragraphs": [
+        "A national park is a park or an area of land officially recognized and protected by a nation's government. National parks are often made to protect the animals that live inside them or the land itself. There are many National Parks in the world.",
+        "The first one established (in 1872) was the United States Yellowstone National Park. It was the first national park in the world. But the idea of protecting areas from human development was proposed years earlier. American painter George Catlin offered the idea during the 1830s.",
+        "An international organization, the International Union for Conservation of Nature (IUCN), and its World Commission on Protected Areas, has defined National Parks as its category II type of protected areas. The largest national park in the world meeting the IUCN definition is the Northeast Greenland National Park, which was established in 1974. According to the IUCN, there are about 7000 national parks worldwide (2010 figure).",
+        "In 1969 the IUCN (International Union for the Conservation of Nature and Natural Resources) declared a national park to be a relatively large area with:",
+        "While national parks are generally understood to be administered by national governments (hence the name), in Australia national parks are run by state governments and predate the Federation of Australia. Also in Japan, some of them are called \"Quasi-national Parks\" (国定公園), which are recognized by the government and managed by local authorities."
+      ],
+      "source": "Simple English Wikipedia",
+      "sourceUrl": "https://simple.wikipedia.org/wiki/National_park",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:36:15.266Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/simple-national-park.jpg",
+        "alt": "National park",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:%D0%9D%D1%96%D0%B6%D0%BD%D0%B8%D0%B9_%D1%80%D0%B0%D0%BD%D0%BA%D0%BE%D0%B2%D0%B8%D0%B9_%D1%81%D0%B2%D1%96%D1%82%D0%BB%D0%BE.jpg",
+        "credit": "<a href=\"//commons.wikimedia.org/wiki/User:Balkhovitin\" title=\"User:Balkhovitin\">Balkhovitin</a>",
+        "license": {
+          "name": "CC BY-SA 3.0",
+          "url": "https://creativecommons.org/licenses/by-sa/3.0"
+        }
+      }
+    },
+    {
+      "id": "en-library",
+      "title": "Library",
+      "wikiTitle": "Library",
+      "lang": "en",
+      "level": "standard",
+      "topic": "文化",
+      "paragraphs": [
+        "A library is a collection of books, and possibly other materials and media, that is accessible for use by its members and members of allied institutions. Libraries provide physical (hard copies) or digital (soft copies) materials, and may be a physical location, a virtual space, or both. A library's collection normally includes printed materials which can be borrowed, and usually also includes a reference section of publications which may only be utilized inside the premises. Resources such as commercial releases of films, television programmes, other video recordings, radio, music and audio recordings may be available in many formats. These include DVDs, Blu-rays, CDs, cassettes, or other applicable formats such as microform. They may also provide access to information, music or other content held on bibliographic databases. In addition, some libraries offer creation stations for makers which offer access to a 3D printing station with a 3D scanner.",
+        "Libraries can vary widely in size and may be organised and maintained by a public body such as a government, an institution (such as a school or museum), a corporation, or a private individual. In addition to providing materials, libraries also provide the services of librarians who are trained experts in finding, selecting, circulating and organising information while interpreting information needs and navigating and analysing large amounts of information with a variety of resources. The area of study is known as library and information science or studies.",
+        "Library buildings often provide quiet areas for studying, as well as common areas for group study and collaboration, and may provide public facilities for access to their electronic resources, such as computers and access to the Internet."
+      ],
+      "source": "Wikipedia",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Library",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:36:17.687Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/en-library.jpg",
+        "alt": "Library",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:SanDiegoCityCollegeLearningResource_-_bookshelf.jpg",
+        "credit": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/artlung/\">Joe Crawford</a> from Moorpark, California, USA",
+        "license": {
+          "name": "CC BY 2.0",
+          "url": "https://creativecommons.org/licenses/by/2.0"
+        }
+      }
+    },
+    {
+      "id": "en-bicycle",
+      "title": "Bicycle",
+      "wikiTitle": "Bicycle",
+      "lang": "en",
+      "level": "standard",
+      "topic": "城市",
+      "paragraphs": [
+        "A bicycle, also called a pedal cycle, bike, push-bike or cycle, is a human-powered or motor-assisted, pedal-driven, single-track vehicle, with two wheels attached to a frame, one behind the other. A bicycle rider is called a cyclist or bicyclist.",
+        "The bicycle was invented in Europe in the 19th century. By the early 21st century, there were more than 1 billion bicycles. Bicycles are the principal means of transport in many regions. They are also popular for recreation, and have been adapted for use as children's toys. Bicycles are used for commuting, shopping, fitness, military and police applications, courier services, bicycle racing, and artistic cycling.",
+        "The basic shape and configuration of a typical upright or \"safety\" bicycle, has changed little since the first chain-driven model was developed around 1885. However, many details have been improved, especially since the advent of modern materials and computer-aided design. These have allowed for a proliferation of specialized designs for many types of cycling. In the 21st century, electric bicycles have become popular.",
+        "The bicycle's invention has had an enormous effect on society, both in terms of culture and of advancing modern industrial methods. Several components that played a key role in the development of the car were initially invented for use in the bicycle, including ball bearings, pneumatic tires, chain-driven sprockets, and tension-spoked wheels.",
+        "The first known appearance in English print of the word bicycle was in The Daily News in 1868, to describe \"Bysicles and trysicles\" on the \"Champs Elysées and Bois de Boulogne\". The word was first used in 1828 in French to describe a two-wheeled chaise, a horse-drawn carriage. The design of the bicycle was an advance on the velocipede, although the words were used with some degree of overlap for a time."
+      ],
+      "source": "Wikipedia",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Bicycle",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:36:19.513Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/en-bicycle.jpg",
+        "alt": "Bicycle",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Left_side_of_Flying_Pigeon.jpg",
+        "credit": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/7527824@N04\">齐健</a> from Peking, People's Republic of China",
+        "license": {
+          "name": "CC BY 2.0",
+          "url": "https://creativecommons.org/licenses/by/2.0"
+        }
+      }
+    },
+    {
+      "id": "en-rainbow",
+      "title": "Rainbow",
+      "wikiTitle": "Rainbow",
+      "lang": "en",
+      "level": "standard",
+      "topic": "自然",
+      "paragraphs": [
+        "A rainbow is an optical phenomenon caused by refraction, internal reflection and dispersion of light in water droplets resulting in a continuous spectrum of light appearing in the sky. The rainbow takes the form of a multicoloured circular arc. Rainbows caused by sunlight always appear in the section of sky directly opposite the sun. Rainbows can be caused by many forms of airborne water. These include not only rain, but also mist, spray, and airborne dew.",
+        "Rainbows when viewed from the ground typically appear as an illuminated arc, but when flying, if there is enough mist they can be seen as full circles. The centre of the curve is always on a line from the Sun to the observer's eye.",
+        "In a primary rainbow, the arc shows red on the outer part and violet on the inner side. This rainbow is caused by light being refracted when entering a droplet of water, then reflected inside on the back of the droplet and refracted again when leaving it.",
+        "In a double rainbow, a second arc is seen about 10° outside the primary arc. Its colours are perceived to be in reverse order, with red on the lower side of the arc.",
+        "The Guinness World Records holder of the longest-lasting rainbow observed was 8 hours 58 minutes in the Yangmingshan range of Taipei, Taiwan in November 2017.",
+        "Rainbows can be observed whenever there are water drops in the air and sunlight shining from behind the observer at a low altitude angle. Because of this, rainbows are usually seen in the western sky during the morning and in the eastern sky during the early evening. The most spectacular rainbow displays happen when half the sky is still dark with raining clouds and the observer is at a spot with clear sky in the direction of the Sun. The result is a luminous rainbow that contrasts with the darkened background. During such good visibility conditions, the larger but fainter secondary rainbow is often visible. It appears about 10° outside of the primary rainbow, with the inverse order of colours."
+      ],
+      "source": "Wikipedia",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Rainbow",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:36:21.848Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/en-rainbow.jpg",
+        "alt": "Rainbow",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Double-alaskan-rainbow.jpg",
+        "credit": "<a href=\"https://en.wikipedia.org/wiki/en:User:Ericrolph\" class=\"extiw\" title=\"w:en:User:Ericrolph\">Eric Rolph</a> at English Wikipedia",
+        "license": {
+          "name": "CC BY-SA 2.5",
+          "url": "https://creativecommons.org/licenses/by-sa/2.5"
+        }
+      }
+    },
+    {
+      "id": "en-moon",
+      "title": "Moon",
+      "wikiTitle": "Moon",
+      "lang": "en",
+      "level": "standard",
+      "topic": "探索",
+      "paragraphs": [
+        "The Moon is the only natural satellite of Earth. It orbits Earth at an average distance of 384,399 kilometers (238,854 mi). Because the Moon follows an elliptical path, its distance from Earth varies over the year, ranging from 357,000–407,000 kilometers (222,000–253,000 mi), a distance roughly 30 times the width of Earth. It completes an orbit (lunar month) in relation to Earth and the Sun (synodically) every 29.5 days. The Moon and Earth are bound by gravitational attraction, which is stronger on the sides facing each other. The resulting tidal forces are the main driver of Earth's tides, and have pulled the Moon to always face Earth with the same near side. This tidal locking effectively synchronizes the Moon's rotation period (lunar day) to its orbital period (lunar month).",
+        "In geophysical terms, the Moon is a planetary-mass object or satellite planet. Its mass is 1.2% that of the Earth, and its diameter is 3,474 km (2,159 mi), roughly one-quarter of Earth's (about as wide as the contiguous United States). Within the Solar System, it is larger and more massive than any known dwarf planet, and the fifth-largest and fifth–most massive moon, as well as the largest and most massive in relation to its parent planet. Its surface gravity is about one-sixth of Earth's, about half that of Mars, and the second-highest among all moons in the Solar System after Jupiter's moon Io. The body of the Moon is differentiated and terrestrial, with only a minuscule hydrosphere, atmosphere, and magnetic field. The lunar surface is covered in regolith dust, which mainly consists of the fine material ejected from the lunar crust by impact events. The lunar crust is marked by impact craters; some younger ones feature bright ray-like streaks. The Moon was volcanically active until 1.2 billion years ago, surfacing lava mostly on the thinner near side of the Moon, filling ancient craters, which through cooling formed the today prominently visible dark plains of basalt called maria ('seas'). The origin of the Moon is not clear, although it is thought to have been formed out of material from Earth that was ejected by a giant impact of a Mars-sized body 4.51 billion years ago, not long after Earth's formation."
+      ],
+      "source": "Wikipedia",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Moon",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:36:24.570Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/en-moon.jpg",
+        "alt": "Moon",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:FullMoon2010.jpg",
+        "credit": "Gregory H. Revera",
+        "license": {
+          "name": "CC BY-SA 3.0",
+          "url": "https://creativecommons.org/licenses/by-sa/3.0"
+        }
+      }
+    },
+    {
+      "id": "en-tea",
+      "title": "Tea",
+      "wikiTitle": "Tea",
+      "lang": "en",
+      "level": "standard",
+      "topic": "生活",
+      "paragraphs": [
+        "Tea is an aromatic beverage prepared by infusion of hot or boiling fresh water with fresh or cured leaves of Camellia sinensis, an evergreen shrub native to East Asia that originated in the borderlands of southwestern China, northeast India and northern Myanmar. Tea has a stimulant effect in humans primarily due to its caffeine content.",
+        "After plain drinking water, tea is the most widely consumed beverage in the world. There are many varieties of tea according to differences in cultivars, processing and blends; some have a cooling, slightly bitter and astringent flavor, while others have taste profiles that include sweet, nutty, floral or grassy notes.",
+        "Traditionally, tea is made by steeping loose tea leaves in hot water (usually in a teapot or teacup) for a period of time, or in the case of compressed and fermented tea, via decoction (simmering) in a kettle. Convenient preparations, such as tea bag, infuser and press as well as powdered instant tea such as matcha, konacha and chai latte, are also common. Tea is most commonly consumed as a hot beverage in a plain hot water infusion, although it can also be in mixed drink forms, such as milk tea and butter tea, sometimes sweetened with added sugar or sugar substitutes, or alternatively flavored with salt and spices. In modern times, tea can also be served as a cold beverage in the form of iced tea or in soft drink mixtures such as bubble tea."
+      ],
+      "source": "Wikipedia",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Tea",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:37:02.975Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/en-tea.jpg",
+        "alt": "Tea",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Longjing_tea_steeping_in_gaiwan.jpg",
+        "credit": "<a href=\"//commons.wikimedia.org/wiki/User:Difference_engine\" title=\"User:Difference engine\">Difference engine</a>",
+        "license": {
+          "name": "CC BY-SA 4.0",
+          "url": "https://creativecommons.org/licenses/by-sa/4.0"
+        }
+      }
+    },
+    {
+      "id": "en-photography",
+      "title": "Photography",
+      "wikiTitle": "Photography",
+      "lang": "en",
+      "level": "standard",
+      "topic": "艺术",
+      "paragraphs": [
+        "Photography is the art, application, and practice of creating images by recording light, either electronically by means of an image sensor, or chemically by means of a light-sensitive material such as photographic film. It is employed in many fields of science, manufacturing (e.g., photolithography), and business, as well as its more direct uses for art, film and video production, recreational purposes, hobby, and mass communication. A person who operates a camera to capture or take photographs is called a photographer, while the captured image, also known as a photograph, is the result produced by the camera.",
+        "Typically, a lens is used to focus the light reflected or emitted from objects into a real image on the light-sensitive surface inside a camera during a timed exposure. With an electronic image sensor, this produces an electrical charge at each pixel, which is electronically processed and stored in a digital image file for subsequent display or processing. The result with photographic emulsion is an invisible latent image, which is later chemically developed into a visible image, either negative or positive, depending on the purpose of the photographic material and the method of processing. A negative image on film is traditionally used to photographically create a positive image on a paper base, known as a print, either by using an enlarger or by contact printing.",
+        "Before the emergence of digital photography, photographs that utilized film had to be developed to produce negatives or projectable slides, and negatives had to be printed as positive images, usually in enlarged form. This was typically done by photographic laboratories, but many amateur photographers, students, and photographic artists did their own processing."
+      ],
+      "source": "Wikipedia",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Photography",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:37:04.619Z",
+      "revision": ""
+    },
+    {
+      "id": "en-national-park",
+      "title": "National park",
+      "wikiTitle": "National park",
+      "lang": "en",
+      "level": "standard",
+      "topic": "自然",
+      "paragraphs": [
+        "A national park is a nature park designated for conservation purposes because of unparalleled national natural, historic, or cultural significance. It is an area of natural, semi-natural, or developed land that is protected and owned by a government. Although governments hold different standards for national park designation, the conservation of 'wild nature' for posterity and as a symbol of national pride is a common motivation for the continued protection of all national parks around the world. National parks are almost always accessible to the public. Usually national parks are developed, owned and managed by national governments, though in some countries with federal or devolved forms of government, \"national parks\" may be the responsibility of subnational, regional, or local authorities.",
+        "The United States established Yellowstone National Park, the first \"public park or pleasuring-ground for the benefit and enjoyment of the people\", in 1872. Although Yellowstone was not officially termed a \"national park\" at the time, in practice it is widely held to be the first and oldest national park in the world. The Tobago Main Ridge Forest Reserve (in what is now Trinidad and Tobago; established in 1776) and the area surrounding Bogd Khan Uul Mountain (Mongolia, 1778), which were restricted from cultivation to protect surrounding farmland, are considered the oldest legally protected areas. Parks Canada, established on May 19, 1911, is the world's oldest national park service.",
+        "The International Union for Conservation of Nature (IUCN) and its World Commission on Protected Areas (WCPA) have defined \"National Park\" as its Category II type of protected areas. According to the IUCN, 6,555 national parks worldwide met its criteria in 2006. IUCN is still discussing the parameters of defining a national park."
+      ],
+      "source": "Wikipedia",
+      "sourceUrl": "https://en.wikipedia.org/wiki/National_park",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-09-23T09:37:07.783Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/en-national-park.jpg",
+        "alt": "National park",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bogdkhan_Uul_Strictly_Protected_Area,_Mongolia_(149199747).jpg",
+        "credit": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/46274125@N00\">yeowatzup</a>",
+        "license": {
+          "name": "CC BY 2.0",
+          "url": "https://creativecommons.org/licenses/by/2.0"
+        }
+      }
+    }
+  ]
+}

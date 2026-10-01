@@ -1,0 +1,119 @@
+:root{--glass-fill:rgba(250,252,255,.64);--glass-shadow:0 8px 28px #3445530d,0 1px 3px #3445530b,inset 0 1px 1px #fff,inset 0 -1px 1px #ffffff80}
+.glass-app{background:#f2f5f8;color:#222c35}
+.glass-app .sidebar,.glass-app .topbar,.glass-app .mobile-nav,.glass-app .import-button,.glass-app .study-tabs,.glass-app .secondary,.glass-app .study-ai-link{
+  background:var(--glass-fill);-webkit-backdrop-filter:blur(26px) saturate(170%);backdrop-filter:blur(26px) saturate(170%);border:1px solid #ffffffd6;box-shadow:var(--glass-shadow)
+}
+.glass-app .sidebar{border-right-color:#dce4eb75}
+.glass-app .topbar{border-width:0 0 1px;border-bottom-color:#ffffffd9;height:62px;position:sticky;top:0;z-index:15}
+.glass-app .nav-item.active{background:#ffffffba;box-shadow:inset 0 1px 1px white,0 2px 7px #26453709}
+.glass-app .brand-icon{background:#187f70;border:1px solid #ffffff80;box-shadow:inset 0 1px 2px #ffffff60,0 4px 10px #1a685529}
+.glass-app .import-button{border-radius:22px;color:#3c5750;padding:9px 14px}
+.glass-app .primary{border:1px solid #ffffff40;box-shadow:inset 0 1px 1px #ffffff36,0 3px 8px #125a4012}
+.glass-app .primary:active,.glass-app .secondary:active,.glass-app .mobile-nav button:active,.glass-app .study-tabs button:active{transform:scale(.97)}
+.glass-app .modal{background:#f8fafbf5;border:1px solid #fff;border-radius:24px;box-shadow:0 26px 85px #29384624,inset 0 1px white}
+.glass-app .modal::backdrop{background:#273a472c;backdrop-filter:blur(7px)}
+.glass-app .modal-heading{background:#f8fafbef}
+.glass-app .toast{background:#2e463ef0;border:1px solid #ffffff28;box-shadow:0 8px 35px #233f3326}
+.glass-app .study-tools{background:transparent}
+.glass-app.study-page .content{max-width:900px;padding-top:20px}
+.glass-app .study-heading{margin-bottom:8px}
+.glass-app .study-heading h1{font-size:24px}
+.glass-app .study-heading p{font-size:11px;gap:12px}
+.glass-app .study-ai-link{border-radius:24px;padding:0 13px;min-height:38px}
+.glass-app .study-selects{min-height:42px;gap:8px}
+.glass-app .study-selects select{font-size:12px;min-height:40px}
+.glass-app .study-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;border-radius:24px;padding:4px;margin:5px 0 20px;max-width:380px}
+.glass-app .study-tabs button{min-height:34px;justify-content:center;border:0;border-radius:20px;font-size:13px;font-weight:500}
+.glass-app .study-tabs button[aria-pressed=true]{background:#ffffffd6;box-shadow:0 2px 7px #293b4310,inset 0 1px 1px #fff;color:#067b67}
+.vocab-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:7px}
+.vocab-section-heading h2{font-size:11px;font-weight:600;color:#738893}
+.vocab-section-heading>span{font-size:11px;font-variant-numeric:tabular-nums;color:#8b9aa4}
+.english-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 32px;list-style:none;margin:0;padding:0;scroll-margin-top:78px}
+.english-entry{min-width:0;border-bottom:1px solid #dce4e9;display:flex}
+.english-entry button{display:flex;align-items:center;gap:14px;min-height:44px;width:100%;text-align:left;padding:7px 0;min-width:0}
+.english-entry button:hover{background:#e5eeeeb0}
+.word-number{width:23px;flex-shrink:0;color:#97a3ac;font-size:11px;font-variant-numeric:tabular-nums;line-height:1.4}
+.english-word{min-width:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:17px;line-height:1.4;font-weight:500;overflow-wrap:anywhere;word-break:normal;color:#1e2a32}
+.word-number.rated-green{color:#288965}
+.word-number.rated-red{color:#bb645e}
+.word-number.rated-amber{color:#a07d37}
+.word-number.rated-blue{color:#547ab8}
+.meaning-section{margin-top:32px;padding-top:20px;border-top:1px solid #cfdbe3;scroll-margin-top:80px}
+.meaning-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.meaning-heading h2{font-size:15px;color:#455b66;font-weight:600}
+.meaning-heading h2>span{font-size:11px;font-weight:400;color:#95a2ab;margin-left:7px}
+.meaning-heading>div{display:flex;gap:1px}
+.meaning-list{margin:0;padding:0;list-style:none}
+.meaning-entry{border-bottom:1px solid #e0e6eb;scroll-margin-top:90px;transition:background .2s}
+.meaning-entry.focused{background:#e4efe980}
+.meaning-row{display:grid;grid-template-columns:23px minmax(0,1fr) 40px;gap:14px;align-items:center;min-height:44px}
+.chinese-meaning{font-size:14px;line-height:1.65;color:#506472;overflow-wrap:anywhere;padding:7px 0}
+.meaning-row .study-mark{height:40px;width:40px;min-height:40px;border-radius:50%}
+.hidden-meaning{height:40px;padding:10px 0;display:flex;align-items:center}
+.hidden-meaning span{display:block;background:#e2e8eb;height:9px;border-radius:8px;width:95px}
+.meaning-entry .study-row-actions{padding:0 0 13px 37px}
+.meaning-entry .study-row-detail{padding:0;font-size:11px}
+.meaning-entry .study-ratings{gap:8px}
+.meaning-entry .study-ratings button{min-height:60px}
+.glass-setting{display:flex;flex-direction:column;gap:14px;max-width:450px;margin-top:22px;color:#617881;font-size:13px}
+.glass-setting input[type=range]{padding:0;accent-color:#148c78;min-height:28px;width:100%;border:0;background:none}
+.glass-range-labels{display:flex;justify-content:space-between;font-size:11px;color:#95a4ad}
+.glass-app .quiz-feedback{color:#657970}
+@media(max-width:640px){
+  .glass-app .topbar,.glass-app.study-page .topbar{height:48px;padding:0 14px;background:var(--glass-fill)}
+  .glass-app .breadcrumb{font-size:11px;gap:6px}
+  .glass-app.study-page .topbar .breadcrumb{font-size:11px}
+  .glass-app .import-button{padding:6px 11px;min-height:32px;font-size:11px}
+  .glass-app.study-page .content{padding:14px 16px calc(108px + env(safe-area-inset-bottom))}
+  .glass-app .study-heading{margin-bottom:2px}
+  .glass-app .study-heading h1{font-size:22px}
+  .glass-app .study-heading p{font-size:10px;margin-top:5px}
+  .glass-app .study-ai-link{min-height:34px;font-size:11px;padding:0 10px}
+  .glass-app .study-selects{min-height:39px}
+  .glass-app .study-selects select{min-height:38px;font-size:11px}
+  .glass-app .study-selects label select{max-width:90px}
+  .glass-app .study-tool-button{height:36px;width:36px}
+  .glass-app .study-tabs{max-width:none;margin:4px 0 16px;padding:3px}
+  .glass-app .study-tabs button{font-size:12px;min-height:31px}
+  .glass-app .study-tabs button span{font-size:10px}
+  .english-grid{gap:0 20px;scroll-margin-top:60px}
+  .english-entry button{min-height:41px;gap:8px;padding:7px 0}
+  .english-word{font-size:15px;font-weight:500}
+  .word-number{font-size:10px;width:19px}
+  .vocab-section-heading{margin-bottom:3px}
+  .vocab-section-heading h2,.vocab-section-heading>span{font-size:10px}
+  .meaning-section{margin-top:24px;padding-top:12px}
+  .meaning-heading{margin-bottom:4px}
+  .meaning-heading h2{font-size:13px}
+  .meaning-row{grid-template-columns:19px minmax(0,1fr) 36px;gap:8px;min-height:40px}
+  .chinese-meaning{font-size:12px;line-height:1.6;padding:6px 0}
+  .meaning-row .study-mark{width:36px;height:36px;min-height:36px}
+  .meaning-row .study-mark svg{width:16px}
+  .meaning-entry .study-row-actions{padding-left:27px}
+  .meaning-entry .study-ratings{gap:5px}
+  .meaning-entry .study-ratings button{min-height:58px;font-size:11px;column-gap:3px}
+  .glass-app .mobile-nav,.glass-app.study-page .mobile-nav{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));padding:6px;border-radius:30px;background:var(--glass-fill);border:1px solid #fffffff0;box-shadow:0 9px 35px #26394b24,inset 0 1px 2px #fff,inset 0 -1px 2px #ffffff80}
+  .glass-app .mobile-nav button,.glass-app.study-page .mobile-nav button{min-height:47px;border-radius:24px;gap:4px;font-size:10px;color:#7d8c93}
+  .glass-app .mobile-nav button.active{background:#ffffffad;color:#087f70;box-shadow:inset 0 1px 1px white,0 2px 6px #38564a0c}
+  .glass-app .mobile-nav button svg{width:20px;height:20px}
+  .glass-app .toast{bottom:calc(94px + env(safe-area-inset-bottom))}
+  .glass-app .content{padding-bottom:calc(115px + env(safe-area-inset-bottom))}
+}
+@media(max-width:360px){
+  .glass-app.study-page .content{padding-left:12px;padding-right:12px}
+  .english-grid{gap:0 14px}
+  .english-entry button{gap:5px}
+  .english-word{font-size:14px}
+  .word-number{width:18px}
+}
+@supports not (backdrop-filter:blur(1px)){
+  .glass-app .sidebar,.glass-app .topbar,.glass-app .mobile-nav,.glass-app .study-tabs{background:#f8fafb}
+}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more){
+  .glass-app .sidebar,.glass-app .topbar,.glass-app .mobile-nav,.glass-app .study-tabs,.glass-app .import-button,.glass-app .study-ai-link{background:#fafcfe!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .word-number,.vocab-section-heading h2,.chinese-meaning{color:#344a57}
+}
+@media(prefers-reduced-motion:reduce){
+  .glass-app *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+  .glass-app button:active{transform:none}
+}

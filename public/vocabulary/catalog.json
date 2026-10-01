@@ -1,0 +1,56 @@
+[
+  {
+    "id": "ecdict-gk",
+    "title": "高考词汇",
+    "label": "GAOKAO",
+    "color": "#49a99a",
+    "tag": "gk",
+    "count": 3674,
+    "source": "ECDICT 分类词表"
+  },
+  {
+    "id": "ecdict-cet4",
+    "title": "四级词汇",
+    "label": "CET-4",
+    "color": "#567ec3",
+    "tag": "cet4",
+    "count": 3846,
+    "source": "ECDICT 分类词表"
+  },
+  {
+    "id": "ecdict-cet6",
+    "title": "六级词汇",
+    "label": "CET-6",
+    "color": "#9078b5",
+    "tag": "cet6",
+    "count": 5406,
+    "source": "ECDICT 分类词表"
+  },
+  {
+    "id": "ecdict-ky",
+    "title": "考研词汇",
+    "label": "POSTGRAD",
+    "color": "#ca817e",
+    "tag": "ky",
+    "count": 4801,
+    "source": "ECDICT 分类词表"
+  },
+  {
+    "id": "ecdict-ielts",
+    "title": "雅思词汇",
+    "label": "IELTS",
+    "color": "#4992b4",
+    "tag": "ielts",
+    "count": 5040,
+    "source": "ECDICT 分类词表"
+  },
+  {
+    "id": "ecdict-toefl",
+    "title": "托福词汇",
+    "label": "TOEFL",
+    "color": "#729a60",
+    "tag": "toefl",
+    "count": 6974,
+    "source": "ECDICT 分类词表"
+  }
+]

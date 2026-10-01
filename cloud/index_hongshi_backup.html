@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Wordflow · 拾词 — Repeat them, until they stay.</title>
+  <meta name="description" content="Wordflow 拾词 — 面向 Android 的个人单词记忆与短文巩固应用。纯离线优先，数据本地掌控。">
+  <meta name="theme-color" content="#0a0a0b">
+  <link rel="icon" href="assets/logo.png?v=alpha">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --fg: #ededeb;
+      --mute: #76767a;
+      --line: rgba(237, 237, 235, 0.12);
+      --accent: #3b82f6;
+      --accent-teal: #10b981;
+      --px: clamp(20px, 4.2vw, 64px);
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "Inter Tight", -apple-system, "PingFang SC", "Noto Sans SC", sans-serif;
+      font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; }
+    ::selection { background: var(--accent); color: #fff; }
+    .mono {
+      font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* Fixed Canvas for Ambient Particles */
+    #gl {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100vh;
+      height: 100lvh;
+      z-index: 0;
+      pointer-events: none;
+    }
+    main { position: relative; z-index: 1; }
+
+    /* Line mask reveal */
+    .ln { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+    .ln > span { display: inline-block; will-change: transform; }
+
+    /* ---------- Fixed Header ---------- */
+    .top {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 22px var(--px);
+      mix-blend-mode: difference;
+      color: #fff;
+    }
+    .top__name {
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .top__nav {
+      display: flex;
+      gap: 32px;
+      font-size: 14px;
+    }
+    .top__nav a {
+      opacity: 0.6;
+      transition: opacity 0.3s;
+    }
+    .top__nav a:hover, .top__nav a.on { opacity: 1; }
+    .top__clock {
+      justify-self: end;
+      opacity: 0.6;
+    }
+
+    /* ---------- Fixed Bottom HUD ---------- */
+    .hud {
+      position: fixed;
+      right: var(--px);
+      bottom: 28px;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--mute);
+      font-size: 11px;
+    }
+    .hud i {
+      width: 80px;
+      height: 1px;
+      background: var(--line);
+      position: relative;
+      overflow: hidden;
+      display: block;
+    }
+    .hud b {
+      position: absolute;
+      inset: 0;
+      background: var(--accent);
+      transform-origin: left;
+      transform: scaleX(0);
+      display: block;
+      transition: transform 0.1s linear;
+    }
+    .hud #hudIdx { color: var(--fg); font-weight: 600; }
+
+    /* ---------- 00 HERO ---------- */
+    .hero {
+      min-height: 100vh;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 110px var(--px) 36px;
+      position: relative;
+    }
+    .hero__meta {
+      display: flex;
+      justify-content: space-between;
+      color: var(--mute);
+      max-width: 640px;
+      gap: 16px;
+      word-break: keep-all;
+    }
+    .hero__title {
+      font-size: clamp(48px, 8.8vw, 136px);
+      font-weight: 500;
+      line-height: 0.96;
+      letter-spacing: -0.045em;
+      margin: 40px 0;
+      font-family: Palatino, "Iowan Old Style", "Songti SC", Georgia, serif;
+    }
+    .hero__title em {
+      font-style: italic;
+      color: var(--accent);
+      font-weight: 400;
+    }
+    .hero__foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .who {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .who img {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+    }
+    .who b {
+      display: block;
+      font-weight: 500;
+      font-size: 15px;
+    }
+    .who span {
+      display: block;
+      color: var(--mute);
+      font-size: 13px;
+      margin-top: 3px;
+      max-width: 42ch;
+    }
+
+    .hero__cta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 24px;
+      border-radius: 999px;
+      background: #ffffff;
+      color: #0a0a0b;
+      font-size: 14.5px;
+      font-weight: 600;
+      transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-download:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(255, 255, 255, 0.16);
+    }
+    .scroll-down {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--mute);
+    }
+    .scroll-down i {
+      width: 48px;
+      height: 1px;
+      background: var(--line);
+      position: relative;
+      overflow: hidden;
+      display: block;
+    }
+    .scroll-down i::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--fg);
+      animation: scLine 2.2s var(--ease) infinite;
+    }
+    @keyframes scLine {
+      0% { transform: translateX(-100%); }
+      60%, 100% { transform: translateX(100%); }
+    }
+
+    /* Ticker strip */
+    .ticker-bar {
+      margin: 20px 0 0;
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+      max-width: 580px;
+    }
+    .ticker-track {
+      display: flex;
+      width: max-content;
+      animation: ticker 32s linear infinite;
+    }
+    .ticker-set {
+      white-space: nowrap;
+      font-size: 12.5px;
+      color: #627181;
+      letter-spacing: 0.02em;
+    }
+    @keyframes ticker { to { transform: translateX(-50%); } }
+
+    /* ---------- Common Section Layout ---------- */
+    section.sec {
+      padding: 120px var(--px);
+      position: relative;
+    }
+    .label {
+      display: flex;
+      gap: 14px;
+      color: var(--mute);
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      margin-bottom: clamp(36px, 5vw, 64px);
+    }
+    .label span { color: var(--accent); }
+
+    .split-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 460px) minmax(0, 1fr);
+      gap: 64px;
+      align-items: start;
+    }
+    .sec__title {
+      font-size: clamp(32px, 3.6vw, 56px);
+      font-weight: 500;
+      line-height: 1.12;
+      letter-spacing: -0.035em;
+      margin-bottom: 22px;
+      font-family: Palatino, "Iowan Old Style", "Songti SC", Georgia, serif;
+    }
+    .sec__title em {
+      font-style: italic;
+      color: var(--accent);
+      font-weight: 400;
+    }
+    .sec__lead {
+      font-size: clamp(17px, 1.6vw, 22px);
+      line-height: 1.5;
+      letter-spacing: -0.015em;
+      color: #b9b9b6;
+      margin-bottom: 16px;
+    }
+    .sec__lead em {
+      color: var(--fg);
+      border-bottom: 1px solid var(--accent);
+    }
+    .sec__dim {
+      font-size: 15px;
+      color: var(--mute);
+      line-height: 1.8;
+      max-width: 44ch;
+    }
+
+    /* Screen Card with clean HongShi container */
+    .screen-stage {
+      display: flex;
+      justify-content: center;
+      position: relative;
+    }
+    .screen-mockup {
+      width: 100%;
+      max-width: 320px;
+      border-radius: 28px;
+      overflow: hidden;
+      background: #0e121a;
+      border: 1px solid var(--line);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      transition: transform 0.4s var(--ease), border-color 0.4s var(--ease);
+    }
+    .screen-mockup:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .screen-mockup img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Interactive 6-Dot Module */
+    .six-box {
+      margin-top: 24px;
+      padding: 16px 20px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.02);
+      max-width: 380px;
+    }
+    .six-head {
+      display: flex;
+      justify-content: space-between;
+      color: var(--mute);
+      font-size: 11px;
+      margin-bottom: 12px;
+    }
+    .six-dots {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .s-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--line);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .s-dot:hover {
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: scale(1.15);
+    }
+    .s-dot.on {
+      background: var(--accent);
+      border-color: #60a5fa;
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+    }
+    .s-dot:nth-child(5).on, .s-dot:nth-child(6).on {
+      background: var(--accent-teal);
+      border-color: #34d399;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+    }
+    .six-desc {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #9cb1c4;
+    }
+
+    /* Feature List / Metrics */
+    .plist {
+      list-style: none;
+      border-top: 1px solid var(--line);
+      margin-top: 40px;
+    }
+    .plist li {
+      border-bottom: 1px solid var(--line);
+      padding: 22px 0;
+      display: grid;
+      grid-template-columns: 48px 1fr auto;
+      align-items: center;
+      transition: opacity 0.3s;
+    }
+    .plist li span.plist__num { color: var(--accent); }
+    .plist li b { font-weight: 500; font-size: 18px; }
+    .plist li span.plist__desc { color: var(--mute); font-size: 14px; }
+
+    /* ---------- 05 BIG DOWNLOAD / CONTACT STYLE ---------- */
+    .download-section {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      padding-top: clamp(80px, 12vh, 140px);
+      padding-bottom: 32px;
+    }
+    .contact__lead {
+      color: var(--mute);
+      font-size: clamp(16px, 1.4vw, 20px);
+    }
+    .contact__big {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.15em;
+      margin-top: 20px;
+      font-size: clamp(48px, 10vw, 160px);
+      font-weight: 500;
+      letter-spacing: -0.05em;
+      line-height: 0.95;
+      font-family: Palatino, "Iowan Old Style", "Songti SC", Georgia, serif;
+      cursor: pointer;
+    }
+    .contact__big em { font-style: italic; color: var(--accent); }
+    .contact__big i {
+      font-style: normal;
+      font-size: 0.35em;
+      color: var(--accent);
+      margin-top: 0.2em;
+      transition: transform 0.6s var(--ease);
+    }
+    .contact__big:hover i {
+      transform: translate(8px, 8px);
+    }
+
+    /* Meta blocks */
+    .release-meta-strip {
+      margin-top: 40px;
+      padding-top: 24px;
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      color: var(--mute);
+      font-size: 13px;
+    }
+    .meta-col b { display: block; color: var(--fg); font-weight: 500; font-size: 15px; }
+
+    /* Social / Info strip */
+    .social-strip {
+      margin-top: auto;
+      padding-top: 60px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid var(--line);
+    }
+    .social-strip a {
+      padding: 22px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-right: 1px solid var(--line);
+      padding-left: 20px;
+    }
+    .social-strip a:first-child { padding-left: 0; }
+    .social-strip a:last-child { border-right: 0; }
+    .social-strip span { color: var(--mute); }
+    .social-strip b {
+      font-weight: 500;
+      font-size: clamp(15px, 1.5vw, 20px);
+      letter-spacing: -0.02em;
+      transition: color 0.3s;
+    }
+    .social-strip a:hover b { color: var(--accent); }
+
+    .foot {
+      display: flex;
+      justify-content: space-between;
+      color: var(--mute);
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      font-size: 12px;
+    }
+    .foot a:hover { color: var(--fg); }
+
+    /* ---------- Mobile ---------- */
+    @media (max-width: 800px) {
+      .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px var(--px);
+      }
+      .top__clock { display: none; }
+      .top__nav { gap: 18px; font-size: 13px; }
+      .hero { padding-top: 92px; }
+      .hero__meta { flex-direction: column; gap: 4px; }
+      .hero__title { font-size: clamp(38px, 12vw, 68px); margin: 24px 0; }
+      .scroll-down { display: none; }
+      .split-grid { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+      .hud { bottom: 18px; }
+      .social-strip { grid-template-columns: 1fr; }
+      .social-strip a {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding-left: 0;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .social-strip a:last-child { border-bottom: 0; }
+    }
+    @media (max-width: 520px) {
+      .top__nav a:not([href="#download"]):not([href="#loop"]):not([href="#rhythm"]) {
+        display: none;
+      }
+      .top__nav { gap: 14px; font-size: 12.5px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .scroll-down i::after, .ticker-track { animation: none; }
+      #gl { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background WebGL/Canvas Particle System -->
+  <canvas id="gl" aria-hidden="true"></canvas>
+
+  <!-- Fixed Top Header -->
+  <header class="top">
+    <a href="#top" class="top__name" data-link>
+      <img src="assets/logo.png?v=alpha" width="22" height="22" alt="Wordflow" style="border-radius: 6px;">
+      <span>Wordflow</span>
+    </a>
+    <nav class="top__nav">
+      <a href="#loop" data-link>Recall</a>
+      <a href="#scale" data-link>Scale</a>
+      <a href="#rhythm" data-link>Rhythm</a>
+      <a href="#read" data-link>Read</a>
+      <a href="#download" data-link>Download</a>
+    </nav>
+    <span class="top__clock mono" id="clock">UTC+8 --:--</span>
+  </header>
+
+  <!-- Fixed Bottom HUD -->
+  <div class="hud mono" aria-hidden="true">
+    <span id="hudIdx">00</span>
+    <i><b id="hudBar"></b></i>
+    <span id="hudName">OVERVIEW</span>
+  </div>
+
+  <main id="top">
+
+    <!-- ============ 00 HERO ============ -->
+    <section class="hero" data-idx="00" data-name="OVERVIEW">
+      <div class="hero__meta mono">
+        <span>Wordflow · 拾词</span>
+        <span>Spaced Repetition & Context Reading</span>
+      </div>
+
+      <h1 class="hero__title">
+        <span class="ln"><span>Repeat them,</span></span>
+        <span class="ln"><span><em>until they stay.</em></span></span>
+      </h1>
+
+      <div class="hero__foot">
+        <div class="who">
+          <img src="assets/logo.png?v=alpha" alt="Wordflow Logo">
+          <div>
+            <b>拾词 Wordflow · 个人单词记忆</b>
+            <span>The same words, over and over. See the meaning, hide it, see it again.</span>
+          </div>
+        </div>
+
+        <div class="hero__cta">
+          <a class="btn-download" id="top-download-btn" href="releases/wordflow.apk">
+            Download for Android
+          </a>
+          <div class="scroll-down mono">
+            <span>Scroll</span>
+            <i></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="ticker-bar" aria-hidden="true">
+        <div class="ticker-track">
+          <span class="ticker-set">serendipity&nbsp;&nbsp;&middot;&nbsp;&nbsp;resilient&nbsp;&nbsp;&middot;&nbsp;&nbsp;ephemeral&nbsp;&nbsp;&middot;&nbsp;&nbsp;deliberate&nbsp;&nbsp;&middot;&nbsp;&nbsp;embrace&nbsp;&nbsp;&middot;&nbsp;&nbsp;subtle&nbsp;&nbsp;&middot;&nbsp;&nbsp;flourish&nbsp;&nbsp;&middot;&nbsp;&nbsp;perspective&nbsp;&nbsp;&middot;&nbsp;&nbsp;tranquil&nbsp;&nbsp;&middot;&nbsp;&nbsp;curiosity&nbsp;&nbsp;&middot;&nbsp;&nbsp;consistent&nbsp;&nbsp;&middot;&nbsp;&nbsp;cherish&nbsp;&nbsp;&middot;&nbsp;&nbsp;</span>
+          <span class="ticker-set">serendipity&nbsp;&nbsp;&middot;&nbsp;&nbsp;resilient&nbsp;&nbsp;&middot;&nbsp;&nbsp;ephemeral&nbsp;&nbsp;&middot;&nbsp;&nbsp;deliberate&nbsp;&nbsp;&middot;&nbsp;&nbsp;embrace&nbsp;&nbsp;&middot;&nbsp;&nbsp;subtle&nbsp;&nbsp;&middot;&nbsp;&nbsp;flourish&nbsp;&nbsp;&middot;&nbsp;&nbsp;perspective&nbsp;&nbsp;&middot;&nbsp;&nbsp;tranquil&nbsp;&nbsp;&middot;&nbsp;&nbsp;curiosity&nbsp;&nbsp;&middot;&nbsp;&nbsp;consistent&nbsp;&nbsp;&middot;&nbsp;&nbsp;cherish&nbsp;&nbsp;&middot;&nbsp;&nbsp;</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 01 THE MECHANISM ============ -->
+    <section class="sec" id="loop" data-idx="01" data-name="MECHANISM">
+      <div class="label mono"><span>01</span>The Mechanism // 认知机制</div>
+      <div class="split-grid">
+        <div class="sec__info">
+          <h2 class="sec__title">See it. Hide it.<br><em>Try to recall.</em></h2>
+          <p class="sec__lead">看懂释义，并不等于<em>真正掌握</em>。</p>
+          <p class="sec__dim">
+            大多数背词应用让人沉迷于“眼熟”的虚假安全感。拾词在双列卡片中默认遮挡中文释义，将自测变成一次微小的大脑检索阻力——唯有迫使神经回路经历主动提取，记忆印痕才真正形成。
+          </p>
+        </div>
+        <div class="screen-stage">
+          <div class="screen-mockup">
+            <img src="assets/shot-recall.png" alt="遮义自测界面">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 THE SCALE ============ -->
+    <section class="sec" id="scale" data-idx="02" data-name="SCALE">
+      <div class="label mono"><span>02</span>The Scale // 阻力分级</div>
+      <div class="split-grid">
+        <div class="sec__info">
+          <h2 class="sec__title">Six quiet dots.<br><em>Never binary.</em></h2>
+          <p class="sec__lead">记忆从来不是<em>非黑即白的开关</em>。</p>
+          <p class="sec__dim">
+            每张卡片下方固定排布六颗微小的标记点。难词点按逐级升级，熟词随时标熟移出主队列；达到六级并不等于永久掌握。在未来的检查中再次生疏，仍会如实降级并解除完成状态，真实映射记忆衰减。
+          </p>
+
+          <!-- Interactive 6-dot box -->
+          <div class="six-box">
+            <div class="six-head mono">
+              <span>SIX-DOT SYSTEM</span>
+              <span>CLICK TO TEST</span>
+            </div>
+            <div class="six-dots" id="dots-row">
+              <button type="button" class="s-dot on" data-lvl="1" aria-label="Rating 1"></button>
+              <button type="button" class="s-dot on" data-lvl="2" aria-label="Rating 2"></button>
+              <button type="button" class="s-dot on" data-lvl="3" aria-label="Rating 3"></button>
+              <button type="button" class="s-dot" data-lvl="4" aria-label="Rating 4"></button>
+              <button type="button" class="s-dot" data-lvl="5" aria-label="Rating 5"></button>
+              <button type="button" class="s-dot" data-lvl="6" aria-label="Rating 6"></button>
+            </div>
+            <div class="six-desc mono" id="dots-desc">Level 3 · Noticeable resistance (3 reviews required)</div>
+          </div>
+        </div>
+        <div class="screen-stage">
+          <div class="screen-mockup">
+            <img src="assets/shot-detail.png" alt="六点难词标记与详情">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 03 THE RHYTHM ============ -->
+    <section class="sec" id="rhythm" data-idx="03" data-name="RHYTHM">
+      <div class="label mono"><span>03</span>The Rhythm // 记忆曲线</div>
+      <div class="split-grid">
+        <div class="sec__info">
+          <h2 class="sec__title">Spaced in time,<br><em>until it hardens.</em></h2>
+          <p class="sec__lead">只有真正完成整组，才<em>更新复习计划</em>。</p>
+          <p class="sec__dim">
+            预设 20 分钟、1 天、2 天、4 天、7 天、15 天、30 天的经典固定时间间隔；忘记后 5 分钟重学，重新开始。同时支持自由切换至新一代 FSRS 自适应算法。表格化列出各阶段到期任务，不伪造复习，不堆积负担。
+          </p>
+
+          <ul class="plist mono">
+            <li>
+              <span class="plist__num">20m</span>
+              <b>Initial consolidation</b>
+              <span class="plist__desc">短期记忆突触沉淀</span>
+            </li>
+            <li>
+              <span class="plist__num">1-7d</span>
+              <b>Spaced intervals</b>
+              <span class="plist__desc">抗遗忘周期阶梯</span>
+            </li>
+            <li>
+              <span class="plist__num">30d</span>
+              <b>Long-term mastery</b>
+              <span class="plist__desc">稳固长时记忆回路</span>
+            </li>
+          </ul>
+        </div>
+        <div class="screen-stage">
+          <div class="screen-mockup">
+            <img src="assets/shot-preview.png" alt="双列速览与学习排期">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 04 THE CONTEXT ============ -->
+    <section class="sec" id="read" data-idx="04" data-name="CONTEXT">
+      <div class="label mono"><span>04</span>The Context // 语境短文</div>
+      <div class="split-grid">
+        <div class="sec__info">
+          <h2 class="sec__title">Isolated words die.<br><em>Sentences breathe.</em></h2>
+          <p class="sec__lead">词汇只有活在句子中，才<em>具备语感生命</em>。</p>
+          <p class="sec__dim">
+            “阅读 ➔ 今日短文”依据当日计划中的目标生词，端侧一键编织为连贯自然的英文小短文与对应译文，严格从实际英文正文统计词汇覆盖率；同时附带 14 篇精选 Wikipedia 原文分级阅读，点词即查，系统级纯正发音。
+          </p>
+        </div>
+        <div class="screen-stage">
+          <div class="screen-mockup">
+            <img src="assets/shot-read.png" alt="AI 语境短文与精选阅读">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 05 DOWNLOAD / FINALE ============ -->
+    <section class="sec download-section" id="download" data-idx="05" data-name="DOWNLOAD">
+      <div class="label mono"><span>05</span>Get Started // 安装体验</div>
+      <p class="contact__lead">准备好开启专注、纯粹的记忆心流了吗？</p>
+
+      <a class="contact__big" id="main-download-link" href="releases/wordflow.apk">
+        <span class="ln"><span>Download <em>Wordflow</em></span></span>
+        <i>↓</i>
+      </a>
+
+      <div class="release-meta-strip mono">
+        <div class="meta-col">
+          <span>Target Platform</span>
+          <b id="release-platform">Android 7.0+</b>
+        </div>
+        <div class="meta-col">
+          <span>Current Version</span>
+          <b id="release-version">Android 0.1.7</b>
+        </div>
+        <div class="meta-col">
+          <span>Package Size</span>
+          <b>~35 MB (Offline APK)</b>
+        </div>
+        <div class="meta-col">
+          <span>Data Privacy</span>
+          <b>100% Local SQLite</b>
+        </div>
+      </div>
+
+      <div class="social-strip">
+        <a href="#top" data-link>
+          <span class="mono">Wordflow</span>
+          <b>Repeat them, until they stay.</b>
+        </a>
+        <a href="https://wordflow.43.134.190.112.sslip.io/releases/wordflow.apk">
+          <span class="mono">Direct Release</span>
+          <b>wordflow.apk ↗</b>
+        </a>
+        <a href="#top" data-link>
+          <span class="mono">Back to top</span>
+          <b>Top ↑</b>
+        </a>
+      </div>
+
+      <footer class="foot mono">
+        <span>© <span id="yr">2026</span> Wordflow · Pure Offline & Local First</span>
+        <a href="#top" data-link>Back to top ↑</a>
+      </footer>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      // 1. Clock display
+      var clock = document.getElementById("clock")
+      function tick() {
+        var d = new Date(Date.now() + (new Date().getTimezoneOffset() + 480) * 60000)
+        var h = String(d.getHours()).padStart(2, '0')
+        var m = String(d.getMinutes()).padStart(2, '0')
+        if (clock) clock.textContent = "UTC+8 " + h + ":" + m
+      }
+      tick()
+      setInterval(tick, 10000)
+
+      var yr = document.getElementById("yr")
+      if (yr) yr.textContent = new Date().getFullYear()
+
+      // 2. Smooth Navigation links
+      var links = document.querySelectorAll("[data-link]")
+      links.forEach(function (a) {
+        a.addEventListener("click", function (e) {
+          e.preventDefault()
+          var targetId = this.getAttribute("href")
+          var targetEl = targetId === "#top" ? document.body : document.querySelector(targetId)
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: "smooth" })
+          }
+        })
+      })
+
+      // 3. Dynamic Release API
+      fetch("/v1/release")
+        .then(function (res) { return res.json() })
+        .then(function (release) {
+          var url = release.url || "releases/wordflow.apk"
+          var topBtn = document.getElementById("top-download-btn")
+          var mainBtn = document.getElementById("main-download-link")
+          var verEl = document.getElementById("release-version")
+          if (topBtn) topBtn.href = url
+          if (mainBtn) mainBtn.href = url
+          if (verEl && release.versionName) {
+            verEl.textContent = "Android " + release.versionName + (release.versionCode ? " (Build " + release.versionCode + ")" : "")
+          }
+        })
+        .catch(function () {})
+
+      // 4. Interactive 6-Dot Module
+      var dotsRow = document.getElementById("dots-row")
+      var dotsDesc = document.getElementById("dots-desc")
+      if (dotsRow && dotsDesc) {
+        var dots = dotsRow.querySelectorAll(".s-dot")
+        var descs = [
+          "Level 1 · Slight friction (relearn scheduled in 20m)",
+          "Level 2 · Moderate recall delay (review in 1 day)",
+          "Level 3 · Noticeable resistance (review in 2 days)",
+          "Level 4 · Deep retrieval required (review in 4 days)",
+          "Level 5 · Solid recognition emerging (review in 7 days)",
+          "Level 6 · Fluid response (next scheduled in 15 days)"
+        ]
+        dots.forEach(function (dot) {
+          dot.addEventListener("click", function () {
+            var lvl = parseInt(this.getAttribute("data-lvl"), 10)
+            dots.forEach(function (d, i) {
+              if (i < lvl) d.classList.add("on")
+              else d.classList.remove("on")
+            })
+            dotsDesc.textContent = descs[lvl - 1]
+          })
+        })
+      }
+
+      // 5. Scroll HUD Tracking
+      var hudIdx = document.getElementById("hudIdx")
+      var hudBar = document.getElementById("hudBar")
+      var hudName = document.getElementById("hudName")
+      var sections = document.querySelectorAll("section[data-idx]")
+
+      function onScroll() {
+        var scrollY = window.pageYOffset || document.documentElement.scrollTop
+        var totalH = document.documentElement.scrollHeight - window.innerHeight
+        var progress = totalH > 0 ? Math.min(1, Math.max(0, scrollY / totalH)) : 0
+        if (hudBar) hudBar.style.transform = "scaleX(" + progress + ")"
+
+        // Find active section
+        var activeSec = sections[0]
+        sections.forEach(function (sec) {
+          var rect = sec.getBoundingClientRect()
+          if (rect.top <= window.innerHeight * 0.45) {
+            activeSec = sec
+          }
+        })
+        if (activeSec && hudIdx && hudName) {
+          hudIdx.textContent = activeSec.getAttribute("data-idx")
+          hudName.textContent = activeSec.getAttribute("data-name")
+        }
+      }
+      window.addEventListener("scroll", onScroll, { passive: true })
+      onScroll()
+
+      // 6. Ambient Pixel Particle Canvas (Inspired by HongShi's particle aesthetic)
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+      var canvas = document.getElementById("gl")
+      if (!canvas) return
+      var ctx = canvas.getContext("2d")
+      var w = 0, h = 0, dpr = 1
+      var particles = []
+      var mouse = { x: null, y: null }
+      var count = window.innerWidth < 760 ? 40 : 80
+      var colors = ["#3b82f6", "#60a5fa", "#10b981", "#93c5fd", "#dbeafe"]
+
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2)
+        w = window.innerWidth
+        h = window.innerHeight
+        canvas.width = w * dpr
+        canvas.height = h * dpr
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        ctx.imageSmoothingEnabled = false
+      }
+      window.addEventListener("resize", resize)
+      resize()
+
+      for (var i = 0; i < count; i++) {
+        var size = [2, 3, 4, 5][(Math.random() * 4) | 0]
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          size: size,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: -(0.25 + Math.random() * 0.55),
+          baseAlpha: 0.15 + Math.random() * 0.6,
+          pulse: Math.random() * Math.PI * 2,
+          pulseSpeed: 0.015 + Math.random() * 0.025,
+          color: colors[(Math.random() * colors.length) | 0]
+        })
+      }
+
+      window.addEventListener("mousemove", function (e) {
+        mouse.x = e.clientX
+        mouse.y = e.clientY
+      })
+      window.addEventListener("mouseleave", function () {
+        mouse.x = null
+        mouse.y = null
+      })
+
+      function loop() {
+        ctx.clearRect(0, 0, w, h)
+        for (var i = 0; i < particles.length; i++) {
+          var p = particles[i]
+          p.pulse += p.pulseSpeed
+          var alpha = p.baseAlpha * (0.65 + 0.35 * Math.sin(p.pulse))
+          p.x += p.vx
+          p.y += p.vy
+
+          // Gentle mouse evasion
+          if (mouse.x !== null) {
+            var dx = p.x - mouse.x
+            var dy = p.y - mouse.y
+            var dist = Math.sqrt(dx * dx + dy * dy)
+            if (dist < 85) {
+              var f = (85 - dist) / 85
+              p.x += (dx / dist) * f * 2.5
+              p.y += (dy / dist) * f * 2.5
+            }
+          }
+
+          if (p.y < -10) { p.y = h + 8; p.x = Math.random() * w; }
+          if (p.x < -10) p.x = w + 8;
+          if (p.x > w + 10) p.x = -8;
+
+          ctx.fillStyle = p.color
+          ctx.globalAlpha = alpha
+          ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size)
+        }
+        requestAnimationFrame(loop)
+      }
+      requestAnimationFrame(loop)
+    })()
+  </script>
+</body>
+</html>

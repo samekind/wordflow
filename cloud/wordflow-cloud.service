@@ -1,0 +1,19 @@
+[Unit]
+Description=Wordflow cloud sync
+After=network.target
+
+[Service]
+User=wordflow
+Group=wordflow
+WorkingDirectory=/srv/wordflow
+Environment=WORDFLOW_CLOUD_DIR=/srv/wordflow
+Environment=WORDFLOW_BIND=172.29.0.1
+Environment=WORDFLOW_PORT=8120
+ExecStart=/usr/bin/python3 /srv/wordflow/wordflow_cloud.py
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
