@@ -6,7 +6,6 @@ import { loadBookWords, loadCatalog, type CatalogBook } from '../wordbooks'
 
 type Deps = {
   storeRef: { current: Store }
-  saveLock: { current: boolean }
   commit: (next: Store) => Promise<boolean>
   notify: (message: string) => void
   clearUndo: () => void
@@ -15,7 +14,7 @@ type Deps = {
 }
 
 /** Wordbook catalog, installing books, importing word lists and editing or deleting words. */
-export function useWordActions({ storeRef, saveLock, commit, notify, clearUndo, onStudyBook }: Deps) {
+export function useWordActions({ storeRef, commit, notify, clearUndo, onStudyBook }: Deps) {
   const [catalog, setCatalog] = useState<CatalogBook[]>([])
   const [catalogError, setCatalogError] = useState('')
   const [bookBusy, setBookBusy] = useState(false)
@@ -28,7 +27,7 @@ export function useWordActions({ storeRef, saveLock, commit, notify, clearUndo, 
     catch { return next }
   }
   async function installCatalogBook(book: CatalogBook, daily: number) {
-    if (bookBusy || saveLock.current) return false
+    if (bookBusy) return false
     setBookBusy(true)
     try {
       const rows = await loadBookWords(book.tag, book.exam)

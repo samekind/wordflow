@@ -11,7 +11,11 @@ async function studyMenu(page: Page) {
 
 
 const fixture = (count = 40) => importToPersonal({ ...emptyStore(), goal: 40 }, starterRows.slice(0, count), '学习回归').store
-const state = async (page: Page): Promise<Store> => (await (await page.request.get('/api/state')).json()).state
+/** Saves run in the background now; wait until the page has nothing in flight, then read the device copy. */
+async function settled(page: Page) {
+  if (page.url().startsWith('http')) await page.waitForFunction(() => document.documentElement.dataset.saving !== 'true', null, { timeout: 15000 })
+}
+const state = async (page: Page): Promise<Store> => { await settled(page); return (await (await page.request.get('/api/state')).json()).state }
 async function seed(page: Page, store: Store) {
   const { revision } = await (await page.request.get('/api/state')).json()
   expect((await page.request.put('/api/state', { data: { state: validateStore(store), revision } })).status()).toBe(200)

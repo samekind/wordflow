@@ -43,9 +43,9 @@ export default function App() {
   const speech = useSpeech(storeRef, toast.notify)
   const nav = useNavigation(speech.stop)
   const goStudy = () => nav.navigate({ name: 'today' })
-  const study = useStudyActions({ storeRef, saveLock: data.saveLock, saving, commit, notify: toast.notify, stopSpeech: speech.stop, onStudyBook: goStudy })
-  const words = useWordActions({ storeRef, saveLock: data.saveLock, commit, notify: toast.notify, clearUndo: study.clearUndo, onStudyBook: goStudy })
-  const ai = useAIServices({ storeRef, saveLock: data.saveLock, pendingSave: data.pendingSave, commit, notify: toast.notify, changeStudy: study.changeStudy })
+  const study = useStudyActions({ storeRef, saving, commit, notify: toast.notify, stopSpeech: speech.stop, onStudyBook: goStudy })
+  const words = useWordActions({ storeRef, commit, notify: toast.notify, clearUndo: study.clearUndo, onStudyBook: goStudy })
+  const ai = useAIServices({ storeRef, pendingSave: data.pendingSave, commit, notify: toast.notify, changeStudy: study.changeStudy })
   aiConfigRef.current = ai.setConfig
 
   const [readingView, setReadingView] = useState<'story' | 'daily'>('daily')
@@ -60,8 +60,8 @@ export default function App() {
 
   function go(screen: Screen) { ai.clearError(); nav.navigate(screen) }
   const back = () => nav.back()
-  useBackButton({ busy: () => data.saveLock.current, back, onExit: speech.stop })
-  useBeforeUnload(() => data.saveLock.current || ai.locked.current || !!data.failedSaveRef.current, speech.stop)
+  useBackButton({ busy: () => false, back, onExit: speech.stop })
+  useBeforeUnload(() => data.isSaving() || ai.locked.current || !!data.failedSaveRef.current, speech.stop)
 
   const openWord = (id: string) => { setDetailId(id); ai.clearError() }
   const openAISettings = () => go({ name: 'section', section: 'ai' })

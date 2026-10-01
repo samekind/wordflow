@@ -7,7 +7,6 @@ type CompletionChange = { bookId: string; wordId: string; completed: boolean }
 export type UndoAction = { changes: { id: string; patch: Partial<Word> }[]; reviewIds: string[]; completions: CompletionChange[] }
 type Deps = {
   storeRef: { current: Store }
-  saveLock: { current: boolean }
   saving: boolean
   commit: (next: Store) => Promise<boolean>
   notify: (message: string, allowUndo?: boolean) => void
@@ -22,7 +21,7 @@ function completionChanges(before: Store, after: Store, ids: string[]): Completi
 }
 
 /** Study flow, marks, known words and the single-step undo they share. */
-export function useStudyActions({ storeRef, saveLock, saving, commit, notify, stopSpeech, onStudyBook }: Deps) {
+export function useStudyActions({ storeRef, saving, commit, notify, stopSpeech, onStudyBook }: Deps) {
   const [undo, setUndo] = useState<UndoAction | null>(null)
 
   async function changeStudy(draft: StudyDraft, action: StudyAction) {
@@ -46,7 +45,7 @@ export function useStudyActions({ storeRef, saveLock, saving, commit, notify, st
   }
   async function changeMarks(id: string, delta: 1 | -1) {
     const previous = storeRef.current, word = previous.words.find(w => w.id === id)
-    if (!word || saveLock.current) return false
+    if (!word) return false
     const next = markWord(previous, id, delta)
     if (next === previous) {
       notify(delta > 0 ? `${word.word} 已到六级标记；本轮自测结果仍会单独记录` : `${word.word} 还没有标记可减`)
@@ -57,7 +56,7 @@ export function useStudyActions({ storeRef, saveLock, saving, commit, notify, st
   }
   async function changeKnown(id: string, known: boolean) {
     const previous = storeRef.current, word = previous.words.find(w => w.id === id)
-    if (!word || saveLock.current) return false
+    if (!word) return false
     const next = setKnown(previous, id, known)
     if (next === previous || !await commit(next)) return false
     setUndo({ changes: [{ id, patch: { known: word.known } }], reviewIds: [], completions: completionChanges(previous, next, [id]) })

@@ -13,7 +13,6 @@ export function useStoreSync(notify: (message: string) => void, onSettings: (set
   const [store, setStore] = useState<Store>(emptyStore)
   const storeRef = useRef(store)
   const revision = useRef(0)
-  const saveLock = useRef(false)
   const pendingSave = useRef<Promise<void> | null>(null)
   const [ready, setReady] = useState(false)
   const [loadError, setLoadError] = useState('')
@@ -47,37 +46,61 @@ export function useStoreSync(notify: (message: string) => void, onSettings: (set
     if (ready) void syncSystemAppearance(store.appearance.theme).catch(error => console.warn('无法同步系统栏外观', error))
   }, [ready, store.appearance.theme])
 
+  // Optimistic save queue. `commit` applies the change to the screen at once and returns; saves run
+  // in the background one at a time, always sending the newest store against the last confirmed
+  // revision. Changes made while a save is in flight are coalesced into the next one.
+  const unsaved = useRef<Store | null>(null)
+  const draining = useRef<Promise<void> | null>(null)
+  function setBusy(on: boolean) {
+    // Read by browser tests to wait for the device copy; set synchronously, not in an effect.
+    document.documentElement.dataset.saving = on ? 'true' : 'false'
+    setSaving(on)
+  }
+  function confirmed(savedRevision: number) {
+    revision.current = savedRevision; setClock(Date.now())
+    failedSaveRef.current = null; setFailedSave(null)
+  }
+  /** True when the server already holds `valid` (a save whose response was lost). Throws on a newer foreign write. */
+  async function reconcile(valid: Store, base: number) {
+    const latest = await api('state')
+    if (latest.apiVersion !== API_VERSION) throw new Error('当前服务版本不支持新版学习草稿，请更新后重试。')
+    if (latest.revision > base && JSON.stringify(validateStore(latest.state)) === JSON.stringify(valid)) { confirmed(latest.revision); return true }
+    if (latest.revision !== base) throw new Error('其他操作已更新学习记录。当前改动仍在本页，可先导出待保存备份再重新加载。')
+    return false
+  }
+  async function drain(retry: boolean) {
+    let checkFirst = retry
+    while (unsaved.current) {
+      const valid = unsaved.current, base = revision.current
+      unsaved.current = null
+      try {
+        if (checkFirst) { checkFirst = false; if (await reconcile(valid, base)) continue }
+        const data = await api('state', { method: 'PUT', body: JSON.stringify({ state: valid, revision: base }) })
+        confirmed(data.revision)
+      } catch (error) {
+        let message = (error as Error).message
+        try { if (await reconcile(valid, base)) continue } catch (reason) { message = (reason as Error).message }
+        // Keep the newest local copy on screen until the user retries, exports or reloads.
+        const failed = { next: unsaved.current || valid, revision: base, error: message }
+        unsaved.current = null
+        failedSaveRef.current = failed; setFailedSave(failed)
+        break
+      }
+    }
+    setBusy(false)
+  }
   async function commit(next: Store, retry = false) {
-    if (saveLock.current || (failedSaveRef.current && !retry)) return false
-    saveLock.current = true; setSaving(true)
-    const baseRevision = retry ? failedSaveRef.current!.revision : revision.current
+    if (failedSaveRef.current && !retry) return false
     let valid: Store
-    try { valid = validateStore(next) } catch (error) { saveLock.current = false; setSaving(false); notify((error as Error).message); return false }
-    let release!: () => void
-    pendingSave.current = new Promise<void>(resolve => { release = resolve })
-    function accept(savedRevision: number) {
-      revision.current = savedRevision; storeRef.current = valid; setStore(valid); setClock(Date.now())
-      failedSaveRef.current = null; setFailedSave(null)
+    try { valid = validateStore(next) } catch (error) { notify((error as Error).message); return false }
+    storeRef.current = valid; setStore(valid)
+    unsaved.current = valid
+    if (!draining.current) {
+      setBusy(true)
+      draining.current = drain(retry).finally(() => { draining.current = null; pendingSave.current = null })
+      pendingSave.current = draining.current
     }
-    async function reconcile() {
-      const latest = await api('state')
-      if (latest.apiVersion !== API_VERSION) throw new Error('当前服务版本不支持新版学习草稿，请更新后重试。')
-      if (latest.revision > baseRevision && JSON.stringify(validateStore(latest.state)) === JSON.stringify(valid)) { accept(latest.revision); return true }
-      if (latest.revision !== baseRevision) throw new Error('其他操作已更新学习记录。当前改动仍在本页，可先导出待保存备份再重新加载。')
-      return false
-    }
-    try {
-      if (retry && await reconcile()) return true
-      const data = await api('state', { method: 'PUT', body: JSON.stringify({ state: valid, revision: baseRevision }) })
-      accept(data.revision); return true
-    } catch (error) {
-      let message = (error as Error).message
-      try { if (await reconcile()) return true } catch (reason) { message = (reason as Error).message }
-      const failed = { next: valid, revision: baseRevision, error: message }
-      failedSaveRef.current = failed; setFailedSave(failed); setStore(valid)
-      return false
-    }
-    finally { saveLock.current = false; pendingSave.current = null; setSaving(false); release() }
+    return true
   }
 
   /** Drops the unsaved copy and reloads what the device has saved. */
@@ -85,12 +108,15 @@ export function useStoreSync(notify: (message: string) => void, onSettings: (set
     const data = await api('state')
     if (data.apiVersion !== API_VERSION) throw new Error('服务版本不匹配')
     const next = validateStore(data.state)
+    unsaved.current = null
     revision.current = data.revision; storeRef.current = next; failedSaveRef.current = null; setFailedSave(null); setStore(next)
   }
 
   return {
     store, storeRef, ready, loadError, clock,
-    savingNow, saving: savingNow || !!failedSave, failedSave, failedSaveRef,
-    saveLock, pendingSave, commit, discardAndReload,
+    // `saving` only blocks the UI after a failed save; normal saves never grey anything out.
+    savingNow, saving: !!failedSave, failedSave, failedSaveRef,
+    pendingSave, commit, discardAndReload,
+    isSaving: () => !!draining.current,
   }
 }

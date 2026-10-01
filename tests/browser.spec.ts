@@ -18,7 +18,11 @@ const examFrequency = frequencySchema.parse(JSON.parse(readFileSync('public/voca
 function studied(store: Store) { return orderPersonalBook(store, examFrequency) }
 function listed(store: Store, index: number) { return store.words.find(word => word.id === store.books[0].wordIds[index])! }
 
-async function state(page: Page): Promise<Store> { return (await (await page.request.get('/api/state')).json()).state }
+/** Saves run in the background now; wait until the page has nothing in flight, then read the device copy. */
+async function settled(page: Page) {
+  if (page.url().startsWith('http')) await page.waitForFunction(() => document.documentElement.dataset.saving !== 'true', null, { timeout: 15000 })
+}
+async function state(page: Page): Promise<Store> { await settled(page); return (await (await page.request.get('/api/state')).json()).state }
 async function seed(page: Page, next: unknown) {
   const { revision } = await (await page.request.get('/api/state')).json()
   expect((await page.request.put('/api/state', { data: { state: validateStore(next), revision } })).status()).toBe(200)

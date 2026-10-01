@@ -7,7 +7,6 @@ import type { AIConfig } from '../components/SettingsPage'
 
 type Deps = {
   storeRef: { current: Store }
-  saveLock: { current: boolean }
   pendingSave: { current: Promise<void> | null }
   commit: (next: Store) => Promise<boolean>
   notify: (message: string) => void
@@ -17,7 +16,7 @@ type Deps = {
 /** AI provider settings and every generation request (mnemonics, day stories, context stories,
  * article assist). Only one request runs at a time; results are re-checked against the latest
  * store before saving, so edits made meanwhile are never overwritten by stale output. */
-export function useAIServices({ storeRef, saveLock, pendingSave, commit, notify, changeStudy }: Deps) {
+export function useAIServices({ storeRef, pendingSave, commit, notify, changeStudy }: Deps) {
   const lock = useRef(false)
   const [config, setConfig] = useState<AIConfig>({ provider: 'deepseek', model: 'deepseek-flash', configured: false })
   const [busy, setBusy] = useState(false)
@@ -64,7 +63,7 @@ export function useAIServices({ storeRef, saveLock, pendingSave, commit, notify,
     }, () => setLive(''))
   }
   async function generateContextStory(draft: StudyDraft) {
-    if (lock.current || saveLock.current) return
+    if (lock.current) return
     if (storeRef.current.learning.drafts[draft.kind]?.id !== draft.id && !await changeStudy(draft, { type: 'method', method: 'context' })) return
     const before = storeRef.current, saved = before.learning.drafts[draft.kind]
     if (saved?.id !== draft.id || saved.page !== draft.page) { notify('当前学习组已改变，请重新打开语境记忆'); return }
