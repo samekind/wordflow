@@ -1,29 +1,12 @@
-/* Shared page rhythm; glass materials remain defined in theme.css. */
-.tab-glass-selection{width:calc((100% - 6px)/4)}
-.topbar,.study-page-heading{height:calc(68px + var(--ion-safe-area-top));padding-top:var(--ion-safe-area-top);gap:10px}
-.topbar{padding-left:22px;padding-right:22px}
-.topbar h1,.study-page-heading h1{font-size: var(--fs-page);line-height:1.3;font-weight: var(--fw-bold);letter-spacing:0;text-align:left;flex:1;margin:0;color:var(--text-primary)}
-.topbar:not(.primary-topbar) h1{font-size: var(--fs-title)}
+/* Study flow, shelf, reading and settings layout details. Header and tokens live in theme.css / tokens.css. */
 .header-action{gap:5px;font-size: var(--fs-small);min-height:44px;white-space:nowrap}
-.content{padding-top:12px}
 .page-purpose{font-size: var(--fs-meta);line-height:1.8;color:var(--text-secondary);margin:0 0 18px;overflow-wrap:anywhere}
-.study-page-heading{display:flex;align-items:center;flex-shrink:0}
-.english-page{min-height:0}
-.study-task-tabs{margin-bottom:14px}
-.study-task-tabs button{min-height:42px;font-size: var(--fs-body)}
 .study-scope{margin-bottom:8px}
 .study-scope .study-date-nav{width:100%;background:none;box-shadow:none;border:0;padding:0;backdrop-filter:none;justify-content:space-between;border-radius:0;min-height:48px}
 .study-scope .deck-title{flex:1;min-width:0;text-align:center}
 .study-scope .study-deck-label{max-width:100%}
 .study-scope .current-book-button{font-size: var(--fs-small);max-width:100%}
 .study-scope .day-title{font-size: var(--fs-word)}
-.study-draft-note{margin:0 0 12px;padding:10px 0;border-bottom:1px solid var(--line)}
-.study-task-progress{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px}
-.study-task-progress strong{font-size: var(--fs-meta)}
-.study-task-progress>span{font-size: var(--fs-small)}
-.study-task-progress .study-later-reviews{flex-basis:100%}
-.study-tools{margin:0;gap:8px;min-height:42px}
-.study-tools>.icon-button{width:36px;height:40px}
 .study-stage-switch{display:flex;flex:1;min-width:0}
 .study-stage-switch button{display:flex;flex:1;justify-content:center;align-items:center;gap:5px;font-size: var(--fs-small);min-height:38px;padding:6px 8px;white-space:nowrap}
 .study-instruction{font-size: var(--fs-small);line-height:1.7;color:var(--text-secondary);margin:10px 0 14px}
@@ -36,42 +19,25 @@
 .study-list-view .meaning-row>.chinese-meaning{flex:1;min-width:0;overflow-wrap:anywhere}
 .meaning-check{font-size: var(--fs-caption);min-height:36px;white-space:nowrap;padding:0 6px}
 .meaning-check[aria-pressed=true]{color:var(--accent);font-weight: var(--fw-semibold)}
-.study-submit-area{margin:12px 0;gap:12px}
 .study-submit-area>.primary,.study-submit-area>.secondary{width:100%;justify-content:center;min-height:46px}
 .study-submit-area>.complete-group{width:100%}
-.study-pagination{margin:8px 0 0;min-height:44px}
 .study-secondary-actions{display:flex;justify-content:space-between;margin:6px 0;gap:12px}
 .study-secondary-actions .text-button{font-size: var(--fs-caption);gap:5px;min-height:36px;color:var(--muted)}
-.study-daily-summary{justify-content:center;padding:16px 0 4px;margin:0}
-.study-practice-link{margin-top:4px;min-height:40px;flex-wrap:wrap;gap:4px 8px}
-.study-empty{padding:32px 8px;min-height:250px}
 .study-empty .button-row{justify-content:center;flex-wrap:wrap}
-.context-task-summary{display:none}
-.context-ready{padding:24px 18px;border-radius: var(--radius-md)}
 .context-check .primary{width:100%;justify-content:center}
-.shelf-toolbar{margin-bottom:0}
-.shelf-toolbar .segment-control{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
 .shelf-toolbar .segment-control button{min-height:42px;font-size: var(--fs-meta)}
 .shelf-links{display:flex;justify-content:space-between;gap:10px;margin:8px 0 18px}
 .shelf-links .text-button{font-size: var(--fs-small);min-height:38px;gap:5px}
-.owned-book-info>strong{flex-wrap:wrap;gap:6px}
 .owned-book-info .current-book-badge{font-size: var(--fs-tab);color:var(--accent);padding:2px 6px;background:var(--glass-selected);border-radius:5px;white-space:nowrap}
 .shelf-continue{height:auto;min-height:46px;margin-top:20px;white-space:normal;line-height:1.6}
 .reading-purpose{margin-bottom:16px}
 .reading-purpose .page-purpose{margin-bottom:4px}
 .reading-purpose .text-button{min-height:36px;font-size: var(--fs-small);gap:4px}
 .reader-book-label{font-size: var(--fs-small);line-height:1.7;color:var(--text-secondary);margin:0 0 12px}
-.story-ready{padding:0}
-.story-ready-card{padding:24px 20px;border-radius: var(--radius-md)}
-.story-ready-card h2{font-size: var(--fs-title);margin-top:24px}
-.article-completion{flex-wrap:wrap;gap:10px}
 .article-completion .primary,.article-completion .secondary{min-height:44px}
 .settings-group-title{font-size: var(--fs-small);color:var(--muted);font-weight: var(--fw-medium);margin:12px 0 0;padding:4px 0}
 .settings-group-title:not(:first-child){margin-top:24px}
-.settings-menu>button>span{display:grid;gap:5px}
 .settings-menu>button>span>small{font-size: var(--fs-caption);line-height:1.6;color:var(--text-secondary);font-weight: var(--fw-regular)}
-.settings-menu>button>svg:first-child{color:var(--accent)}
-.settings-menu>button{min-height:62px}
 .data-block{padding:20px 0;border-top:1px solid var(--line)}
 .data-block h2{font-size: var(--fs-body-l);margin:0 0 10px;color:var(--text-primary)}
 .data-block h2>span{font-size: var(--fs-caption);font-weight: var(--fw-regular);color:var(--muted);margin-left:8px}
@@ -81,8 +47,7 @@
 .recovery-details summary{min-height:36px;cursor:pointer}
 .recovery-details .form-label{margin-top:12px}
 .detail-status-note{font-size: var(--fs-caption);line-height:1.8;color:var(--text-secondary);margin:0 0 16px}
-.library-toolbar{flex-wrap:wrap}
 .library-toolbar .search-field{flex-basis:100%}
 .library-toolbar .sort-field{margin-right:auto}
 .empty>p{font-size: var(--fs-meta);line-height:1.8;color:var(--text-secondary);max-width:320px}
-@media(max-width:360px){.topbar{padding-left:16px;padding-right:16px}.study-stage-switch button{padding:5px;font-size: var(--fs-caption)}.study-stage-switch svg{width:13px}.study-instruction{font-size: var(--fs-caption)}.shelf-links .text-button{font-size: var(--fs-caption)}.owned-book{gap:10px}.data-block .button-row>*{min-width:0}}
+@media(max-width:360px){.topbar{padding-left:16px;padding-right:16px}.study-stage-switch button{padding:5px;font-size: var(--fs-caption)}.study-stage-switch svg{width:13px}.study-instruction{font-size: var(--fs-caption)}.shelf-links .text-button{font-size: var(--fs-caption)}.data-block .button-row>*{min-width:0}}

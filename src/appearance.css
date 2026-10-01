@@ -21,9 +21,6 @@ textarea,
 select {
   font-family: var(--app-font);
 }
-body {
-  font-weight: var(--app-weight);
-}
 
 .appearance-sample {
   display: flex;
@@ -80,10 +77,6 @@ html[data-theme="dark"] .sort-field select {
 }
 html[data-theme="dark"] .hidden-meaning > span {
   background: #354353;
-}
-ion-tab-button {
-  --color: var(--text-muted);
-  --color-selected: var(--accent);
 }
 html[data-theme="dark"] ion-toggle.known-toggle,
 html[data-theme="dark"] ion-toggle.setting-toggle {

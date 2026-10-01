@@ -12,6 +12,7 @@ body{
   margin: 0;
   min-width: 280px;
   background: var(--app-bg);
+  font-weight: var(--app-weight);
 }
 button,input,textarea,select{
   font: inherit;
@@ -109,25 +110,27 @@ ion-app{
   display: none;
 }
 .content{
-  padding: 22px 22px calc(94px + var(--ion-safe-area-bottom));
+  padding: 22px 22px calc(94px + var(--ion-safe-area-bottom));padding-top:12px;
 }
 .content.study-view{
   padding: 0 22px calc(94px + var(--ion-safe-area-bottom));
 }
 .english-page{
   min-height: 100dvh;
-  min-height: 100cqh;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 .view-transition{
   min-height: 100%;
 }
-.topbar,.study-topbar{
+/* Page header: one height and one title style for every page. Primary pages (the four tabs)
+   use the page title size; secondary pages use the smaller title size. */
+.topbar,.study-page-heading{
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: calc(86px + var(--ion-safe-area-top));
+  gap: 10px;
+  height: calc(68px + var(--ion-safe-area-top));
   padding-top: var(--ion-safe-area-top);
   flex-shrink: 0;
 }
@@ -135,16 +138,31 @@ ion-app{
   position: sticky;
   top: 0;
   z-index: 10;
-  padding-left: 18px;
-  padding-right: 18px;
+  padding-left: var(--page-gutter);
+  padding-right: var(--page-gutter);
   background: var(--bar-fill);
   backdrop-filter: var(--glass-filter);
   -webkit-backdrop-filter: var(--glass-filter);
 }
-.topbar h1{
+.topbar h1,.study-page-heading h1{
   flex: 1;
-  text-align: center;
+  margin: 0;
+  text-align: left;
+  font-size: var(--fs-page);
+  line-height: 1.3;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0;
+  color: var(--text-primary);
+}
+.topbar:not(.primary-topbar) h1{
   font-size: var(--fs-title);
+}
+.study-topbar{
+  display: flex;
+  align-items: center;
+  height: calc(86px + var(--ion-safe-area-top));
+  padding-top: var(--ion-safe-area-top);
+  flex-shrink: 0;
 }
 .icon-button{
   width: 40px;
@@ -176,8 +194,8 @@ ion-app{
   position: sticky;
   top: 0;
   z-index: 12;
-  margin: 0 -5px;
-  justify-content: space-between;
+  margin: 0;
+  justify-content: space-between;display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:8px;
 }
 .study-date-nav,.study-topbar>.import-trigger,.topbar>.icon-button,.topbar>.import-button,.mobile-nav{
   background: var(--glass-fill);
@@ -193,7 +211,7 @@ ion-app{
   min-width: 0;
   min-height: 48px;
   padding: 3px 5px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-lg);justify-self:center;max-width:100%;
 }
 .study-date-nav .deck-title{
   font-size: var(--fs-body-l);
@@ -202,17 +220,12 @@ ion-app{
   font-weight: var(--fw-bold);
   font-variant-numeric: tabular-nums;
   padding: 0 4px;
-  color: var(--text-primary);
+  color: var(--text-primary);min-width:0;
 }
 .study-date-nav .icon-button{
   width: 30px;
   height: 38px;
   color: var(--text-secondary);
-}
-.study-topbar>.import-trigger{
-  width: 48px;
-  height: 48px;
-  color: var(--accent);
 }
 .deck-title{
   display: flex;
@@ -242,7 +255,7 @@ ion-app{
   list-style: none;
   margin: 3px 0 0;
   padding: 0;
-  gap: 7px 10px;
+  gap: 8px 10px;
   scroll-margin-top: calc(90px + var(--ion-safe-area-top));
 }
 .english-entry{
@@ -259,8 +272,8 @@ ion-app{
   align-items: center;
   width: 100%;
   height: 100%;
-  min-height: 48px;
-  padding: 12px 10px;
+  min-height: 46px;
+  padding: 10px 9px;
   gap: 7px;
   text-align: left;
   touch-action: pan-y;
@@ -371,7 +384,8 @@ ion-app{
 }
 .english-entry ion-item-sliding,.study-card-item{display:block;width:100%;min-width:0}
 .english-entry ion-item-options{width:104px !important}
-.meaning-entry ion-item-options{width:84px !important}
+.meaning-entry ion-item-options{width:84px !important;
+  border: 0}
 .english-entry ion-item-option{width:52px;min-width:52px;max-width:52px;font-size: var(--fs-tab)}
 .meaning-entry ion-item-option{width:84px;min-width:84px;max-width:84px;font-size: var(--fs-caption)}
 .study-card-item{--background:transparent;--inner-padding-end:0;--inner-padding-start:0;--min-height:0}
@@ -434,19 +448,13 @@ ion-app{
   border-radius: 4px;
   background: #e8efeb;
 }
-.meaning-entry ion-item-option{
-  font-size: var(--fs-caption);
-}
 .meaning-entry ion-item-option::part(native){
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-.meaning-entry ion-item-options{
-  border: 0;
-}
 .study-pagination{
-  display: flex;
+  display: grid;
   align-items: center;
   justify-content: center;
   gap: 12px;
@@ -454,7 +462,7 @@ ion-app{
   padding: 14px 0 calc(88px + var(--ion-safe-area-bottom));
   color: var(--text-muted);
   font-size: var(--fs-small);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums;grid-template-columns:42px minmax(0,1fr) 42px;width:min(100%,440px);margin-left:auto;margin-right:auto;margin:8px 0 0;min-height:44px;
 }
 .study-pagination .complete-group{
   height: 42px;
@@ -489,6 +497,10 @@ ion-app{
   gap: 17px;
   padding: 60px 15px;
   color: var(--text-muted);
+}
+.study-empty{
+  padding: 32px 8px;
+  min-height: 250px;
 }
 .study-empty h2,.empty h3{
   font-size: var(--fs-word);
@@ -606,7 +618,7 @@ ion-tab-button.tab-selected svg{
   left: 3px;
   top: 3px;
   bottom: 3px;
-  width: calc((100% - 6px)/3);
+  width: calc((100% - 6px)/4);
   border-radius: var(--radius-lg);
   background: var(--glass-selected);
   border: 1px solid var(--glass-edge);
@@ -730,7 +742,7 @@ ion-modal.app-sheet::part(content){
   color: var(--text-secondary);
   line-height: 1.8;
   padding-bottom: 23px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);white-space:pre-line;overflow-wrap:anywhere;
 }
 .word-detail .word-action-title{
   margin: 4px 0 18px;
@@ -996,9 +1008,9 @@ ion-toggle.known-toggle{
   padding: 7px 10px;
 }
 .filter-row button[aria-pressed=true]{
-  background: var(--glass-selected);
+  background: #e3efff;
   box-shadow: var(--glass-selected-shadow);
-  color: var(--accent);
+  color: #006fe8;
 }
 .filter-row>span{
   margin-left: auto;
@@ -1469,7 +1481,7 @@ to{
   padding-right: 18px;
 }
 .study-topbar{
-  margin: 0 -4px;
+  margin: 0;gap:5px;grid-template-columns:38px minmax(0,1fr) 38px;
 }
 .study-date-nav{
   padding-left: 3px;
@@ -1477,10 +1489,10 @@ to{
 }
 .study-date-nav .deck-title{
   font-size: var(--fs-body);
-  padding: 0 1px;
+  padding: 0 1px;gap:3px;
 }
 .study-date-nav .icon-button{
-  width: 26px;
+  width: 24px;
 }
 .content{
   padding: 17px 16px calc(94px + var(--ion-safe-area-bottom));
@@ -1489,9 +1501,9 @@ to{
   column-gap: 8px;
 }
 .english-line{
-  padding-left: 8px;
-  padding-right: 8px;
-  gap: 6px;
+  padding-left: 7px;
+  padding-right: 7px;
+  gap: 5px;
 }
 .word-number{
   width: 17px;
