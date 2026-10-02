@@ -89,17 +89,18 @@ test('draft retains its words, position and explicit forgotten answers through b
   assert.deepEqual(JSON.parse(JSON.stringify(saved.words[0].card)), JSON.parse(JSON.stringify(card)))
 })
 
-test('repeated taps add one mark; a later manual mark edit survives cancellation', () => {
+test('repeated forget records one mark; cancelling always takes exactly one mark off', () => {
   const initial = fixture(20), draft = createStudyDraft(initial, 'learn', now)!, id = draft.groups[0][0]
   let state = applyStudyAction(initial, draft, { type: 'forget', wordId: id }, now)
   assert.equal(applyStudyAction(state, draft, { type: 'forget', wordId: id }, now), state)
   assert.equal(state.words[0].markCount, 1)
   const cancelled = applyStudyAction(state, draft, { type: 'cancel', wordId: id }, now)
   assert.equal(cancelled.words[0].markCount, 0)
+  // A mark added after 本轮不熟 (second tap): cancel still removes one, keeping the other.
   state = markWord(state, id, 1, now)
-  const preserved = applyStudyAction(state, draft, { type: 'cancel', wordId: id }, now)
-  assert.equal(preserved.words[0].markCount, 2)
-  assert.equal(preserved.learning.drafts.learn!.forgotten[id], undefined)
+  const reduced = applyStudyAction(state, draft, { type: 'cancel', wordId: id }, now)
+  assert.equal(reduced.words[0].markCount, 1)
+  assert.equal(reduced.learning.drafts.learn!.forgotten[id], undefined)
 })
 
 test('batch submission records explicit failures and remembered remainder exactly once, including after reload', () => {

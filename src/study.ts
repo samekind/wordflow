@@ -129,7 +129,9 @@ export function applyStudyAction(store: Store, proposed: StudyDraft, action: Stu
       next = markWord(next, word.id, 1, now)
       forgotten[word.id] = { before: markSnapshot(word), after: markSnapshot(next.words.find(item => item.id === word.id)!) }
     } else {
-      next = restoreDraftMark(next, draft, word.id)
+      const restored = restoreDraftMark(next, draft, word.id)
+      // Marks moved since 本轮不熟 was recorded (extra taps, edits elsewhere): still take one off.
+      next = restored !== next ? restored : markWord(next, word.id, -1, now)
       delete forgotten[word.id]
     }
     return putDraft(next, { ...draft, forgotten })

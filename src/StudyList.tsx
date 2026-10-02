@@ -113,8 +113,12 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
     if (preview || mode === 'practice') return markEntry(row.id, 1)
     return row.forgotten ? onMark(row.id, 1) : markEntry(row.id, 1)
   }
-  // 减标记: undo a 本轮不熟 first (it restores the mark it added), otherwise remove one mark.
+  // 减标记 always removes exactly one mark. Marks added after 本轮不熟 go first; the last one
+  // also clears 本轮不熟 for the group.
   function lessMark(row: typeof rows[number]) {
+    const recorded = !preview && mode !== 'practice' ? draft?.forgotten[row.id] : undefined
+    if (recorded && row.markCount > recorded.after.count) return onMark(row.id, -1)
+    if (recorded) return markEntry(row.id, -1)
     if (!preview && row.forgotten) return markEntry(row.id, -1)
     return row.markCount > 0 ? onMark(row.id, -1) : Promise.resolve(false)
   }
