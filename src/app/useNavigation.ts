@@ -11,6 +11,7 @@ export type Screen =
   | { name: 'article'; id?: string; scope?: ReadingScope }
   | { name: 'shelf'; cefr: ReadingScope['cefr']; topic?: string }
   | { name: 'stories' }
+  | { name: 'picks' }
   | { name: 'section'; section: Exclude<SettingsSection, 'home'> }
 type Entry = { screen: Screen; scroll: number }
 type State = { stack: Entry[]; direction: -1 | 0 | 1; seq: number }

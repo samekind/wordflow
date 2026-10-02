@@ -87,6 +87,55 @@ public class WordflowPlugin extends Plugin {
         catch (Exception e) { call.reject("无法读取手机学习记录，请重启应用；原数据库不会被清空。"); }
     }
 
+    @PluginMethod public void readStateText(PluginCall call) {
+        try {
+            WordflowStore.StateText stored = store.readStateText();
+            call.resolve(new JSObject().put("body", stored.body).put("revision", stored.revision).put("apiVersion", 7));
+        } catch (Exception e) { call.reject("无法读取手机学习记录，请重启应用；原数据库不会被清空。"); }
+    }
+
+    @PluginMethod public void readStateFile(PluginCall call) {
+        try {
+            File target = new File(getContext().getCacheDir(), "wordflow-state-read.json");
+            int revision = store.readStateToFile(target);
+            call.resolve(new JSObject().put("path", target.getAbsolutePath()).put("revision", revision).put("apiVersion", 7));
+        } catch (Exception e) { call.reject("无法读取手机学习记录，请重启应用；原数据库不会被清空。"); }
+    }
+
+    private StringBuilder upload;
+    private int uploadNext;
+
+    /** Large documents arrive in slices so each bridge message stays small and the page keeps drawing between them. */
+    @PluginMethod public void writeStateChunk(PluginCall call) {
+        try {
+            Integer index = call.getInt("index");
+            Integer revision = call.getInt("revision");
+            String data = call.getString("data");
+            boolean last = Boolean.TRUE.equals(call.getBoolean("last"));
+            if (index == null || revision == null || revision < 0 || data == null) throw new IllegalArgumentException("学习记录格式无效");
+            String text = null;
+            synchronized (this) {
+                if (index == 0) { upload = new StringBuilder(Math.max(16, data.length() * 8)); uploadNext = 0; }
+                if (upload == null || index != uploadNext) { upload = null; throw new IllegalStateException("保存顺序出错，请重试"); }
+                upload.append(data);
+                uploadNext++;
+                if (last) { text = upload.toString(); upload = null; }
+            }
+            if (!last) { call.resolve(new JSObject().put("received", index)); return; }
+            call.resolve(new JSObject().put("revision", store.saveStateText(text, revision)));
+        } catch (IllegalArgumentException | IllegalStateException e) { synchronized (this) { upload = null; } call.reject(e.getMessage()); }
+        catch (Exception e) { synchronized (this) { upload = null; } call.reject("保存失败，请检查手机剩余空间后重试"); }
+    }
+
+    @PluginMethod public void writeStateText(PluginCall call) {
+        try {
+            Integer revision = call.getInt("revision");
+            if (revision == null || revision < 0) throw new IllegalArgumentException("学习记录格式无效");
+            call.resolve(new JSObject().put("revision", store.saveStateText(call.getString("body"), revision)));
+        } catch (IllegalArgumentException | IllegalStateException e) { call.reject(e.getMessage()); }
+        catch (Exception e) { call.reject("保存失败，请检查手机剩余空间后重试"); }
+    }
+
     @PluginMethod public void saveState(PluginCall call) {
         try {
             JSONObject state = call.getObject("state");

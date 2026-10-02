@@ -20,13 +20,20 @@ html[data-weight="medium"], .font-scope[data-weight="medium"] { --weight-step: 1
 html[data-weight="bold"], .font-scope[data-weight="bold"] { --weight-step: 200; }
 .font-scope[data-font], .font-scope[data-weight] { font-family: var(--app-font); font-weight: var(--fw-regular); }
 .font-scope[data-weight="regular"] { --weight-step: 0; }
-html[data-size="large"] .english-word { font-size: 18px; }
-html[data-size="large"] .layout-preview .english-word { font-size: 20px; }
-html[data-size="large"] .card-meaning,
-html[data-size="large"] .chinese-meaning,
-html[data-size="large"] .meaning-cell,
-html[data-size="large"] .article-paragraphs > p,
-html[data-size="large"] .article-block > p { font-size: 16px; }
+/* ==================== Sizes ====================
+   English words and Chinese meanings scale on their own (data-word-size / data-meaning-size);
+   data-size="large" enlarges every other piece of text through the type tokens. */
+html { --word-scale: 1; --meaning-scale: 1; }
+html[data-word-size="small"] { --word-scale: .9; }
+html[data-word-size="large"] { --word-scale: 1.15; }
+html[data-word-size="xlarge"] { --word-scale: 1.3; }
+html[data-meaning-size="small"] { --meaning-scale: .9; }
+html[data-meaning-size="large"] { --meaning-scale: 1.15; }
+html[data-meaning-size="xlarge"] { --meaning-scale: 1.3; }
+html[data-size="large"] {
+  --fs-tab: 11px; --fs-caption: 12px; --fs-small: 13px; --fs-meta: 14px; --fs-body: 15px;
+  --fs-body-l: 16px; --fs-word: 17px; --fs-title: 19px; --fs-page: 23px; --fs-display: 30px;
+}
 
 body,
 input,
@@ -100,3 +107,6 @@ html[data-theme="dark"] ion-toggle.setting-toggle {
 html[data-theme="dark"] ion-toggle::part(track) {
   box-shadow: inset 0 0 0 1px var(--glass-edge);
 }
+.appearance-sample.size-sample span.english-word { font-size: calc(var(--fs-page) * var(--word-scale)); font-weight: var(--fw-semibold); color: var(--text-primary); }
+.appearance-sample.size-sample span.chinese-meaning { font-size: calc(var(--fs-body-l) * var(--meaning-scale)); color: var(--text-secondary); }
+.appearance-sample.size-sample small { font-size: var(--fs-body); color: var(--text-muted); }

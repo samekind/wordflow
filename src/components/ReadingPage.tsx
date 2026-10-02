@@ -16,7 +16,7 @@ import Sheet from './Sheet'
 type Props = {
   store: Store; now: number;
   /** hub = the 阅读 tab (entry cards); shelf = one difficulty's topics / list; daily / story = the pushed reader screens. */
-  view: 'hub' | 'shelf' | 'story' | 'daily'; onOpen: (view: 'story' | 'daily', articleId?: string, scope?: ReadingScope) => void;
+  view: 'hub' | 'picks' | 'shelf' | 'story' | 'daily'; onOpen: (view: 'picks' | 'story' | 'daily', articleId?: string, scope?: ReadingScope) => void;
   onShelf: (cefr: ReadingScope['cefr'], topic?: string) => void;
   /** Article chosen from a list; the reader starts on it instead of today's pick. */
   articleId?: string;
@@ -32,8 +32,8 @@ type Props = {
 }
 export default function ReadingPage(props: Props) {
   return <div className="reading-page font-scope" data-size={props.store.readingPreferences.textSize} {...pageFontAttrs(props.store.appearance.reading)}>
-    {props.view === 'hub' ? <ReadingHub {...props} /> : props.view === 'shelf' && props.scope ? <ReadingShelf {...props} scope={props.scope} /> : props.view === 'story' ? <>
-      <div className="reading-intro"><p>用自己选的词生成短文，扩展阅读。背当天的词请回到学习页。</p>
+    {props.view === 'hub' ? <ReadingEntries {...props} /> : props.view === 'picks' ? <ReadingHub {...props} /> : props.view === 'shelf' && props.scope ? <ReadingShelf {...props} scope={props.scope} /> : props.view === 'story' ? <>
+      <div className="reading-intro"><p>把当天的词放进一篇短文里，在上下文中记住它们。也可以自己挑词生成。</p>
         <button className="text-button" disabled={props.saving} onClick={props.onStudy}>去本组语境记忆<ChevronRight size={15} /></button></div>
       {props.children}
     </> : <DailyEnglish {...props} />}
@@ -47,7 +47,38 @@ function syncedText(at: number, now: number) {
 }
 const pageSize = 15
 const minutesFor = (words: number) => Math.max(1, Math.ceil(words / 120))
-/** 阅读 tab: a few entry points only. The long lists live one tap deeper (难度 → 主题 → 文章). */
+/** 阅读 tab: exactly two entries. Everything else is one level down. */
+function ReadingEntries({ store, now, onOpen }: Props) {
+  const { articles: catalog } = useReadingArticles(true)
+  const level = readingLevel(store)
+  const choices = useMemo(() => catalog.filter(article => article.level === level), [catalog, level])
+  const today = choices.length ? choices[dailyReadingIndex(choices.length, new Date(now))] : undefined
+  const read = !!today && store.readArticleIds.includes(today.id)
+  const book = store.books.find(item => item.id === store.activeBookId)
+  const dayWords = book ? wordsForDay(store, book).length : 0
+  return <div className="reading-hub reading-entries">
+    <button className="reading-entry reading-entry-daily" aria-label="每日英语选读" onClick={() => onOpen('picks')}>
+      {today?.image ? <img src={today.image.path} alt="" /> : <span className="reading-entry-icon"><DailyIcon size={26} /></span>}
+      <span className="reading-entry-body">
+        <small>每日英语选读</small>
+        <strong lang="en">{today?.title || '百科段落选读'}</strong>
+        <span>今日一篇、适合你的推荐，以及 A2–C2 按难度选读</span>
+      </span>
+      <span className="reading-entry-state" data-read={read}>{read ? <><CheckCheck size={14} />今日已读</> : <ChevronRight size={18} />}</span>
+    </button>
+    <button className="reading-entry" aria-label="语境记忆" onClick={() => onOpen('story')}>
+      <span className="reading-entry-icon"><EssayIcon size={26} /></span>
+      <span className="reading-entry-body">
+        <small>语境记忆</small>
+        <strong>把当天的词放进短文里记</strong>
+        <span>{dayWords ? `当天 ${dayWords} 个词` : '先选一本词书'} · 已保存 {store.stories.length} 篇</span>
+      </span>
+      <ChevronRight size={18} className="reading-entry-chevron" />
+    </button>
+    <p className="reading-hub-note">已读文章 {store.readArticleIds.length} 篇 · 阅读设置在“我的 → 发音与阅读”</p>
+  </div>
+}
+/** 每日英语选读: today's pick, recommendations and the difficulty shelves. The long lists live one tap deeper (难度 → 主题 → 文章). */
 function ReadingHub({ store, now, onOpen, onShelf }: Props) {
   const { articles: catalog, library, refreshLibrary } = useReadingArticles(true)
   const level = readingLevel(store)
@@ -57,8 +88,6 @@ function ReadingHub({ store, now, onOpen, onShelf }: Props) {
   const words = article ? englishWordCount(article.paragraphs.join(' ')) : 0
   const readIds = new Set(store.readArticleIds)
   const read = !!article && readIds.has(article.id)
-  const book = store.books.find(item => item.id === store.activeBookId)
-  const dayWords = book ? wordsForDay(store, book).length : 0
   const picks = useMemo(() => recommendArticles(catalog, store, readIds, 3), [catalog, store.words, store.books, store.activeBookId, store.readArticleIds])
   const shelves = readingLevels.map(cefr => {
     const items = catalog.filter(item => articleCefr(item) === cefr)
@@ -73,15 +102,6 @@ function ReadingHub({ store, now, onOpen, onShelf }: Props) {
         <span>{article ? `${article.topic} · ${words} 词 · 约 ${minutesFor(words)} 分钟` : '百科段落选读，点单词即可查义'}</span>
       </span>
       <span className="reading-entry-state" data-read={read}>{read ? <><CheckCheck size={14} />已读</> : <>开始读<ChevronRight size={15} /></>}</span>
-    </button>
-    <button className="reading-entry" aria-label="自选词短文" onClick={() => onOpen('story')}>
-      <span className="reading-entry-icon"><EssayIcon size={26} /></span>
-      <span className="reading-entry-body">
-        <small>自选词短文</small>
-        <strong>用当天的词写一篇短文</strong>
-        <span>{dayWords ? `当天 ${dayWords} 个词可选` : '先选一本词书'} · 已保存 {store.stories.length} 篇</span>
-      </span>
-      <ChevronRight size={18} className="reading-entry-chevron" />
     </button>
     {picks.length > 0 && <section className="reading-picks" aria-label="适合你">
       <div className="reading-library-head"><div><h2>适合你</h2><span>按你已掌握的词估算，生词占 2%–7% 最合适</span></div></div>

@@ -31,16 +31,16 @@
   --surface-solid: #fff;
 
   /* Liquid glass */
-  --glass-fill: rgba(255, 255, 255, .66);
-  --glass-filter: blur(22px) saturate(1.65);
+  --glass-fill: rgba(255, 255, 255, .94);
+  --glass-filter: none; /* backdrop blur stalls scrolling on mid-range Android WebViews, so materials are near-opaque instead */
   --glass-edge: rgba(255, 255, 255, .9);
   --glass-shadow: 0 8px 28px rgba(23, 31, 50, .08), 0 1px 4px rgba(23, 31, 50, .05), inset 0 1px 0 #fff, inset 0 -1px 0 rgba(60, 75, 98, .08);
-  --glass-card-fill: rgba(255, 255, 255, .58);
+  --glass-card-fill: rgba(255, 255, 255, .8);
   --glass-card-shadow: 0 2px 8px rgba(23, 31, 50, .04), inset 0 1px 0 rgba(255, 255, 255, .95);
   --glass-selected: linear-gradient(150deg, #dcebffbf, #e7f0fc94);
   --glass-selected-shadow: inset 0 1px 2px #fff, 0 1px 5px #185db811;
-  --sheet-fill: rgba(248, 250, 253, .88);
-  --bar-fill: rgba(247, 248, 251, .82);
+  --sheet-fill: rgba(248, 250, 253, .97);
+  --bar-fill: rgba(247, 248, 251, .96);
 
   /* Type scale (px): 10 tab / 11 caption / 12 small / 13 meta / 14 body / 15 body-l / 16 word / 18 title / 22 page / 28 display */
   --fs-tab: 10px;
@@ -124,15 +124,15 @@ html[data-theme="dark"] {
   --line-strong: rgba(255, 255, 255, .14);
   --surface-inset: rgba(12, 19, 31, .55);
   --surface-solid: #1b222d;
-  --glass-fill: rgba(38, 48, 65, .68);
+  --glass-fill: rgba(38, 48, 65, .94);
   --glass-edge: rgba(202, 221, 255, .17);
   --glass-shadow: 0 8px 28px #00000038, 0 1px 4px #00000024, inset 0 1px 0 #e1edff26, inset 0 -1px 0 #00000038;
-  --glass-card-fill: rgba(38, 48, 65, .56);
+  --glass-card-fill: rgba(38, 48, 65, .8);
   --glass-card-shadow: 0 2px 8px #0000001f, inset 0 1px 0 #e1edff1c;
   --glass-selected: linear-gradient(150deg, #3a649eaa, #334b7466);
   --glass-selected-shadow: inset 0 1px 1px #d8e8ff40, 0 1px 5px #00000024;
-  --sheet-fill: rgba(24, 31, 43, .88);
-  --bar-fill: rgba(24, 31, 43, .88);
+  --sheet-fill: rgba(24, 31, 43, .97);
+  --bar-fill: rgba(24, 31, 43, .96);
   --ion-background-color: #161b22;
 }
 

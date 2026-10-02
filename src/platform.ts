@@ -8,6 +8,12 @@ interface WordflowPlugin {
   setAppearance(data: { theme: 'light' | 'dark' }): Promise<void>
   getState(): Promise<{ state: Store; revision: number }>
   saveState(data: { state: Store; revision: number }): Promise<{ revision: number }>
+  /** Same document as getState/saveState, moved as one JSON string so neither side re-serialises megabytes of objects. */
+  readStateText(): Promise<{ body: string; revision: number; apiVersion: number }>
+  writeStateText(data: { body: string; revision: number }): Promise<{ revision: number }>
+  /** The document written to a private file that the page fetches directly; far faster than the bridge for megabytes. */
+  readStateFile(): Promise<{ path: string; revision: number; apiVersion: number }>
+  writeStateChunk(data: { index: number; last: boolean; data: string; revision: number }): Promise<{ revision?: number; received?: number }>
   getSettings(): Promise<NativeSettings>
   saveSettings(data: { provider: string; model: string; key: string }): Promise<NativeSettings>
   removeSettings(): Promise<NativeSettings>
@@ -85,4 +91,29 @@ export async function api(path: string, options?: RequestInit) {
   const data = await response.json()
   if (!response.ok) throw new Error(data.error || '请求失败')
   return data
+}
+
+export async function loadState(): Promise<{ state: unknown; revision: number; apiVersion: number }> {
+  if (!isAndroidApp) return api('state')
+  try {
+    const file = await phone.readStateFile()
+    const response = await fetch(Capacitor.convertFileSrc(file.path), { cache: 'no-store' })
+    if (!response.ok) throw new Error('state file unavailable')
+    return { state: await response.json(), revision: file.revision, apiVersion: file.apiVersion }
+  } catch {
+    const stored = await phone.readStateText()
+    return { state: JSON.parse(stored.body), revision: stored.revision, apiVersion: stored.apiVersion }
+  }
+}
+const slice = 128 * 1024
+export async function saveState(state: Store, revision: number): Promise<{ revision: number }> {
+  if (!isAndroidApp) return api('state', { method: 'PUT', body: JSON.stringify({ state, revision }) })
+  const body = JSON.stringify(state)
+  // Each bridge message blocks the page while it is copied across, so send slices and let frames draw in between.
+  for (let index = 0, offset = 0; ; index++, offset += slice) {
+    const last = offset + slice >= body.length
+    const result = await phone.writeStateChunk({ index, last, data: body.slice(offset, offset + slice), revision })
+    if (last) return { revision: result.revision as number }
+    await new Promise(resolve => setTimeout(resolve, 0))
+  }
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { BookOpen, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, RefreshCw, Settings2, Sparkles, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
-import type { Appearance, PageFont } from '../model'
+import type { Appearance, PageFont, TextSize } from '../model'
 import { installedRelease, loadCloudAccount } from '../cloud'
 import UpdatePage from './UpdatePage'
 import { pageFontAttrs, type Store } from '../model'
@@ -232,6 +232,7 @@ function PageFontRows({ name, value, saving, onChange }: { name: string; value: 
     </SettingRow>
   </>
 }
+const textSizes: { value: TextSize; label: string }[] = [{ value: 'small', label: '小' }, { value: 'standard', label: '标准' }, { value: 'large', label: '大' }, { value: 'xlarge', label: '特大' }]
 function AppearanceSettings({ appearance, saving, onChange }: { appearance: Appearance; saving: boolean; onChange: (patch: Partial<Appearance>) => void }) {
   return <>
     <section className="settings-section" aria-label="全部页面">
@@ -248,11 +249,19 @@ function AppearanceSettings({ appearance, saving, onChange }: { appearance: Appe
         <Segmented label="字重" value={appearance.weight} disabled={saving}
           options={weights.map(weight => ({ value: weight.id, label: weight.label }))} onChange={weight => onChange({ weight })} />
       </SettingRow>
-      <SettingRow label="字号">
-        <Segmented label="字号" value={appearance.size} disabled={saving}
+      <SettingRow label="单词字号">
+        <Segmented label="单词字号" value={appearance.wordSize ?? (appearance.size === 'large' ? 'large' : 'standard')} disabled={saving}
+          options={textSizes} onChange={wordSize => onChange({ wordSize })} />
+      </SettingRow>
+      <SettingRow label="中文字号">
+        <Segmented label="中文字号" value={appearance.meaningSize ?? (appearance.size === 'large' ? 'large' : 'standard')} disabled={saving}
+          options={textSizes} onChange={meaningSize => onChange({ meaningSize })} />
+      </SettingRow>
+      <SettingRow label="其他文字">
+        <Segmented label="其他文字" value={appearance.size} disabled={saving}
           options={[{ value: 'standard', label: '标准' }, { value: 'large', label: '大' }]} onChange={size => onChange({ size })} />
       </SettingRow>
-      <p className="appearance-sample"><span lang="en">perspective</span><span>观点，看待问题的角度</span></p>
+      <p className="appearance-sample size-sample"><span lang="en" className="english-word">perspective</span><span className="chinese-meaning">观点，看待问题的角度</span><small>其他文字的大小示例</small></p>
     </section>
     <section className="settings-section font-scope" aria-label="学习页" {...pageFontAttrs(appearance.study)}>
       <h2>学习页</h2>

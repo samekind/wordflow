@@ -54,7 +54,7 @@ async function navigate(name, section) {
     await page.getByRole('button', { name: '选择目标词书', exact: true }).click()
   } else {
     await tabs.getByRole('tab', { name: name === '当日助记' ? '阅读' : name === '设置' ? '我的' : name, exact: true }).click()
-    if (name === '当日助记') await page.getByRole('button', { name: '今日词汇短文', exact: true }).click()
+    if (name === '当日助记') await page.getByRole('button', { name: '语境记忆', exact: true }).click()
     if (section) await page.getByRole('button', { name: section, exact: true }).click()
   }
 }

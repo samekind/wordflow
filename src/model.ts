@@ -40,11 +40,15 @@ export type Appearance = {
   theme: 'light' | 'dark'
   font: 'system' | 'serif' | 'gothic' | 'mono'
   weight: 'regular' | 'medium' | 'bold'
+  /** Everything except English words and Chinese meanings, which have their own sizes below. */
   size: 'standard' | 'large'
+  wordSize?: TextSize
+  meaningSize?: TextSize
   /** Per-page overrides; anything unset follows the global font / weight. */
   study?: PageFont
   reading?: PageFont
 }
+export type TextSize = 'small' | 'standard' | 'large' | 'xlarge'
 export type PageFont = { font?: Appearance['font']; weight?: Appearance['weight'] }
 /** Attributes that scope a page's own font / weight (see .font-scope in appearance.css). */
 export const pageFontAttrs = (page?: PageFont) => ({ 'data-font': page?.font, 'data-weight': page?.weight })
@@ -129,11 +133,24 @@ const contextStorySchema = storyContentSchema.extend({
   group: z.number().int().min(0).max(4), createdAt: z.string().datetime(), model: z.string().max(100),
   targets: storySchema.shape.targets,
 })
+type ParsedWord = z.infer<typeof wordSchema>
+const reviewSchema = z.object({ id: z.string(), wordId: z.string(), rating: z.number().int().min(1).max(4), at: dateSchema,
+  kind: z.enum(['learn', 'review']).optional(), submissionId: z.string().max(200).optional() })
+/** Words and reviews that already came out of validateStore. Saving after a small change would otherwise re-parse
+ * every word (tens of milliseconds per thousand on a phone) on each tap; unchanged objects keep their identity. */
+const checkedWords = new WeakSet<object>(), checkedReviews = new WeakSet<object>()
+function parseEach<T extends object>(items: unknown[], schema: z.ZodType<T, z.ZodTypeDef, unknown>, checked: WeakSet<object>, path: string): T[] {
+  return items.map((item, index) => {
+    if (item && typeof item === 'object' && checked.has(item)) return item as T
+    const result = schema.safeParse(item)
+    if (!result.success) throw new z.ZodError(result.error.issues.map(issue => ({ ...issue, path: [path, index, ...issue.path] })))
+    return result.data
+  })
+}
 export function validateStore(input: unknown): Store {
   const data = z.object({
-    version: z.union([z.literal(1), z.literal(2), z.literal(3)]), words: z.array(wordSchema).max(30000),
-    reviews: z.array(z.object({ id: z.string(), wordId: z.string(), rating: z.number().int().min(1).max(4), at: dateSchema,
-      kind: z.enum(['learn', 'review']).optional(), submissionId: z.string().max(200).optional() })).max(500000),
+    version: z.union([z.literal(1), z.literal(2), z.literal(3)]), words: z.array(z.unknown()).max(30000),
+    reviews: z.array(z.unknown()).max(500000),
     lessons: z.array(lessonSchema).max(30000), goal: z.number().int().min(1).max(200),
     books: z.array(bookSchema).max(100).optional(), activeBookId: z.string().default(''),
     stories: z.array(storySchema).max(2000).default([]),
@@ -153,6 +170,8 @@ export function validateStore(input: unknown): Store {
       font: z.enum(['system', 'serif', 'gothic', 'mono']),
       weight: z.enum(['regular', 'medium', 'bold']),
       size: z.enum(['standard', 'large']),
+      wordSize: z.enum(['small', 'standard', 'large', 'xlarge']).optional(),
+      meaningSize: z.enum(['small', 'standard', 'large', 'xlarge']).optional(),
       study: pageFontSchema.optional(),
       reading: pageFontSchema.optional(),
     }).default(defaultAppearance),
@@ -161,12 +180,14 @@ export function validateStore(input: unknown): Store {
     onboarded: z.literal(true).optional(),
     learning: z.unknown().optional(),
   }).parse(input)
-  if (new Set(data.words.map(w => w.id)).size !== data.words.length ||
-      new Set(data.words.map(w => normalize(w.word))).size !== data.words.length) throw new Error('备份含重复单词')
-  const ids = new Set(data.words.map(w => w.id))
-  if (data.reviews.some(r => !ids.has(r.wordId)) || data.lessons.some(l => !ids.has(l.wordId))) throw new Error('备份记录不完整')
-  const books = data.books ?? (data.words.length ? [{
-    id: 'personal', title: '我的词本', source: '原有词库', wordIds: data.words.map(w => w.id),
+  const parsedWords = parseEach<ParsedWord>(data.words, wordSchema, checkedWords, 'words')
+  const parsedReviews = parseEach(data.reviews, reviewSchema, checkedReviews, 'reviews')
+  if (new Set(parsedWords.map(w => w.id)).size !== parsedWords.length ||
+      new Set(parsedWords.map(w => normalize(w.word))).size !== parsedWords.length) throw new Error('备份含重复单词')
+  const ids = new Set(parsedWords.map(w => w.id))
+  if (parsedReviews.some(r => !ids.has(r.wordId)) || data.lessons.some(l => !ids.has(l.wordId))) throw new Error('备份记录不完整')
+  const books = data.books ?? (parsedWords.length ? [{
+    id: 'personal', title: '我的词本', source: '原有词库', wordIds: parsedWords.map(w => w.id),
     dailyCount: Math.min(100, Math.max(20, data.goal)), currentDay: 0, completedWordIds: [],
   }] : [])
   if (new Set(books.map(b => b.id)).size !== books.length || books.some(b => {
@@ -183,7 +204,7 @@ export function validateStore(input: unknown): Store {
   if (new Set(data.contextStories.map(s => s.id)).size !== data.contextStories.length ||
       data.contextStories.some(s => new Set(s.targets.map(w => w.id)).size !== s.targets.length || s.targets.some(w => !ids.has(w.id)))) throw new Error('语境短文记录不完整或重复')
   const activeBookId = books.some(b => b.id === data.activeBookId) ? data.activeBookId : books[0]?.id || ''
-  const learnedIds = new Set([...data.reviews.map(review => review.wordId), ...books.flatMap(book => book.completedWordIds)])
+  const learnedIds = new Set([...parsedReviews.map(review => review.wordId), ...books.flatMap(book => book.completedWordIds)])
   const learning = restoreLearning(data.learning, new Set(books.map(book => book.id)))
   const selectedBook = books.find(book => book.id === activeBookId), activeDraft = learning.drafts.learn
   // Older clients could leave the unit selector pointing away from its unfinished task.
@@ -193,9 +214,15 @@ export function validateStore(input: unknown): Store {
     learning.parked = [...learning.parked.filter(draft => draft.id !== selected?.id), activeDraft]
     learning.drafts.learn = selected
   }
-  return { ...data, version: 3, books, activeBookId, learning,
-    words: data.words.map(w => hydrate({ ...w, learned: w.learned || w.card.reps > 0 || learnedIds.has(w.id) } as Word)),
-  } as Store
+  const words = parsedWords.map(w => {
+    const learned = w.learned || w.card.reps > 0 || learnedIds.has(w.id)
+    if (checkedWords.has(w) && w.learned === learned) return w as unknown as Word
+    const next = hydrate({ ...w, learned } as Word)
+    checkedWords.add(next)
+    return next
+  })
+  for (const review of parsedReviews) checkedReviews.add(review)
+  return { ...data, version: 3, books, activeBookId, learning, words, reviews: parsedReviews } as Store
 }
 export function parseWords(text: string) {
   const clean = text.replace(/^\uFEFF/, '').trim()

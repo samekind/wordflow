@@ -325,7 +325,7 @@ ion-app{
   font-size: var(--fs-tab);
 }
 .english-word{
-  font-size: var(--fs-word);
+  font-size: calc(var(--fs-word) * var(--word-scale, 1));
   font-weight: var(--fw-medium);
   line-height: 1.4;
   color: var(--text-primary);
@@ -333,7 +333,7 @@ ion-app{
   min-width: 0;
 }
 .english-word.long-word{
-  font-size: var(--fs-body-l);
+  font-size: calc(var(--fs-body-l) * var(--word-scale, 1));
 }
 .word-number.rated-green{
   color: #3f9b7c;
@@ -442,7 +442,7 @@ ion-app{
   min-height: 43px;
 }
 .chinese-meaning{
-  font-size: var(--fs-body);
+  font-size: calc(var(--fs-body) * var(--meaning-scale, 1));
   line-height: 1.65;
   color: var(--text-secondary);
   padding: 10px 0;
@@ -1110,7 +1110,7 @@ ion-toggle.known-toggle{
   overflow-wrap: anywhere;
 }
 .meaning-cell{
-  font-size: var(--fs-small);
+  font-size: calc(var(--fs-small) * var(--meaning-scale, 1));
   color: var(--text-muted);
   line-height: 1.7;
   text-align: left;
@@ -1122,7 +1122,7 @@ ion-toggle.known-toggle{
   align-items: center;
   gap: 5px;
   color: var(--text-muted);
-  font-size: var(--fs-tab);
+  font-size: calc(var(--fs-tab) * var(--meaning-scale, 1));
 }
 .mastery-cell{
   font-size: var(--fs-caption);

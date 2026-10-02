@@ -37,14 +37,19 @@ function parseArticle(value: unknown): ReadingArticle | null {
   return article
 }
 
+/** Parsed once per session and after each sync: every reading screen asks for it, and re-reading hundreds of articles on each visit stalled the UI. */
+let memo: ReadingArticle[] | null = null
 export function cachedLibrary(): ReadingArticle[] {
+  if (memo) return memo
   const found: ReadingArticle[] = []
   for (const id of readMeta().ids) {
     try {
-      const parsed = readingArticleSchema.safeParse(JSON.parse(localStorage.getItem(articleKey(id)) || 'null'))
-      if (parsed.success && parsed.data.id === id) found.push(parsed.data)
+      // Articles were validated by parseArticle when they were stored, so reading them back only checks the shape.
+      const raw = JSON.parse(localStorage.getItem(articleKey(id)) || 'null') as ReadingArticle | null
+      if (raw && raw.id === id && Array.isArray(raw.paragraphs) && raw.cefr && raw.stats) found.push(raw)
     } catch { /* Skip an unreadable cached article. */ }
   }
+  memo = found
   return found
 }
 export function librarySyncedAt(): number { return readMeta().syncedAt }
@@ -83,6 +88,7 @@ export async function syncLibrary(fetcher: typeof fetch = fetch): Promise<Librar
     try { localStorage.removeItem(articleKey(id)) } catch { /* Best effort; the id leaves the index either way. */ }
     held.delete(id); removed++
   }
+  memo = null
   const next: Meta = { cursor, ids: [...held].filter(id => keep.has(id)), syncedAt: Date.now() }
   try { localStorage.setItem(metaKey, JSON.stringify(next)) } catch { throw new Error('本机存储空间不足，无法缓存选读库') }
   return { added, removed, skipped, total: next.ids.length }
