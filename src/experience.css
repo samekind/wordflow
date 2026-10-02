@@ -84,7 +84,7 @@
 @media(max-width:360px){.profile-summary{gap:12px}.profile-avatar{width:56px;height:56px}.profile-summary-text strong{font-size: var(--fs-title)}.settings-group>button{gap:10px}.reading-tabs button{font-size: var(--fs-caption)}}
 @media(prefers-reduced-transparency:reduce),(prefers-contrast:more){.profile-avatar,.profile-avatar-editor .icon-button{background:var(--glass-fill);backdrop-filter:none}.profile-summary-text>span,.settings-group>button>small{color:var(--text-secondary)}}
 
-.reading-library{display:grid;gap:10px;padding:16px;border-radius: var(--radius-md);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.reading-library,.reading-picks{display:grid;gap:10px;padding:16px;border-radius: var(--radius-md);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
 .reading-library-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .reading-library-head h2{margin:0;font-size: var(--fs-body-l);font-weight: var(--fw-bold);color:var(--text-primary)}
 .reading-library-head span{display:block;margin-top:2px;font-size: var(--fs-caption);color: var(--text-muted)}
@@ -107,3 +107,11 @@
 .vocab-chips{display:flex;flex-wrap:wrap;gap:8px}
 .vocab-chip{min-height:32px;padding:4px 11px;border-radius: var(--radius-pill);background:var(--glass-selected);border:1px solid var(--glass-edge);color:var(--accent);font-size: var(--fs-small)}
 .vocab-more{align-self:center;font-size: var(--fs-caption);color: var(--text-muted)}
+.reading-filters{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.reading-list-intro{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.reading-more{justify-self:center;min-height:36px}
+.reading-sync{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 4px;font-size: var(--fs-caption);color: var(--text-muted)}
+.reading-sync .text-button{gap:4px;white-space:nowrap}
+.article-intro{margin:0 0 10px;font-size: var(--fs-body);color: var(--text-secondary);line-height:1.55}
+.article-tags{display:inline-flex;flex-wrap:wrap;gap:6px;margin-left:8px;vertical-align:middle}
+.article-tags i{font-style:normal;font-size: var(--fs-caption);padding:1px 8px;border-radius:99px;background:var(--glass-fill);border:1px solid var(--glass-edge);color: var(--text-muted)}

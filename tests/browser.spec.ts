@@ -70,7 +70,19 @@ async function holdWord(page: Page, word: string) {
   await expect(page.getByRole('dialog', { name: '单词详情', exact: true })).toBeVisible()
   await page.mouse.up()
 }
+const libraryUrl = '**/v1/library**'
+const emptyLibrary = { version: 1, cursor: 0, more: false, ids: [], articles: [] }
+function libraryArticle(id: string, over: Record<string, unknown> = {}) {
+  return {
+    id, title: 'Fixture ' + id.slice(-1).toUpperCase(), wikiTitle: 'Fixture', lang: 'simple', level: 'easy', cefr: 'B1', topic: '自然', tags: ['测试', '样例'],
+    intro: '合成的在线选读库样例。', paragraphs: ['The fixture article explains a small idea in clear words for every reader.', 'A second paragraph keeps the translation count honest and easy to check.'],
+    translations: ['合成样例第一段译文。', '合成样例第二段译文。'], source: 'Simple English Wikipedia', sourceUrl: 'https://simple.wikipedia.org/wiki/Fixture',
+    author: 'Wikipedia contributors', license: { name: 'CC BY-SA 4.0', url: 'https://creativecommons.org/licenses/by-sa/4.0/' },
+    retrievedAt: '2026-10-01T00:00:00.000Z', revision: '1', stats: { words: 200, avgSentence: 12, rareRatio: 0.03, grade: 7, rare: [['fixtureword', 6]] }, ...over,
+  }
+}
 test.beforeEach(async ({ page }) => {
+  await page.route(libraryUrl, route => route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: emptyLibrary }))
   await page.addInitScript(() => {
     ;(window as any).__speech = []
     ;(window as any).__recordings = []
@@ -187,7 +199,7 @@ test('daily English works offline, records reading separately, handles lookup an
   const initial = studied(importToPersonal(emptyStore(), starterRows.slice(0, 40), '阅读测试').store)
   await seed(page, initial)
   const external: string[] = []
-  page.on('request', request => { if (request.url().startsWith('https:')) external.push(request.url()) })
+  page.on('request', request => { if (request.url().startsWith('https:') && !request.url().includes('/v1/library')) external.push(request.url()) })
   await page.route('https://**/*', route => route.abort())
   await page.route('**/api/settings', route => route.fulfill({ json: { provider: 'deepseek', model: 'fixture-model', configured: true } }))
   await page.route('**/api/article-assist', async route => route.fulfill({ json: { model: 'fixture-model', answer: '合成摘要：文章介绍了一个主题。', items: [] } }))
@@ -730,4 +742,54 @@ test('update page reads the installed version first, then checks, then asks befo
   await page.getByRole('button', { name: '重新检查', exact: true }).click()
   await expect(page.getByRole('region', { name: '最新版本' })).toContainText('99.0.0')
   await expect(page.getByRole('region', { name: '下载安装' })).toBeVisible()
+})
+
+test('online reading library syncs, recommends, filters by level, reads with translation and stays readable offline', async ({ page }) => {
+  await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 40), '在线库').store))
+  const articles = [
+    libraryArticle('lib-simple-fixture-a', { cefr: 'A2' }), libraryArticle('lib-simple-fixture-b'),
+    libraryArticle('lib-en-fixture-c', { lang: 'en', level: 'standard', cefr: 'C1', source: 'Wikipedia', sourceUrl: 'https://en.wikipedia.org/wiki/Fixture' }),
+  ]
+  const requested: string[] = []
+  await page.route(libraryUrl, route => {
+    requested.push(route.request().url())
+    return route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: { version: 1, cursor: 3, more: false, ids: articles.map(a => a.id), articles } })
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await nav(page, '阅读')
+  const library = page.getByRole('region', { name: '全部选读' })
+  await expect(library).toContainText('已读 0 / 13 篇')
+  await expect(page.getByRole('region', { name: '适合你' }).getByRole('button')).toHaveCount(2)
+  await expect(page.getByText('在线选读库 3 篇')).toBeVisible()
+  expect(requested[0]).toContain('since=0')
+  await choose(page, '选读级别', 'B1')
+  await expect(library.locator('.reading-list-item')).toHaveCount(1)
+  await library.locator('.reading-list-item').click()
+  await expect(page.locator('.daily-english')).toHaveAttribute('data-article-id', 'lib-simple-fixture-b')
+  await expect(page.locator('.article-intro')).toContainText('合成的在线选读库样例')
+  await expect(page.getByRole('button', { name: '更新英语文章', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: '显示译文', exact: true }).click()
+  await expect(page.locator('.article-translation').first()).toHaveText('合成样例第一段译文。')
+  await page.getByRole('button', { name: '完成阅读', exact: true }).click()
+  await expect.poll(async () => (await state(page)).readArticleIds).toEqual(['lib-simple-fixture-b'])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.unroute(libraryUrl)
+  await page.route(libraryUrl, route => route.abort())
+  await page.reload()
+  await nav(page, '阅读')
+  await expect(page.getByRole('region', { name: '全部选读' })).toContainText('已读 1 / 13 篇')
+  await expect(page.getByText('在线选读库 3 篇')).toBeVisible()
+})
+
+test('articles the server takes down disappear after the next sync', async ({ page }) => {
+  await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 20), '下架').store))
+  let articles = [libraryArticle('lib-simple-fixture-a'), libraryArticle('lib-simple-fixture-b')]
+  await page.route(libraryUrl, route => route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: { version: 1, cursor: 2, more: false, ids: articles.map(a => a.id), articles: route.request().url().includes('since=0') ? articles : [] } }))
+  await page.goto('/')
+  await nav(page, '阅读')
+  await expect(page.getByRole('region', { name: '全部选读' })).toContainText('/ 13 篇')
+  articles = [articles[0]]
+  await page.getByRole('button', { name: '更新选读库', exact: true }).click()
+  await expect(page.getByRole('region', { name: '全部选读' })).toContainText('/ 12 篇')
 })

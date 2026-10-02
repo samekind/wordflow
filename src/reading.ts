@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { isAndroidApp } from './platform'
 import type { Store } from './model'
 import { extractReadingParagraphs } from './reading-text'
+import { cloudBase } from './cloud'
 export { englishWordCount } from './reading-text'
 
 const wikiUrl = z.string().url().refine(value => {
@@ -14,15 +15,21 @@ const attributionUrl = z.string().url().refine(value => {
   return url.protocol === 'https:' && ['commons.wikimedia.org', 'creativecommons.org', 'www.creativecommons.org'].includes(url.hostname) && !url.username && !url.password
 })
 const licenseSchema = z.object({ name: z.string().max(100), url: attributionUrl })
+const libraryImagePath = new RegExp(`^${cloudBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/v1/library/image/lib-(en|simple)-[a-z0-9-]{1,80}$`)
+export const readingLevels = ['A2', 'B1', 'B2', 'C1'] as const
 export const readingArticleSchema = z.object({
-  id: z.string().regex(/^(en|simple)-[a-z0-9-]+$/), title: z.string().min(1).max(200),
+  id: z.string().regex(/^(lib-)?(en|simple)-[a-z0-9-]+$/), title: z.string().min(1).max(200),
   wikiTitle: z.string().min(1).max(200), lang: z.enum(['simple', 'en']),
   level: z.enum(['easy', 'standard']), topic: z.string().max(30),
   paragraphs: z.array(z.string().min(1).max(15000)).min(1).max(30),
   source: z.string().max(100), sourceUrl: wikiUrl, author: z.string().max(200), license: licenseSchema,
   retrievedAt: z.string().datetime(), revision: z.string().max(100),
+  /** Online-library extras: AI-assisted level, tags, summary, translation and vocabulary statistics. */
+  cefr: z.enum(readingLevels).optional(), tags: z.array(z.string().max(20)).max(6).optional(), intro: z.string().max(120).optional(),
+  translations: z.array(z.string().max(4000)).max(30).optional(),
+  stats: z.object({ words: z.number(), avgSentence: z.number(), rareRatio: z.number(), grade: z.number(), rare: z.array(z.tuple([z.string().max(40), z.number()])).max(200) }).optional(),
   image: z.object({
-    path: z.string().regex(/^\/reading\/images\/[a-z0-9-]+\.(jpg|png|webp)$/),
+    path: z.string().refine(value => /^\/reading\/images\/[a-z0-9-]+\.(jpg|png|webp)$/.test(value) || libraryImagePath.test(value)),
     alt: z.string().max(200), sourceUrl: attributionUrl, credit: z.string().max(5000), license: licenseSchema,
   }).optional(),
 })

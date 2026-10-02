@@ -1,7 +1,7 @@
 {
   "name": "wordflow",
   "private": true,
-  "version": "0.2.9",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "node --env-file-if-exists=.env server/index.mjs",
@@ -10,6 +10,7 @@
     "test": "tsx --test tests/*.test.ts",
     "build:exam-frequency": "python scripts/build-exam-frequency.py --publish",
     "build:reading": "node scripts/build-reading.mjs",
+    "export:library-wordlist": "node scripts/export-library-wordlist.mjs",
     "test:exam-frequency": "python tests/exam_frequency_test.py",
     "test:cloud": "python tests/cloud_test.py",
     "test:android-learning": "tsx tests/android-learning.ts",

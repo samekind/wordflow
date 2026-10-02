@@ -1,0 +1,21 @@
+[Unit]
+Description=Wordflow reading library update
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=wordflow
+Group=wordflow
+WorkingDirectory=/srv/wordflow
+Environment=WORDFLOW_CLOUD_DIR=/srv/wordflow
+Environment=PYTHONUNBUFFERED=1
+# Holds LIBRARY_AI_KEY=... (root-only file; systemd reads it before dropping privileges).
+EnvironmentFile=-/etc/wordflow/library.env
+ExecStart=/usr/bin/python3 /srv/wordflow/library_pipeline.py run
+TimeoutStartSec=3h
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/srv/wordflow/library

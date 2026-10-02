@@ -94,6 +94,16 @@ AI 服务商、模型和密钥统一放在“我的 -> AI 服务”。内置 Dee
 - 点词优先查个人词库或本地 ECDICT，未收录时可手动查询在线词典；提供朗读、原文入口和已读记录。完成阅读不改词书进度或复习日期。
 - 文章内容默认从本地摘录读取，更新原文需要用户主动点击更新；失败保留本地内容，成功结果缓存于当前设备。文章下方可随时调用 AI 做摘要、重点词提取或全文翻译；不会向文章来源发送个人资料或学习记录。
 
+### 在线选读库（0.3.0）
+
+除 APK 自带的 22 篇外，云端服务器维护一个会增长的选读库（`cloud/library_pipeline.py`、`cloud/library_store.py`，数据在 `/srv/wordflow/library/`）。
+
+- 来源：Wikipedia 的 Vital Articles 条目，同时取 Simple English 与 English 版本。英文段落原样摘录，不由 AI 改写；每篇记录条目、版本号、作者页、CC BY-SA 4.0 许可，图片来自 Commons 并记录作者与许可。
+- 程序负责筛选：按词表词频统计生僻词比例、划分 CEFR，规则拒绝太短、列表式和争议类条目。DeepSeek 负责复核：质量判定、CEFR、主题标签、一句话导读、逐段中文译文。AI 判为拒绝或输出格式不合法的文章不入库；译文段数必须与原文一致。
+- 服务：`/v1/library?since=&limit=` 按序号增量提供，`/v1/library/image/<id>` 提供图片。`wordflow-library.timer` 每天 03:40 运行一批（默认 20 个标题，库上限 400 篇），密钥放在服务器 `/etc/wordflow/library.env`（`LIBRARY_AI_KEY=`，仅 root 可读），没有密钥时不运行 AI 步骤。手动隐藏的文章不会被再次收录：`python3 cloud/library_pipeline.py hide <id>`。
+- 手机：阅读页进入时在后台增量同步，缓存在本机，离线可读；服务下架的文章会从缓存删除。阅读页新增“适合你”推荐（按你的词书和已学单词估算生词比例，目标约 4%）、CEFR 和主题筛选、同步状态和“更新选读库”按钮。同步失败时继续使用本机缓存及自带文章。
+- 词表由 `npm run export:library-wordlist` 生成（`cloud/library-wordlist.txt`）。检查：`python tests/library_test.py`（不要用 `-m unittest tests.library_test`）。
+
 ```powershell
 npm run build:reading
 ```

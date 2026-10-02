@@ -6,11 +6,18 @@ import os
 import secrets
 import sqlite3
 import threading
+import sys
 import time
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import library_store  # noqa: E402
+
 ROOT = Path(os.environ.get("WORDFLOW_CLOUD_DIR", "/srv/wordflow"))
+LIBRARY_DB = ROOT / "library" / "library.sqlite"
+LIBRARY_IMAGES = ROOT / "library" / "images"
 DB_PATH = ROOT / "cloud.sqlite"
 PEPPER_PATH = ROOT / "pepper"
 RELEASE_PATH = ROOT / "release.json"
@@ -210,6 +217,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(200, json.loads(RELEASE_PATH.read_text("utf-8")))
         if path == "/releases/wordflow.apk":
             return self.send_apk()
+        if path == "/v1/library":
+            return self.send_library()
+        if path.startswith("/v1/library/image/"):
+            return self.send_library_image(path[len("/v1/library/image/"):])
         account_id = self.bearer()
         if not account_id:
             return self.send_json(401, {"error": "云端登录已失效，请用恢复码重新打开"})
@@ -254,6 +265,41 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def send_library(self):
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+        try:
+            since = max(0, int(query.get("since", ["0"])[0]))
+            limit = int(query.get("limit", ["30"])[0])
+        except ValueError:
+            return self.send_json(400, {"error": "参数不正确"})
+        if not LIBRARY_DB.exists():
+            return self.send_json(200, {"version": 1, "generatedAt": library_store.utc_now(), "cursor": since, "more": False, "ids": [], "articles": []})
+        db = library_store.connect(LIBRARY_DB, readonly=True)
+        try:
+            return self.send_json(200, library_store.published_page(db, since, limit))
+        finally:
+            db.close()
+
+    def send_library_image(self, article_id):
+        found = None
+        if LIBRARY_DB.exists():
+            db = library_store.connect(LIBRARY_DB, readonly=True)
+            try:
+                found = library_store.image_for(db, article_id)
+            finally:
+                db.close()
+        path = LIBRARY_IMAGES / found[0] if found else None
+        if not found or Path(found[0]).name != found[0] or not path.is_file():
+            return self.send_json(404, {"error": "没有这张图片"})
+        body = path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", found[1])
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "public, max-age=86400")
+        self.apply_cors()
         self.end_headers()
         self.wfile.write(body)
 
