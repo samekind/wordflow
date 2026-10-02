@@ -326,18 +326,18 @@ def analyze(paragraphs, ranks):
 def stat_cefr(stats):
     ratio, grade = stats["rareRatio"], stats["grade"]
     score = ratio * 100 + max(0.0, grade - 8) * 0.8
-    for level, ceiling in zip(CEFR, (5, 10, 16, 24)):
+    for level, ceiling in zip(CEFR, (6, 11, 17, 24)):
         if score < ceiling:
             return level
     return "C2"
 
 
 def reconcile(ai_level, stats):
-    """The AI judges meaning and style, word statistics judge vocabulary; disagreements settle on the harder-leaning middle."""
+    """The AI judges meaning and style, word statistics judge vocabulary; the final level sits between them."""
     a, b = CEFR.index(ai_level), CEFR.index(stat_cefr(stats))
-    if abs(a - b) <= 1:
-        return CEFR[a]
-    return CEFR[(a + b + 1) // 2]
+    # Average of the two; a half-step tie goes to the word statistics, which are measured rather than judged.
+    # (The AI alone rarely uses the ends of the scale, which left the beginner and top shelves empty.)
+    return CEFR[(a + b) // 2 if b < a else (a + b + 1) // 2]
 
 
 # ---------- AI review ----------
@@ -572,6 +572,23 @@ def process(db, lang, title, topic, ranks, ai, no_ai=False):
     return "published " + cefr
 
 
+def regrade(db):
+    """Recomputes every published article's level from the stored AI grade and statistics (no AI calls) and republishes changes."""
+    changed = 0
+    for row in db.execute("SELECT id, body, review FROM articles WHERE status = 'published'").fetchall():
+        body, review = json.loads(row["body"]), json.loads(row["review"] or "{}")
+        if review.get("cefr") not in CEFR:
+            continue
+        cefr = reconcile(review["cefr"], body["stats"])
+        if cefr == body.get("cefr"):
+            continue
+        body["cefr"], body["level"] = cefr, "easy" if cefr in ("A2", "B1") else "standard"
+        review.update(statCefr=stat_cefr(body["stats"]), finalCefr=cefr)
+        store.update_published(db, row["id"], body, review)
+        changed += 1
+    return changed
+
+
 def reopen_rule_rejects(db):
     """Puts titles that only the length/vocabulary rules turned away back in the queue."""
     marks = ("rejected: 正文太短", "rejected: 罕见词比例过高", "rejected: 不足两个自然段", "needing disambiguation")
@@ -636,6 +653,7 @@ def main(argv=None):
     runner.add_argument("--no-ai", action="store_true")
     runner.add_argument("--retry", action="store_true", help="judge titles rejected only by length/vocabulary rules again")
     sub.add_parser("status")
+    sub.add_parser("regrade")
     hide = sub.add_parser("hide")
     hide.add_argument("article_id")
     args = parser.parse_args(argv)
@@ -643,6 +661,8 @@ def main(argv=None):
         run(args.titles, args.refresh, args.no_ai, args.retry)
     elif args.command == "status":
         status()
+    elif args.command == "regrade":
+        print("regraded: %d" % regrade(store.connect(DB_PATH)))
     else:
         db = store.connect(DB_PATH)
         print("hidden" if store.set_status(db, args.article_id, "hidden") else "not found or already hidden")

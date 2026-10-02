@@ -72,6 +72,13 @@ def save_article(db, record):
     db.commit()
 
 
+def update_published(db, article_id, body, review):
+    """Rewrites a published article's metadata and bumps its sequence so clients fetch it again."""
+    db.execute("UPDATE articles SET body = ?, review = ?, seq = ? WHERE id = ? AND status = 'published'",
+               (json.dumps(body, ensure_ascii=False, separators=(",", ":")), json.dumps(review, ensure_ascii=False), next_seq(db), article_id))
+    db.commit()
+
+
 def set_status(db, article_id, status):
     row = db.execute("SELECT status FROM articles WHERE id = ?", (article_id,)).fetchone()
     if not row or row["status"] == status:

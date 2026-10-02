@@ -77,10 +77,14 @@ class StatsTests(unittest.TestCase):
         self.assertNotIn("river", words)
         self.assertGreater(stats["rareRatio"], 0)
 
-    def test_ai_and_statistics_settle_on_a_middle_level_when_far_apart(self):
+    def test_final_level_sits_between_ai_and_statistics_and_ties_go_to_statistics(self):
         easy = {"rareRatio": 0.0, "grade": 4}
-        self.assertEqual(pipeline.reconcile("B1", easy), "B1")
-        self.assertEqual(pipeline.reconcile("C1", easy), "B2")
+        hard = {"rareRatio": 0.3, "grade": 18}
+        self.assertEqual(pipeline.reconcile("A2", easy), "A2")
+        self.assertEqual(pipeline.reconcile("B1", easy), "A2")
+        self.assertEqual(pipeline.reconcile("C1", easy), "B1")
+        self.assertEqual(pipeline.reconcile("C1", hard), "C2")
+        self.assertEqual(pipeline.reconcile("B2", hard), "C1")
 
     def test_statistical_level_spans_a2_to_c2(self):
         levels = [pipeline.stat_cefr({"rareRatio": ratio, "grade": 6}) for ratio in (0.02, 0.07, 0.12, 0.2, 0.3)]
@@ -166,6 +170,20 @@ class PipelineTests(unittest.TestCase):
         queue = [r["title"] for r in self.db.execute("SELECT title FROM candidates WHERE state = 'new' ORDER BY position")]
         self.assertEqual(queue[-1], "Quantum field theory")
         self.assertEqual(queue[0], "Dog")
+
+    def test_regrade_moves_published_articles_and_makes_clients_fetch_them_again(self):
+        pipeline.process(self.db, "simple", "Bridge", "城市", self.ranks, FakeAI())
+        before = self.article()["seq"]
+        body = json.loads(self.article()["body"])
+        review = json.loads(self.article()["review"])
+        review["cefr"] = "C2"  # as if the AI had judged it harder than the statistics did
+        self.db.execute("UPDATE articles SET review = ? WHERE id = 'lib-simple-bridge'", (json.dumps(review),))
+        expected = pipeline.reconcile("C2", body["stats"])
+        self.assertNotEqual(expected, body["cefr"])
+        self.assertEqual(pipeline.regrade(self.db), 1)
+        self.assertEqual(json.loads(self.article()["body"])["cefr"], expected)
+        self.assertGreater(self.article()["seq"], before)
+        self.assertEqual(pipeline.regrade(self.db), 0)
 
     def test_a_short_plain_page_is_judged_again_after_the_rules_were_loosened(self):
         self.page = {**self.page, "extract": "Dogs are animals. " * 3}
