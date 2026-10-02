@@ -30,7 +30,9 @@ type Props = {
   onLearning: (learning: LearningState) => Promise<boolean>;
   onDay: (book: WordBook, day: number) => Promise<void>; onOpenWord: (id: string) => void;
   onUndo: () => void; onBooks: () => void; onImport: () => void;
-  onLayout: (layout: Store['studyLayout']) => void; onSpeak: (text: string) => void; onStop: () => void;
+  onLayout: (layout: Store['studyLayout']) => void;
+  /** Study-page display preferences kept in appearance (e.g. hiding phonetics). */
+  onAppearance: (patch: Partial<Store['appearance']>) => void; onSpeak: (text: string) => void; onStop: () => void;
   contextServices: ContextServices;
 }
 /** ⋯ menu for everything that is not the current word list. */
@@ -50,8 +52,9 @@ function StudyMenu({ children }: { children: (close: () => void) => ReactNode })
   </div>
 }
 
-export default function StudyList({ start, store, now, saving, canUndo, onMark, onKnown, onStudy, onRestart, onLearning, onDay, onOpenWord, onUndo, onBooks, onImport, onLayout, onSpeak, onStop, contextServices }: Props) {
+export default function StudyList({ start, store, now, saving, canUndo, onMark, onKnown, onStudy, onRestart, onLearning, onDay, onOpenWord, onUndo, onBooks, onImport, onLayout, onAppearance, onSpeak, onStop, contextServices }: Props) {
   const reduced = useReducedMotion()
+  const hidePhonetic = !!store.appearance.hidePhonetic
   const [daysOpen, setDaysOpen] = useState(false), [showMeanings, setShowMeanings] = useState(false), [planOpen, setPlanOpen] = useState(false)
   const [replaceKind, setReplaceKind] = useState<StudyKind | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -149,15 +152,25 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
   const showTasks = mode === 'review' || queue.length > 0
   return <section className={`study-list-view font-scope layout-${store.studyLayout}`} aria-label="列表背词" {...pageFontAttrs(store.appearance.study)}>
     <div className="english-page">
-      {/* One rounded card holds everything about what you are studying; the rest is behind ⋯. */}
+      {/* One slim row: which day (the book is chosen in 我的 → 词书管理), group dots, and ⋯. */}
       <header className="study-card">
         <h1 className="sr-only">学习</h1>
         <div className="study-card-top">
-          {mode === 'review'
-            ? <span className="current-book-button is-static"><BookOpen size={16} /><span className="current-book-label">全部词书</span></span>
-            : <button className="current-book-button" aria-label="选择目标词书" title={book?.title || '选择目标词书'} disabled={saving} onClick={onBooks}><BookOpen size={16} /><span>{book?.title || '选择目标词书'}</span><ChevronDown size={14} /></button>}
+          <div className="study-day-stepper" data-review={mode === 'review'}>
+            {mode !== 'review' && <button className="icon-button" aria-label="前一天" disabled={!book || !day || saving} onClick={() => void chooseDay(day - 1)}><ChevronLeft size={17} /></button>}
+            {mode === 'review'
+              ? <span className="study-day-button is-static"><span className="day-title">到期复习</span><span className="current-book-label">全部词书</span></span>
+              : <button className="study-day-button" aria-label="选择学习的天" disabled={!book || saving} onClick={() => setDaysOpen(true)}><span className="day-title">第 {day + 1} 天</span><ChevronDown size={13} /></button>}
+            {mode !== 'review' && <button className="icon-button" aria-label="后一天" disabled={!book || day >= days.length - 1 || saving} onClick={() => void chooseDay(day + 1)}><ChevronRight size={17} /></button>}
+          </div>
+          {!!rows.length && groups.length > 0 && <div className="study-task-progress" aria-label="本次任务进度">
+            <span className="group-dots" aria-hidden="true">{groups.map((_, index) => <i key={index} data-done={!!draft?.completed.includes(index)} data-current={index === currentPage} />)}</span>
+            <span className="sr-only">第 {currentPage + 1} / {groups.length} 组{draft ? ` · 已完成 ${draft.completed.length} / ${groups.length} 组` : ''}{mode === 'review' && pendingReviewGroups.length > 0 && laterReviews > 0 ? ` · 另有 ${laterReviews} 词到期` : ''}</span>
+            <span className="group-count">{currentPage + 1}/{groups.length} 组</span>
+          </div>}
           <StudyMenu>{close => <>
             <button onClick={() => { close(); setPlanOpen(true) }}><Clock3 size={16} />复习计划</button>
+            <button aria-pressed={hidePhonetic} onClick={() => { close(); onAppearance({ hidePhonetic: !hidePhonetic }) }}>{hidePhonetic ? <Eye size={16} /> : <EyeOff size={16} />}{hidePhonetic ? '显示音标' : '隐藏音标'}</button>
             {!!rows.length && <button disabled={saving} onClick={() => { close(); onSpeak(rows.filter(row => !row.missing).map(row => row.word).join('. ')) }}><Volume2 size={16} />朗读本组</button>}
             {!!rows.length && mode !== 'practice' && <button aria-pressed={contextMode} disabled={saving || contextServices.busy} onClick={() => { close(); chooseStage('context') }}><BookOpen size={16} />读短文</button>}
             {book && mode !== 'review' && <button disabled={saving} onClick={() => { close(); switchMode(mode === 'practice' ? 'learn' : 'practice') }}><RotateCcw size={16} />{mode === 'practice' ? '返回当天新词' : '回看当天 · 不改变复习计划'}</button>}
@@ -166,16 +179,6 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
             <button onClick={() => { close(); onImport() }}><Plus size={16} />导入词表</button>
             <p className="study-menu-note" aria-label="今日学习统计">今日新学 {stats.newToday} 词 · 复习 {stats.reviewedToday} 词</p>
           </>}</StudyMenu>
-        </div>
-        <div className="study-card-row">
-          <div className="study-day-stepper" data-review={mode === 'review'}>
-            {mode !== 'review' && <button className="icon-button" aria-label="前一天" disabled={!book || !day || saving} onClick={() => void chooseDay(day - 1)}><ChevronLeft size={20} /></button>}
-            {mode === 'review'
-              ? <span className="study-day-button is-static"><span className="day-title">到期复习</span></span>
-              : <button className="study-day-button" aria-label="选择学习的天" disabled={!book || saving} onClick={() => setDaysOpen(true)}><span className="day-title">第 {day + 1} 天</span><ChevronDown size={14} /></button>}
-            {mode !== 'review' && <button className="icon-button" aria-label="后一天" disabled={!book || day >= days.length - 1 || saving} onClick={() => void chooseDay(day + 1)}><ChevronRight size={20} /></button>}
-          </div>
-          {!!rows.length && groups.length > 0 && <p className="study-task-progress" aria-label="本次任务进度">第 {currentPage + 1} / {groups.length} 组{draft ? ` · 已完成 ${draft.completed.length} / ${groups.length} 组` : ''}{mode === 'review' && pendingReviewGroups.length > 0 && laterReviews > 0 && <span className="study-later-reviews"> · 另有 {laterReviews} 词到期</span>}</p>}
         </div>
         {/* New vs due review only matters when something is due. */}
         {showTasks && <Segmented label="学习任务" className="study-task-tabs" disabled={saving}
@@ -206,7 +209,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
                 onPointerDown={event => { if (event.button !== 0) return; cancelPress(); press.current = { x: event.clientX, y: event.clientY, moved: false, held: false }; timer.current = setTimeout(() => { press.current.held = true; onOpenWord(row.id) }, 480) }}
                 onPointerMove={event => { if (Math.hypot(event.clientX - press.current.x, event.clientY - press.current.y) > 8) { press.current.moved = true; cancelPress() } }} onPointerUp={cancelPress} onPointerLeave={cancelPress} onPointerCancel={cancelPress}
                 onContextMenu={event => { event.preventDefault(); cancelPress(); press.current.held = true; onOpenWord(row.id) }} onClick={event => { if (event.detail === 0 || (!press.current.held && !press.current.moved)) { if (completed && !preview) onOpenWord(row.id); else void tapWord(row) } }}>
-                <span className="word-index"><span className="word-number">{number(row.id)}</span><MarkDots count={row.markCount} /></span><span className="word-card-content"><span className="english-stack"><span className={`english-word${row.word.length > 14 ? ' long-word' : ''}`} lang="en">{row.word}</span>{row.phonetic && <span className="card-phonetic" lang="en">{row.phonetic}</span>}</span>{preview && <span className="card-meaning">{coreGloss(row.meaning)}</span>}{!!row.status && <span className="study-word-state">{row.status}</span>}{!preview && row.forgotten && <span className="study-word-state">本轮不熟</span>}</span>
+                <span className="word-index"><span className="word-number">{number(row.id)}</span><MarkDots count={row.markCount} /></span><span className="word-card-content"><span className="english-stack"><span className={`english-word${row.word.length > 14 ? ' long-word' : ''}`} lang="en">{row.word}</span>{row.phonetic && !hidePhonetic && <span className="card-phonetic" lang="en">{row.phonetic}</span>}</span>{preview && <span className="card-meaning">{coreGloss(row.meaning)}</span>}{!!row.status && <span className="study-word-state">{row.status}</span>}{!preview && row.forgotten && <span className="study-word-state">本轮不熟</span>}</span>
               </button>
             </SwipeRow>
           </li>)}

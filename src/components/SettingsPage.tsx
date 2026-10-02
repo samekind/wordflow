@@ -256,6 +256,10 @@ function AppearanceSettings({ appearance, saving, onChange }: { appearance: Appe
     <section className="settings-section font-scope" aria-label="学习页" {...pageFontAttrs(appearance.study)}>
       <h2>学习页</h2>
       <PageFontRows name="学习页" value={appearance.study} saving={saving} onChange={study => onChange({ study })} />
+      <SettingRow label="音标">
+        <Segmented label="学习页音标" value={appearance.hidePhonetic ? 'hide' : 'show'} disabled={saving}
+          options={[{ value: 'show', label: '显示' }, { value: 'hide', label: '隐藏' }]} onChange={value => onChange({ hidePhonetic: value === 'hide' || undefined })} />
+      </SettingRow>
       <p className="appearance-sample"><span lang="en">resilient</span><span>有韧性的，能迅速恢复的</span></p>
     </section>
     <section className="settings-section font-scope" aria-label="阅读页" {...pageFontAttrs(appearance.reading)}>

@@ -106,6 +106,7 @@ export default function App() {
               onMark={study.changeMarks} onKnown={id => study.changeKnown(id, true)} onStudy={study.changeStudy} onRestart={study.restartStudy} onDay={study.selectDay} onOpenWord={openWord} onUndo={study.undoLastAction}
               onLearning={learning => commit({ ...storeRef.current, learning })}
               onLayout={studyLayout => { void commit({ ...storeRef.current, studyLayout }) }}
+              onAppearance={patch => { void commit({ ...storeRef.current, appearance: { ...storeRef.current.appearance, ...patch } }) }}
               contextServices={{ busy: ai.busy || saving, generatingKey: ai.contextKey, configured: ai.config.configured, live: ai.live, error: ai.error, onGenerate: ai.generateContextStory, onSettings: openAISettings }} onStop={speech.stop}
               onBooks={() => go({ name: 'books' })} onImport={() => setImportOpen(true)} onSpeak={speech.speak} />}
             {screen.name === 'books' && <BookShelf store={store} catalog={words.catalog} busy={words.bookBusy || saving} error={words.catalogError} onRetry={words.refreshCatalog}
