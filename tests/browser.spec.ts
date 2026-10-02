@@ -38,7 +38,14 @@ async function nav(page: Page, name: string) {
     if (name === '当日助记') await page.getByRole('button', { name: '自选词短文', exact: true }).click()
   }
 }
-async function settings(page: Page, section: string) {
+/** List choices open a bottom sheet (SelectButton); pick the option by its title. */
+async function choose(page: Page, label: string, option: string) {
+  await page.getByRole('button', { name: label, exact: true }).click()
+  // The dialog role is on Ionic's shadow wrapper; the list is slotted light DOM, so scope by ion-modal.
+  const sheet = page.locator('ion-modal').filter({ has: page.getByRole('heading', { name: label, exact: true }) })
+  await sheet.locator('.choice-list ion-item').filter({ has: page.locator('h3', { hasText: new RegExp(`^${option.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }) }).click()
+  await expect(sheet).toHaveCount(0)
+}async function settings(page: Page, section: string) {
   await nav(page, '我的')
   await page.getByRole('button', { name: section, exact: true }).click()
 }
@@ -89,7 +96,7 @@ test('recent exam counts are searchable and the study list stays in frequency or
   await expect(page.locator('.frequency-row[data-word]')).toHaveCount(100)
   await page.getByLabel('搜索考频单词').fill('research')
   await expect(page.locator('.frequency-row[data-word="research"]')).toContainText('/ 33')
-  await page.getByLabel('考频考试类型').selectOption('ky2')
+  await choose(page, '考频考试类型', '考研英语二')
   await expect(page.getByRole('table', { name: '考研英语二近五年考频' })).toBeVisible()
   await expect(page.locator('.frequency-row[data-word="research"]')).toContainText('/ 5')
   await page.getByLabel('搜索考频单词').fill('not-a-vocabulary-entry')
@@ -211,7 +218,7 @@ test('daily English works offline, records reading separately, handles lookup an
   expect((await state(page)).reviews).toEqual([])
   expect((await state(page)).books).toEqual(initial.books)
   await settings(page, '发音与阅读')
-  await page.getByLabel('文章难度', { exact: true }).selectOption('standard')
+  await choose(page, '文章难度', '进阶选读')
   await expect.poll(async () => (await state(page)).readingPreferences.level).toBe('standard')
   await page.getByRole('button', { name: '大字', exact: true }).click()
   await expect.poll(async () => (await state(page)).readingPreferences.textSize).toBe('large')
@@ -304,7 +311,7 @@ test('custom daily volumes persist, preserve old plans and marks keep a neutral 
   }
   await closeSheet(page)
   await settings(page, '学习设置')
-  await page.getByLabel('复习方法', { exact: true }).selectOption('fsrs')
+  await choose(page, '复习方法', 'FSRS 自适应')
   await expect.poll(async () => (await state(page)).reviewMethod).toBe('fsrs')
   await nav(page, '学习')
   await (await studyMenu(page)).getByRole('button', { name: '复习计划', exact: true }).click()
@@ -382,7 +389,7 @@ test('card layouts persist and spaced reviews support due completion and undo', 
   expect(new Date((await state(page)).words.find(word => word.id === reviewed.id)!.card.due).getTime()).toBe(reviewed.card.due.getTime())
   await closeToast(page)
   await settings(page, '学习设置')
-  await page.getByLabel('复习方法', { exact: true }).selectOption('fsrs')
+  await choose(page, '复习方法', 'FSRS 自适应')
   await expect.poll(async () => (await state(page)).reviewMethod).toBe('fsrs')
   await page.reload()
   await page.getByRole('button', { name: '自己自查', exact: true }).click()
@@ -663,10 +670,10 @@ test('settings contain model presets and responsive reading surfaces do not over
   }
   await page.setViewportSize({ width: 390, height: 844 })
   await settings(page, 'AI 服务')
-  await expect(page.getByLabel('AI 模型', { exact: true })).toHaveValue('deepseek-flash')
-  await page.getByLabel('AI 服务商', { exact: true }).selectOption('qwen')
-  await expect(page.getByLabel('AI 模型', { exact: true })).toHaveValue('qwen-plus')
-  await page.getByLabel('AI 模型', { exact: true }).selectOption('custom')
+  await expect(page.getByRole('button', { name: 'AI 模型', exact: true })).toHaveAttribute('data-value', 'deepseek-flash')
+  await choose(page, 'AI 服务商', '通义千问')
+  await expect(page.getByRole('button', { name: 'AI 模型', exact: true })).toHaveAttribute('data-value', 'qwen-plus')
+  await choose(page, 'AI 模型', '自定义模型名称')
   await page.getByLabel('自定义模型名称').fill('my-model')
   await page.route('**/api/settings', route => {
     const data = route.request().postDataJSON()

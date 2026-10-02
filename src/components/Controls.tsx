@@ -1,6 +1,29 @@
 import { IonAlert } from '@ionic/react'
 import { useReducedMotion } from 'motion/react'
 import { useCallback, useRef, useState, type ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
+import ChoiceSheet from './ChoiceSheet'
+
+export type SelectOption = { value: string; label: string; detail?: string }
+
+/** Pick one of many options (5+ or long labels): shows the current choice, opens a bottom sheet.
+ * Replaces native <select> so every list choice in the app looks and behaves the same. */
+export function SelectButton({ label, value, options, onChange, disabled }: {
+  label: string
+  value: string
+  options: SelectOption[]
+  onChange: (value: string) => void
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const current = options.find(option => option.value === value)
+  return <>
+    <button type="button" className="select-button" aria-label={label} aria-haspopup="dialog" data-value={value} disabled={disabled} onClick={() => setOpen(true)}>
+      <span>{current?.label ?? value}</span><ChevronDown size={15} />
+    </button>
+    <ChoiceSheet title={label} open={open} value={value} options={options} onClose={() => setOpen(false)} onSelect={next => { if (next !== value) onChange(next) }} />
+  </>
+}
 
 /* Shared form controls. Every settings-style choice in the app goes through these, so they
    look and behave the same everywhere (glass segmented control, one row layout, one confirm). */

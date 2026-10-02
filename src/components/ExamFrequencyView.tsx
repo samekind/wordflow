@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { LoaderCircle, Search } from 'lucide-react'
 import { examChoices, loadExamFrequency, type ExamFrequencyData, type ExamKey } from '../exam-frequency'
 import { normalize } from '../model'
+import { SelectButton } from './Controls'
 
 export default function ExamFrequencyView({ initialExam }: { initialExam: ExamKey }) {
   const [exam, setExam] = useState<ExamKey>(initialExam)
@@ -23,9 +24,7 @@ export default function ExamFrequencyView({ initialExam }: { initialExam: ExamKe
     .filter(word => normalize(word.word).includes(normalize(query))) || []
   return <section className="exam-frequency-view" aria-label="近五年考频">
     <div className="frequency-heading"><h2>2022–2026 卷面考频</h2>
-      <select aria-label="考频考试类型" value={exam} onChange={event => setExam(event.target.value as ExamKey)}>
-        {examChoices.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
-      </select>
+      <SelectButton label="考频考试类型" value={exam} onChange={next => setExam(next as ExamKey)} options={examChoices.map(([key, title]) => ({ value: key, label: title }))} />
     </div>
     {error ? <div className="error-banner" role="alert">{error}<button className="text-button" onClick={() => setAttempt(value => value + 1)}>重试</button></div> :
       !current ? <div className="empty"><LoaderCircle size={24} className="spin" /></div> : <>

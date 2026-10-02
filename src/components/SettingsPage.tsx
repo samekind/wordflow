@@ -6,7 +6,7 @@ import { dayKey, type Store } from '../model'
 import { hasLearned } from '../study'
 import { prepareAvatar } from '../profile'
 import DailyWordCount, { validDailyCount } from './DailyWordCount'
-import { Segmented, SettingRow } from './Controls'
+import { Segmented, SelectButton, SettingRow } from './Controls'
 
 export type AIConfig = { provider: string; model: string; configured: boolean }
 export type SettingsSection = 'home' | 'profile' | 'learning' | 'appearance' | 'reading' | 'ai' | 'data'
@@ -129,8 +129,8 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
     {section === 'learning' && <section className="settings-section">
       {book && <SettingRow label={book.title}><span className="setting-value">每天 {book.dailyCount} 词</span></SettingRow>}
       <SettingRow label="复习方法" note="现有复习日期保留，下次完成时使用新方法。">
-        <select aria-label="复习方法" value={store.reviewMethod} disabled={saving} onChange={event => void onPreferences({ reviewMethod: event.target.value as Store['reviewMethod'] })}>
-          <option value="ebbinghaus">艾宾浩斯式间隔</option><option value="fsrs">FSRS 自适应</option></select>
+        <SelectButton label="复习方法" value={store.reviewMethod} disabled={saving} options={[{ value: 'ebbinghaus', label: '艾宾浩斯式间隔' }, { value: 'fsrs', label: 'FSRS 自适应' }]}
+          onChange={method => void onPreferences({ reviewMethod: method as Store['reviewMethod'] })} />
       </SettingRow>
       <DailyWordCount label="新词书每天词量" value={daily} onChange={setDaily} disabled={saving} />
       <p className="field-note">只用于以后添加的词书，现有词书的每天词量和进度保留。</p>
@@ -144,13 +144,13 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
           onChange={accent => void onPreferences({ pronunciation: { ...store.pronunciation, accent } })} />
       </SettingRow>
       <SettingRow label="朗读速度">
-        <select aria-label="朗读速度" value={store.pronunciation.rate} disabled={saving} onChange={event => void onPreferences({ pronunciation: { ...store.pronunciation, rate: Number(event.target.value) } })}>
-          {[...new Set([.75, .85, 1, 1.15, store.pronunciation.rate])].sort((a, b) => a - b).map(rate => <option key={rate} value={rate}>{rate}x</option>)}</select>
+        <SelectButton label="朗读速度" value={String(store.pronunciation.rate)} disabled={saving} options={[...new Set([.75, .85, 1, 1.15, store.pronunciation.rate])].sort((a, b) => a - b).map(rate => ({ value: String(rate), label: `x` }))}
+          onChange={rate => void onPreferences({ pronunciation: { ...store.pronunciation, rate: Number(rate) } })} />
       </SettingRow>
       <button className="text-button" onClick={() => onSpeak('A little practice every day makes a difference.')}><Volume2 size={17} />试听发音</button>
       <SettingRow label="文章难度">
-        <select aria-label="文章难度" value={store.readingPreferences.level} disabled={saving} onChange={event => void onPreferences({ readingPreferences: { ...store.readingPreferences, level: event.target.value as Store['readingPreferences']['level'] } })}>
-          <option value="auto">跟随目标词书</option><option value="easy">基础选读</option><option value="standard">进阶选读</option></select>
+        <SelectButton label="文章难度" value={store.readingPreferences.level} disabled={saving} options={[{ value: 'auto', label: '跟随目标词书' }, { value: 'easy', label: '基础选读' }, { value: 'standard', label: '进阶选读' }]}
+          onChange={level => void onPreferences({ readingPreferences: { ...store.readingPreferences, level: level as Store['readingPreferences']['level'] } })} />
       </SettingRow>
       <SettingRow label="正文字号">
         <Segmented label="正文字号" value={store.readingPreferences.textSize} disabled={saving}
@@ -163,10 +163,10 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
     {section === 'ai' && <section className="settings-section">
       <div className="section-heading"><h2>生成服务</h2><span className={ai.configured ? 'configured-label' : 'muted'}>{ai.configured ? '已配置' : '未配置'}</span></div>
       <form className="settings-form" onSubmit={async event => { event.preventDefault(); if (await onSaveAI({ provider, model, key })) setKey('') }}>
-        <label>服务商<select aria-label="AI 服务商" value={provider} disabled={aiBusy} onChange={event => { setProvider(event.target.value); setModel(defaults[event.target.value]); setCustomModel(false); setKey('') }}>
-          <option value="deepseek">DeepSeek</option><option value="openai">OpenAI</option><option value="qwen">通义千问</option></select></label>
-        <label>模型<select aria-label="AI 模型" value={customModel ? 'custom' : model} disabled={aiBusy} onChange={event => { setCustomModel(event.target.value === 'custom'); if (event.target.value !== 'custom') setModel(event.target.value) }}>
-          <option value={defaults[provider]}>{provider === 'deepseek' ? 'V4.1-Flash（deepseek-flash）' : defaults[provider]}</option><option value="custom">自定义模型名称</option></select></label>
+        <SettingRow label="服务商"><SelectButton label="AI 服务商" value={provider} disabled={aiBusy} options={[{ value: 'deepseek', label: 'DeepSeek' }, { value: 'openai', label: 'OpenAI' }, { value: 'qwen', label: '通义千问' }]}
+          onChange={next => { setProvider(next); setModel(defaults[next]); setCustomModel(false); setKey('') }} /></SettingRow>
+        <SettingRow label="模型"><SelectButton label="AI 模型" value={customModel ? 'custom' : model} disabled={aiBusy} options={[{ value: defaults[provider], label: provider === 'deepseek' ? 'V4.1-Flash（deepseek-flash）' : defaults[provider] }, { value: 'custom', label: '自定义模型名称' }]}
+          onChange={next => { setCustomModel(next === 'custom'); if (next !== 'custom') setModel(next) }} /></SettingRow>
         {customModel && <label>模型名称<input aria-label="自定义模型名称" required maxLength={100} value={model} disabled={aiBusy} onChange={event => setModel(event.target.value)} /></label>}
         <label>API Key<div className="secret-input"><input aria-label="API Key" type={visibleKey ? 'text' : 'password'} autoComplete="new-password" value={key} disabled={aiBusy}
           onChange={event => setKey(event.target.value)} placeholder={ai.configured && provider === ai.provider ? '已保存；留空保留密钥' : '输入此服务商的 API Key'} />

@@ -3,7 +3,7 @@ import { ArrowDownUp, CheckCheck, Eye, EyeOff, Search } from 'lucide-react'
 import { markLevel, type Store } from '../model'
 import { coreGloss } from '../gloss'
 import MarkDots from '../components/MarkDots'
-import { Segmented } from '../components/Controls'
+import { Segmented, SelectButton } from '../components/Controls'
 
 type Filter = 'all' | 'marked' | 'known'
 type Props = { store: Store; onWord: (id: string) => void; onBooks: () => void }
@@ -25,7 +25,7 @@ export default function LibraryPage({ store, onWord, onBooks }: Props) {
   return <>
     <p className="page-purpose">查找所有词书中的单词，整理难词与熟词。点单词查看详情。</p>
     <div className="library-toolbar"><div className="search-field"><Search size={18} /><input aria-label="搜索词库" placeholder="搜索单词或释义" value={search} onChange={event => setSearch(event.target.value)} /></div>
-      <label className="sort-field"><ArrowDownUp size={16} /><select aria-label="单词排序" value={sort} onChange={event => setSort(event.target.value)}><option value="weak">标记程度</option><option value="recent">最近加入</option><option value="alpha">字母顺序</option></select></label>
+      <span className="sort-field"><ArrowDownUp size={16} /><SelectButton label="单词排序" value={sort} onChange={setSort} options={[{ value: 'weak', label: '标记程度' }, { value: 'recent', label: '最近加入' }, { value: 'alpha', label: '字母顺序' }]} /></span>
       <button className="icon-button" aria-label={hidden ? '显示释义' : '隐藏释义'} title={hidden ? '显示释义' : '隐藏释义'} onClick={() => { setHidden(!hidden); setRevealed(new Set()) }}>{hidden ? <EyeOff size={19} /> : <Eye size={19} />}</button>
     </div>
     <div className="filter-row"><Segmented label="单词筛选" value={filter} onChange={setFilter}

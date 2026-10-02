@@ -126,3 +126,18 @@ i.is-review{background:var(--success)}
 .stats-links{margin-top:2px}
 .account-section{border-top:1px solid var(--line);margin-top:22px;padding-top:18px}
 .account-section h2{display:flex;align-items:center;gap:8px}
+
+/* ==================== Shared list choice (components/Controls.tsx SelectButton) ==================== */
+.select-button{display:inline-flex;align-items:center;justify-content:space-between;gap:8px;min-height:var(--tap);max-width:100%;padding:0 12px 0 14px;border-radius:var(--radius-lg);background:var(--glass-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow);font-size:var(--fs-meta);color:var(--text-primary)}
+.select-button>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.select-button>svg{color:var(--text-muted);flex-shrink:0}
+.select-button:active{background:var(--glass-selected)}
+.sort-field .select-button{min-height:38px;border:0;box-shadow:none;background:transparent;padding:0 4px}
+.frequency-heading .select-button{min-height:38px}
+
+/* ==================== Page actions: one width rule ====================
+   A single page action is full width; a pair (button-row) splits the width evenly. */
+.settings-section>.primary,.settings-section>.secondary,.profile-form>.primary,.data-block>.secondary,.account-section>.secondary,.settings-form .button-row>.primary{width:100%}
+.data-block .button-row>.secondary,.data-block .button-row>.primary{flex:1 1 0;min-width:0}
+.settings-form .button-row{flex-direction:column;align-items:stretch}
+.settings-form .button-row>.text-button{align-self:center}
