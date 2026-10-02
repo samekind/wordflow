@@ -141,3 +141,111 @@ i.is-review{background:var(--success)}
 .data-block .button-row>.secondary,.data-block .button-row>.primary{flex:1 1 0;min-width:0}
 .settings-form .button-row{flex-direction:column;align-items:stretch}
 .settings-form .button-row>.text-button{align-self:center}
+
+/* ==================== Screen transitions ====================
+   Tabs swap instantly. Pushed / popped screens slide 24px; opacity never drops, so the page
+   never flashes to the grey background. */
+.view-transition[data-enter="push"]{animation:screen-push .18s cubic-bezier(.2,.8,.2,1)}
+.view-transition[data-enter="pop"]{animation:screen-pop .18s cubic-bezier(.2,.8,.2,1)}
+@keyframes screen-push{from{transform:translate3d(24px,0,0)}to{transform:none}}
+@keyframes screen-pop{from{transform:translate3d(-24px,0,0)}to{transform:none}}
+
+/* ==================== Study card (top of 学习) ==================== */
+.study-card{display:flex;flex-direction:column;gap:10px;margin:calc(12px + var(--ion-safe-area-top)) 0 14px;padding:12px 12px 12px;border-radius:var(--radius-lg);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow);backdrop-filter:var(--glass-filter);-webkit-backdrop-filter:var(--glass-filter)}
+.study-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:var(--tap)}
+.study-card .current-book-button{display:inline-flex;align-items:center;gap:6px;min-height:36px;max-width:calc(100% - 52px);padding:0 12px;border-radius:var(--radius-pill);background:var(--surface-inset);font-size:var(--fs-meta);font-weight:var(--fw-semibold);color:var(--text-primary);white-space:nowrap}
+.study-card .current-book-button>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.study-card .current-book-button>svg:first-child{color:var(--accent);flex-shrink:0}
+.study-card .current-book-button>svg:last-child{color:var(--text-muted);flex-shrink:0}
+.study-card .current-book-button.is-static{background:none;padding-left:4px}
+.study-day-stepper{display:grid;grid-template-columns:var(--tap) minmax(0,1fr) var(--tap);align-items:center;min-height:52px;padding:0 2px;border-radius:var(--radius-md);background:var(--surface-inset)}
+.study-day-stepper[data-review=true]{grid-template-columns:minmax(0,1fr)}
+.study-day-stepper .icon-button{width:var(--tap);height:var(--tap);color:var(--text-secondary)}
+.study-day-stepper .icon-button:disabled{opacity:.3}
+.study-card .study-day-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;justify-self:center;min-height:var(--tap);padding:0 10px;color:var(--text-primary)}
+.study-card .study-day-button .day-title{font-size:var(--fs-title);font-weight:var(--fw-bold);letter-spacing:0;white-space:nowrap}
+.study-card .study-day-button>svg{color:var(--text-muted)}
+.study-card .segment-control{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);width:100%;margin:0}
+.study-card .segment-control button{justify-content:center;min-height:40px}
+.study-card .study-task-progress{margin:0;text-align:center;font-size:var(--fs-small);color:var(--text-muted);white-space:normal}
+.study-card .study-menu .icon-button{width:var(--tap);height:var(--tap);border-radius:50%;background:var(--surface-inset)}
+/* Compact card: book row, then day stepper + group progress on one row, then the mode switch. */
+.study-card{gap:8px;padding:10px;margin-top:calc(10px + var(--ion-safe-area-top))}
+.study-card-row{display:flex;align-items:center;gap:10px;min-width:0}
+.study-card .study-day-stepper{display:inline-flex;flex:0 0 auto;min-height:var(--tap);padding:0;gap:0;border-radius:var(--radius-pill)}
+.study-card .study-day-stepper .icon-button{width:40px;height:var(--tap)}
+.study-card .study-day-button{min-height:var(--tap);padding:0 2px}
+.study-card .study-day-button .day-title{font-size:var(--fs-body-l)}
+.study-card .study-day-stepper[data-review=true]{padding:0 14px}
+.study-card .study-task-progress{flex:1;min-width:0;text-align:right;line-height:1.45}
+.study-card .segment-control button{min-height:38px}
+
+/* ==================== Rounded cards: grouped lists and settings ====================
+   Every list of rows and every settings block sits in one rounded glass card, so no text floats
+   loose on the page background. */
+.settings-menu{display:flex;flex-direction:column;padding-top:4px}
+.settings-group-title{margin:18px 6px 8px;font-size:var(--fs-small);font-weight:var(--fw-medium);color:var(--text-muted)}
+.settings-group,.settings-section,.profile-form,.data-block,.stats-card{border-radius:var(--radius-lg);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.settings-group{padding:0 14px;overflow:hidden}
+.settings-group>button{min-height:58px;border-bottom:1px solid var(--line)}
+.settings-group>button:last-child{border-bottom:0}
+.settings-group>button:active{background:var(--surface-inset);margin:0 -14px;padding-left:14px;padding-right:14px;width:calc(100% + 28px)}
+.settings-layout{display:flex;flex-direction:column;gap:14px}
+.settings-layout>.page-purpose{margin:0 4px}
+.settings-section{padding:6px 16px 16px}
+.settings-section>h2{margin:12px 0 2px;font-size:var(--fs-meta);font-weight:var(--fw-semibold);color:var(--text-primary)}
+.settings-section>.setting-row:last-of-type{border-bottom:0}
+.settings-section>.field-note,.settings-section>.appearance-sample{margin-left:0;margin-right:0}
+.settings-layout>.field-note{margin:0 6px}
+.profile-form{padding:18px 16px}
+.data-block{padding:4px 16px 16px;margin:0}
+.data-block+.data-block{margin-top:14px}
+.account-section{margin-top:0;border-top:0;padding-top:6px}
+.appearance-sample{border-top:1px solid var(--line);margin:8px 0 0;padding:14px 0 2px}
+/* 数据与备份 holds several blocks: each block is the card, not the section around them. */
+.settings-section:has(> .data-block){padding:0;background:none;border:0;box-shadow:none}
+.settings-section:has(> .data-block)>.data-summary{margin:0 6px 12px}
+
+/* Study page, below the words: 核对释义 and the submit area are cards too. */
+.study-list-view .meaning-section,.study-list-view .study-submit-area{margin:14px 0 0;padding:6px 14px 14px;border:1px solid var(--glass-edge);border-top:1px solid var(--glass-edge);border-radius:var(--radius-lg);background:var(--glass-card-fill);box-shadow:var(--glass-card-shadow)}
+.study-list-view .study-submit-area{padding:14px;display:flex;flex-direction:column;gap:10px}
+.study-list-view .study-submit-area>p{margin:0;text-align:center;font-size:var(--fs-small);color:var(--text-secondary)}
+.study-list-view .study-pagination{margin-top:14px}
+/* 我的: the profile row is a card like everything else. */
+.my-page .profile-summary{padding:14px 16px;border-radius:var(--radius-lg);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+/* page-flow.css loads later and zeroes these paddings; restate them with more specificity. */
+.study-list-view section.meaning-section{padding:6px 14px 10px}
+.study-list-view section.meaning-section .meaning-heading{padding:6px 0}
+
+/* ==================== 阅读: entry cards and reader screens ==================== */
+.reading-hub{display:flex;flex-direction:column;gap:14px}
+.reading-entry{display:flex;align-items:center;gap:14px;width:100%;min-height:96px;padding:12px;text-align:left;border-radius:var(--radius-lg);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.reading-entry:active{transform:scale(.99)}
+.reading-entry>img{width:76px;height:76px;flex-shrink:0;object-fit:cover;border-radius:var(--radius-md)}
+.reading-entry-icon{display:grid;place-items:center;width:76px;height:76px;flex-shrink:0;border-radius:var(--radius-md);background:var(--surface-inset);color:var(--accent)}
+.reading-entry-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.reading-entry-body small{font-size:var(--fs-caption);color:var(--text-muted)}
+.reading-entry-body strong{font-size:var(--fs-body-l);font-weight:var(--fw-semibold);color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reading-entry-body>span{font-size:var(--fs-small);color:var(--text-secondary);line-height:1.5}
+.reading-entry-state{display:inline-flex;align-items:center;gap:3px;flex-shrink:0;align-self:flex-end;padding:6px 10px;border-radius:var(--radius-pill);font-size:var(--fs-caption);font-weight:var(--fw-semibold);color:var(--accent);background:var(--glass-selected)}
+.reading-entry-state[data-read=true]{color:var(--success);background:var(--surface-inset)}
+.reading-entry-chevron{color:var(--text-faint);flex-shrink:0}
+.reading-hub-note{margin:2px 6px 0;font-size:var(--fs-caption);color:var(--text-muted)}
+.reading-intro{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;padding:12px 14px;border-radius:var(--radius-lg);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.reading-intro p{margin:0;flex:1;min-width:0;font-size:var(--fs-small);line-height:1.6;color:var(--text-secondary)}
+/* Reader: toolbar, article and completion each sit in a card. */
+.daily-english{display:flex;flex-direction:column;gap:14px}
+.daily-english .daily-article-toolbar{display:flex;align-items:center;justify-content:space-between;margin:0;padding:6px 12px 6px 6px;border-radius:var(--radius-lg);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.daily-english .daily-article-toolbar .article-picker{background:none;border:0;box-shadow:none}
+.daily-english .daily-article-toolbar>span{font-size:var(--fs-small);color:var(--text-muted)}
+.daily-english .source-article{margin:0;padding:18px 16px;border-radius:var(--radius-lg);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.daily-english .article-meta{margin:0 6px -6px}
+.daily-english .reader-tools{padding:6px 0;border-radius:var(--radius-md)}
+.daily-english .article-completion{margin:0;padding:12px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;border-radius:var(--radius-lg);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.daily-english .article-completion>.primary,.daily-english .article-completion>.secondary{flex:1 1 0;min-width:0}
+.daily-english .article-attribution{margin:0 6px}
+/* The card's glass filter makes it a stacking context; lift it so the ⋯ menu covers the words. */
+.study-card{position:relative;z-index:20}
+/* Menus are solid so nothing underneath reads through them. */
+.study-menu-panel{background:var(--surface-solid);backdrop-filter:none;-webkit-backdrop-filter:none}
+.daily-english .source-article .article-meta{display:flex;justify-content:space-between;gap:10px;margin:0 0 12px;font-size:var(--fs-small);color:var(--text-muted)}

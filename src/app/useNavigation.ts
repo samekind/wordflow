@@ -7,6 +7,8 @@ export type Screen =
   | { name: 'books' }
   | { name: 'library' }
   | { name: 'frequency' }
+  | { name: 'article' }
+  | { name: 'stories' }
   | { name: 'section'; section: Exclude<SettingsSection, 'home'> }
 type Entry = { screen: Screen; scroll: number }
 type State = { stack: Entry[]; direction: -1 | 0 | 1; seq: number }

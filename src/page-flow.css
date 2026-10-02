@@ -37,7 +37,7 @@
 .article-completion .primary,.article-completion .secondary{min-height:44px}
 .settings-group-title{font-size: var(--fs-small);color:var(--muted);font-weight: var(--fw-medium);margin:12px 0 0;padding:4px 0}
 .settings-group-title:not(:first-child){margin-top:24px}
-.settings-menu>button>span>small{font-size: var(--fs-caption);line-height:1.6;color:var(--text-secondary);font-weight: var(--fw-regular)}
+.settings-group>button>span>small{font-size: var(--fs-caption);line-height:1.6;color:var(--text-secondary);font-weight: var(--fw-regular)}
 .data-block{padding:20px 0;border-top:1px solid var(--line)}
 .data-block h2{font-size: var(--fs-body-l);margin:0 0 10px;color:var(--text-primary)}
 .data-block h2>span{font-size: var(--fs-caption);font-weight: var(--fw-regular);color:var(--muted);margin-left:8px}

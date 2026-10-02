@@ -78,6 +78,9 @@ app.put('/api/state', (req, res) => {
     appearance: z.object({
       theme: z.enum(['light', 'dark']), font: z.enum(['system', 'serif', 'gothic', 'mono']),
       weight: z.enum(['regular', 'medium', 'bold']), size: z.enum(['standard', 'large']),
+      // Per-page font overrides (study / reading); optional so older stores stay valid.
+      study: z.object({ font: z.enum(['system', 'serif', 'gothic', 'mono']).optional(), weight: z.enum(['regular', 'medium', 'bold']).optional() }).optional(),
+      reading: z.object({ font: z.enum(['system', 'serif', 'gothic', 'mono']).optional(), weight: z.enum(['regular', 'medium', 'bold']).optional() }).optional(),
     }).optional(),
     aiPreferences: z.object({ autoStory: z.boolean() }).optional(),
     readArticleIds: z.array(z.string().min(1).max(200)).max(2000).optional(),

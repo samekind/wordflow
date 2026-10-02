@@ -223,6 +223,7 @@ test('daily English works offline, records reading separately, handles lookup an
   await page.getByRole('button', { name: '大字', exact: true }).click()
   await expect.poll(async () => (await state(page)).readingPreferences.textSize).toBe('large')
   await nav(page, '阅读')
+  await page.getByRole('button', { name: '英语选读', exact: true }).click()
   await selectArticle(page, 'Library')
   await expect(page.locator('.daily-english')).toHaveAttribute('data-article-id', 'en-library')
   await expect(page.locator('.article-paragraphs p').first()).toHaveCSS('font-size', '20px')
@@ -365,9 +366,10 @@ test('card layouts persist and spaced reviews support due completion and undo', 
       const meaning = row.querySelector('.card-meaning')!.getBoundingClientRect()
       return english.right <= meaning.left && Math.abs((english.top + english.bottom) / 2 - (meaning.top + meaning.bottom) / 2) < 1
     }))).toBe(true)
-    const symmetry = await page.locator('.study-scope').evaluate(el => {
-      const bar = el.getBoundingClientRect(), title = el.querySelector('.study-date-nav')!.getBoundingClientRect()
-      return Math.abs((bar.left + bar.right) / 2 - (title.left + title.right) / 2)
+    const symmetry = await page.locator('.study-card').evaluate(el => {
+      // The study card spans the content width with equal side insets.
+    const bar = el.getBoundingClientRect(), page = el.closest('.content')!.getBoundingClientRect()
+      return Math.abs((bar.left - page.left) - (page.right - bar.right))
     })
     expect(symmetry).toBeLessThan(1)
     await page.screenshot({ path: `test-results/cards-preview-${width}.png`, animations: 'disabled' })

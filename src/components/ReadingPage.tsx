@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Eye, EyeOff, Globe, LoaderCircle, RefreshCw, Square, Volume2 } from 'lucide-react'
 import { DailyIcon, EssayIcon } from '../icons'
-import { dayKey, normalize, wordsForDay, type ImportRow, type Store } from '../model'
+import { dayKey, normalize, pageFontAttrs, wordsForDay, type ImportRow, type Store } from '../model'
 import { cachedArticle, dailyReadingIndex, englishWordCount, loadReadingCatalog, readingLevel, refreshReadingArticle, type ReadingArticle } from '../reading'
 import type { ArticleAssistMode, ArticleAssistResult } from '../platform'
 import { articleTranslations } from '../reading-translations'
@@ -10,10 +10,11 @@ import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dict
 import { coreGloss } from '../gloss'
 import ChoiceSheet from './ChoiceSheet'
 import Sheet from './Sheet'
-import { Segmented } from './Controls'
 
 type Props = {
-  store: Store; now: number; view: 'story' | 'daily'; onView: (view: 'story' | 'daily') => void;
+  store: Store; now: number;
+  /** hub = the 阅读 tab (two entry cards); daily / story = the pushed reader screens. */
+  view: 'hub' | 'story' | 'daily'; onOpen: (view: 'story' | 'daily') => void;
   saving: boolean; onRead: (id: string) => Promise<boolean>; onWord: (id: string) => void;
   onSpeak: (text: string) => void; onStop: () => void; children: ReactNode;
   aiConfigured: boolean; onAssist: (data: { mode: ArticleAssistMode; title: string; text: string }) => Promise<ArticleAssistResult>;
@@ -21,13 +22,46 @@ type Props = {
   onStudy: () => void;
 }
 export default function ReadingPage(props: Props) {
-  return <div className="reading-page" data-size={props.store.readingPreferences.textSize}>
-    <div className="reading-tabs"><Segmented label="阅读内容" value={props.view} onChange={props.onView} options={[
-      { value: 'daily', label: <><DailyIcon size={16} />英语选读</> },
-      { value: 'story', label: <><EssayIcon size={16} />自选词短文</> },
-    ]} /></div>
-    <div className="reading-purpose"><p className="page-purpose">{props.view === 'daily' ? '读一篇英语文章，点单词查义。完成后记录阅读进度。' : '自由选词生成短文，用来扩展阅读。背本组单词请回到学习。'}</p>{props.view === 'story' && <button className="text-button" disabled={props.saving} onClick={props.onStudy}>去本组语境记忆<ChevronRight size={15} /></button>}</div>
-    {props.view === 'story' ? props.children : <DailyEnglish {...props} />}
+  return <div className="reading-page font-scope" data-size={props.store.readingPreferences.textSize} {...pageFontAttrs(props.store.appearance.reading)}>
+    {props.view === 'hub' ? <ReadingHub {...props} /> : props.view === 'story' ? <>
+      <div className="reading-intro"><p>用自己选的词生成短文，扩展阅读。背当天的词请回到学习页。</p>
+        <button className="text-button" disabled={props.saving} onClick={props.onStudy}>去本组语境记忆<ChevronRight size={15} /></button></div>
+      {props.children}
+    </> : <DailyEnglish {...props} />}
+  </div>
+}
+/** 阅读 tab: one card per way to read, each opening its own screen. */
+function ReadingHub({ store, now, onOpen }: Props) {
+  const [catalog, setCatalog] = useState<ReadingArticle[]>([])
+  useEffect(() => { let active = true; loadReadingCatalog().then(articles => { if (active) setCatalog(articles) }).catch(() => {}); return () => { active = false } }, [])
+  const level = readingLevel(store)
+  const choices = catalog.filter(article => article.level === level)
+  const today = choices.length ? choices[dailyReadingIndex(choices.length, new Date(now))] : undefined
+  const article = today ? cachedArticle(today) : undefined
+  const words = article ? englishWordCount(article.paragraphs.join(' ')) : 0
+  const read = !!article && store.readArticleIds.includes(article.id)
+  const book = store.books.find(item => item.id === store.activeBookId)
+  const dayWords = book ? wordsForDay(store, book).length : 0
+  return <div className="reading-hub">
+    <button className="reading-entry reading-entry-daily" aria-label="英语选读" onClick={() => onOpen('daily')}>
+      {article?.image ? <img src={article.image.path} alt="" /> : <span className="reading-entry-icon"><DailyIcon size={26} /></span>}
+      <span className="reading-entry-body">
+        <small>今日英语选读 · {level === 'easy' ? '基础' : '进阶'}</small>
+        <strong lang="en">{article?.title || '正在读取…'}</strong>
+        <span>{article ? `${article.topic} · ${words} 词 · 约 ${Math.max(1, Math.ceil(words / 120))} 分钟` : '百科段落选读，点单词即可查义'}</span>
+      </span>
+      <span className="reading-entry-state" data-read={read}>{read ? <><CheckCheck size={14} />已读</> : <>开始读<ChevronRight size={15} /></>}</span>
+    </button>
+    <button className="reading-entry" aria-label="自选词短文" onClick={() => onOpen('story')}>
+      <span className="reading-entry-icon"><EssayIcon size={26} /></span>
+      <span className="reading-entry-body">
+        <small>自选词短文</small>
+        <strong>用当天的词写一篇短文</strong>
+        <span>{dayWords ? `当天 ${dayWords} 个词可选` : '先选一本词书'} · 已保存 {store.stories.length} 篇</span>
+      </span>
+      <ChevronRight size={18} className="reading-entry-chevron" />
+    </button>
+    <p className="reading-hub-note">已读文章 {new Set(store.readArticleIds).size} 篇 · 阅读设置在“我的 → 发音与阅读”</p>
   </div>
 }
 function plainCredit(value: string) {
@@ -109,8 +143,8 @@ function DailyEnglish({ store, now, saving, onRead, onWord, onSpeak, onStop }: P
       </div>
       <span>{new Date(now).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}</span>
     </div>
-    <div className="article-meta"><span>{article.topic} · {level === 'easy' ? '基础选读' : '进阶选读'}</span><span>{words} 词 · 约 {Math.max(1, Math.ceil(words / 120))} 分钟</span></div>
     <article className="source-article">
+      <div className="article-meta"><span>{article.topic} · {level === 'easy' ? '基础选读' : '进阶选读'}</span><span>{words} 词 · 约 {Math.max(1, Math.ceil(words / 120))} 分钟</span></div>
       <h2 lang="en">{article.title}</h2>
       {article.image && <figure className="reading-image"><img src={article.image.path} alt={article.image.alt} /></figure>}
       <div className="reader-tools"><span>{article.source}</span><div className="small-tools">

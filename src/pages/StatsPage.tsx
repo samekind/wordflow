@@ -90,9 +90,9 @@ export default function StatsPage({ store, now, onLibrary, onFrequency, onBooks 
       </div>)}</div>
     </section>
 
-    <div className="settings-menu stats-links">
+    <div className="settings-menu stats-links"><div className="settings-group">
       <button onClick={onLibrary} aria-label="我的单词"><Search size={20} /><span>我的单词<small>搜索、筛选难词和熟词</small></span><ChevronRight size={16} /></button>
       <button onClick={onFrequency} aria-label="考频查询"><TrendingUp size={20} /><span>考频查询<small>2022–2026 卷面考频</small></span><ChevronRight size={16} /></button>
-    </div>
+    </div></div>
   </div>
 }

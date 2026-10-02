@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { IonAlert } from '@ionic/react'
-import { motion, useReducedMotion } from 'motion/react'
+import { useReducedMotion } from 'motion/react'
 import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clock3, Ellipsis, Eye, EyeOff, Minus, Plus, RotateCcw, Volume2 } from 'lucide-react'
 import { PreviewIcon, RecallIcon } from './icons'
 import { coreGloss } from './gloss'
-import { bookDays, dayKey, ebbNextLabel, intervalLabel, markLevel, memoryIntervals, wordsForDay, type Store, type WordBook } from './model'
+import { bookDays, dayKey, ebbNextLabel, intervalLabel, markLevel, memoryIntervals, wordsForDay, pageFontAttrs, type Store, type WordBook } from './model'
 import { currentStudyDraft, draftComplete, hasLearned, learningStatistics, newWords, reviewQueue, studyView, studyWordStatus, type StudyAction } from './study'
 import type { LearningState, StudyDraft, StudyKind } from './study-state'
 import ChoiceSheet from './components/ChoiceSheet'
@@ -145,51 +145,56 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
     else if (mode === 'practice') onLayout(stage === 'test' ? 'test' : 'preview')
   }
   // First run: no wordbook yet, so 学习 walks through choosing one instead of an empty page.
-  if (!store.books.length && start) return <section className="study-list-view" aria-label="列表背词"><div className="english-page"><StartPlan store={store} {...start} onImport={onImport} /></div></section>
+  if (!store.books.length && start) return <section className="study-list-view font-scope" aria-label="列表背词" {...pageFontAttrs(store.appearance.study)}><div className="english-page"><StartPlan store={store} {...start} onImport={onImport} /></div></section>
   const showTasks = mode === 'review' || queue.length > 0
-  return <section className={`study-list-view layout-${store.studyLayout}`} aria-label="列表背词">
+  return <section className={`study-list-view font-scope layout-${store.studyLayout}`} aria-label="列表背词" {...pageFontAttrs(store.appearance.study)}>
     <div className="english-page">
-      {/* One line: what you are studying, and everything else behind ⋯. */}
-      <header className="study-head">
+      {/* One rounded card holds everything about what you are studying; the rest is behind ⋯. */}
+      <header className="study-card">
         <h1 className="sr-only">学习</h1>
-        <div className="study-scope">
-        <div className="study-date-nav" data-review={mode === 'review'}>
-          {mode !== 'review' && <button className="icon-button" aria-label="前一天" disabled={!book || !day || saving} onClick={() => void chooseDay(day - 1)}><ChevronLeft size={19} /></button>}
-          <div className="deck-title"><span className="study-deck-label">{mode === 'review' ? <><span className="current-book-label">全部词书</span><span className="day-title">到期复习</span></> : <><button className="current-book-button" aria-label="选择目标词书" title={book?.title || '选择目标词书'} disabled={saving} onClick={onBooks}><span>{book?.title || '选择目标词书'}</span><ChevronDown size={11} /></button>
-            <button className="study-day-button" aria-label="选择学习的天" disabled={!book || saving} onClick={() => setDaysOpen(true)}><span className="day-title">第 {day + 1} 天</span><ChevronDown size={12} /></button></>}</span></div>
-          {mode !== 'review' && <button className="icon-button" aria-label="后一天" disabled={!book || day >= days.length - 1 || saving} onClick={() => void chooseDay(day + 1)}><ChevronRight size={19} /></button>}
+        <div className="study-card-top">
+          {mode === 'review'
+            ? <span className="current-book-button is-static"><BookOpen size={16} /><span className="current-book-label">全部词书</span></span>
+            : <button className="current-book-button" aria-label="选择目标词书" title={book?.title || '选择目标词书'} disabled={saving} onClick={onBooks}><BookOpen size={16} /><span>{book?.title || '选择目标词书'}</span><ChevronDown size={14} /></button>}
+          <StudyMenu>{close => <>
+            <button onClick={() => { close(); setPlanOpen(true) }}><Clock3 size={16} />复习计划</button>
+            {!!rows.length && <button disabled={saving} onClick={() => { close(); onSpeak(rows.filter(row => !row.missing).map(row => row.word).join('. ')) }}><Volume2 size={16} />朗读本组</button>}
+            {!!rows.length && mode !== 'practice' && <button aria-pressed={contextMode} disabled={saving || contextServices.busy} onClick={() => { close(); chooseStage('context') }}><BookOpen size={16} />读短文</button>}
+            {book && mode !== 'review' && <button disabled={saving} onClick={() => { close(); switchMode(mode === 'practice' ? 'learn' : 'practice') }}><RotateCcw size={16} />{mode === 'practice' ? '返回当天新词' : '回看当天 · 不改变复习计划'}</button>}
+            <button disabled={!canUndo || saving} onClick={() => { close(); onUndo() }} aria-label="撤销上一步"><RotateCcw size={16} />撤销上一步</button>
+            {savedDraft && !draftComplete(draft) && <button disabled={saving} onClick={() => { close(); restart(draft.kind) }}>重新开始本组</button>}
+            <button onClick={() => { close(); onImport() }}><Plus size={16} />导入词表</button>
+            <p className="study-menu-note" aria-label="今日学习统计">今日新学 {stats.newToday} 词 · 复习 {stats.reviewedToday} 词</p>
+          </>}</StudyMenu>
         </div>
+        <div className="study-card-row">
+          <div className="study-day-stepper" data-review={mode === 'review'}>
+            {mode !== 'review' && <button className="icon-button" aria-label="前一天" disabled={!book || !day || saving} onClick={() => void chooseDay(day - 1)}><ChevronLeft size={20} /></button>}
+            {mode === 'review'
+              ? <span className="study-day-button is-static"><span className="day-title">到期复习</span></span>
+              : <button className="study-day-button" aria-label="选择学习的天" disabled={!book || saving} onClick={() => setDaysOpen(true)}><span className="day-title">第 {day + 1} 天</span><ChevronDown size={14} /></button>}
+            {mode !== 'review' && <button className="icon-button" aria-label="后一天" disabled={!book || day >= days.length - 1 || saving} onClick={() => void chooseDay(day + 1)}><ChevronRight size={20} /></button>}
+          </div>
+          {!!rows.length && groups.length > 0 && <p className="study-task-progress" aria-label="本次任务进度">第 {currentPage + 1} / {groups.length} 组{draft ? ` · 已完成 ${draft.completed.length} / ${groups.length} 组` : ''}{mode === 'review' && pendingReviewGroups.length > 0 && laterReviews > 0 && <span className="study-later-reviews"> · 另有 {laterReviews} 词到期</span>}</p>}
         </div>
-        <StudyMenu>{close => <>
-          <button onClick={() => { close(); setPlanOpen(true) }}><Clock3 size={16} />复习计划</button>
-          {!!rows.length && <button disabled={saving} onClick={() => { close(); onSpeak(rows.filter(row => !row.missing).map(row => row.word).join('. ')) }}><Volume2 size={16} />朗读本组</button>}
-          {!!rows.length && mode !== 'practice' && <button aria-pressed={contextMode} disabled={saving || contextServices.busy} onClick={() => { close(); chooseStage('context') }}><BookOpen size={16} />读短文</button>}
-          {book && mode !== 'review' && <button disabled={saving} onClick={() => { close(); switchMode(mode === 'practice' ? 'learn' : 'practice') }}><RotateCcw size={16} />{mode === 'practice' ? '返回当天新词' : '回看当天 · 不改变复习计划'}</button>}
-          <button disabled={!canUndo || saving} onClick={() => { close(); onUndo() }} aria-label="撤销上一步"><RotateCcw size={16} />撤销上一步</button>
-          {savedDraft && !draftComplete(draft) && <button disabled={saving} onClick={() => { close(); restart(draft.kind) }}>重新开始本组</button>}
-          <button onClick={() => { close(); onImport() }}><Plus size={16} />导入词表</button>
-          <p className="study-menu-note" aria-label="今日学习统计">今日新学 {stats.newToday} 词 · 复习 {stats.reviewedToday} 词</p>
-        </>}</StudyMenu>
+        {/* New vs due review only matters when something is due. */}
+        {showTasks && <Segmented label="学习任务" className="study-task-tabs" disabled={saving}
+          value={mode === 'review' ? 'review' : mode === 'practice' ? 'practice' : 'learn'}
+          onChange={view => switchMode(view === 'review' ? 'review' : 'learn')}
+          options={[
+            // In practice mode the 新词 tab shows as selected and tapping it returns to learning.
+            { value: mode === 'practice' ? 'practice' as const : 'learn' as const, ariaLabel: '新词', title: `今天待学 ${fresh.length} 词`, label: <>新词 <span>{fresh.length}</span></> },
+            { value: 'review' as const, ariaLabel: '到期复习', title: `全部词书到期 ${queue.length} 词`, label: <>到期复习 <span>{queue.length}</span></> },
+          ]} />}
+        {!!rows.length && <Segmented label="学习方式" className="study-stage-switch"
+          value={contextMode ? 'context' : preview ? 'preview' : 'test'} disabled={saving || contextServices.busy} onChange={chooseStage}
+          options={[
+            { value: 'preview' as const, ariaLabel: '快速记忆', label: <><PreviewIcon size={15} />快速记忆</> },
+            { value: 'test' as const, ariaLabel: '自己自查', label: <><RecallIcon size={15} />自己自查</> },
+          ]} />}
       </header>
-      {/* New vs due review only matters when something is due. */}
-      {showTasks && <Segmented label="学习任务" className="study-task-tabs" disabled={saving}
-        value={mode === 'review' ? 'review' : mode === 'practice' ? 'practice' : 'learn'}
-        onChange={view => switchMode(view === 'review' ? 'review' : 'learn')}
-        options={[
-          // In practice mode the 新词 tab shows as selected and tapping it returns to learning.
-          { value: mode === 'practice' ? 'practice' as const : 'learn' as const, ariaLabel: '新词', title: `今天待学 ${fresh.length} 词`, label: <>新词 <span>{fresh.length}</span></> },
-          { value: 'review' as const, ariaLabel: '到期复习', title: `全部词书到期 ${queue.length} 词`, label: <>到期复习 <span>{queue.length}</span></> },
-        ]} />}
-      {!!rows.length && <div className="study-tools"><Segmented label="学习方式" className="study-stage-switch"
-        value={contextMode ? 'context' : preview ? 'preview' : 'test'} disabled={saving || contextServices.busy} onChange={chooseStage}
-        options={[
-          { value: 'preview' as const, ariaLabel: '快速记忆', label: <><PreviewIcon size={15} />快速记忆</> },
-          { value: 'test' as const, ariaLabel: '自己自查', label: <><RecallIcon size={15} />自己自查</> },
-        ]} />
-        {groups.length > 0 && <span className="study-task-progress" aria-label="本次任务进度">第 {currentPage + 1} / {groups.length} 组{draft ? ` · 已完成 ${draft.completed.length} / ${groups.length} 组` : ''}{mode === 'review' && pendingReviewGroups.length > 0 && laterReviews > 0 && <span className="study-later-reviews"> · 另有 {laterReviews} 词到期</span>}</span>}
-      </div>}
       {!rows.length ? <div className="study-empty"><BookOpen size={30} /><h2>{mode === 'review' ? '暂无到期复习' : !book ? '从一本词书开始' : '今天暂无新词'}</h2><p>{mode === 'review' ? nextDue ? `下次复习在 ${intervalLabel(nextDue.card.due, moment)}后` : '完成新词自测后，这里会按计划安排复习。' : !book ? '选词书 → 看词或读短文 → 自测提交。每组最多 20 词，中途退出会保留进度。' : '今天的词已学过或已标熟，可以回看，或继续下一天。'}</p><div className="button-row">{mode === 'review' && <button className="primary" disabled={saving} onClick={() => switchMode('learn')}>学习新词</button>}{book && day + 1 < days.length && mode !== 'review' && <button className="primary" onClick={() => void chooseDay(day + 1)}>进入下一天</button>}{!book && <><button className="primary" onClick={onBooks}>选择词书</button><button className="secondary" onClick={onImport}>导入词表</button></>}</div></div> : <>
-        {contextMode && draft ? <ContextReader store={store} draft={draft} now={now} services={contextServices} onWord={onOpenWord} onSpeak={onSpeak} onStop={onStop} onCheck={() => { onStop(); void onStudy(draft, { type: 'self-test' }) }} /> : <><motion.ol className="english-grid" aria-label="编号英文词表" key={currentKey} initial={reduced ? false : { opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .18 }}>
+        {contextMode && draft ? <ContextReader store={store} draft={draft} now={now} services={contextServices} onWord={onOpenWord} onSpeak={onSpeak} onStop={onStop} onCheck={() => { onStop(); void onStudy(draft, { type: 'self-test' }) }} /> : <><ol className="english-grid" aria-label="编号英文词表" key={currentKey}>
           {rows.map(row => <li className="english-entry" key={row.id} data-word-id={row.id} data-number={number(row.id)} data-mark-count={markLevel(row.markCount)} data-mark-level={markLevel(row.markCount)} data-forgotten={row.forgotten} data-next={store.reviewMethod === 'ebbinghaus' && byId.has(row.id) ? ebbNextLabel(byId.get(row.id)!, row.forgotten) : ''}>
             <SwipeRow disabled={saving || row.missing || (!preview && completed)}
               onSwipeStart={() => { press.current.moved = true; cancelPress() }}
@@ -205,7 +210,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
               </button>
             </SwipeRow>
           </li>)}
-        </motion.ol>
+        </ol>
         {!preview && <section className="meaning-section" aria-label="编号中文释义"><div className="meaning-heading"><h2>核对释义</h2><button className="text-button" onClick={() => setShowMeanings(!showMeanings)} aria-label={showMeanings ? '隐藏全部释义' : '显示全部释义'}>{showMeanings ? <EyeOff size={16} /> : <Eye size={16} />}{showMeanings ? '收起释义' : '展开核对'}</button></div>
           {showMeanings && <ol className="meaning-list">{rows.map(row => <li className="meaning-entry" key={row.id} data-word-id={row.id} data-number={number(row.id)}><div className="meaning-row"><span className="word-number">{number(row.id)}</span><span className="chinese-meaning">{coreGloss(row.meaning)}</span><button className="text-button meaning-check" aria-label={`${row.forgotten ? '取消' : '标记'}第 ${number(row.id)} 词不熟`} aria-pressed={row.forgotten} disabled={saving || completed || row.missing} onClick={() => void markEntry(row.id, row.forgotten ? -1 : 1)}>{row.forgotten ? '已标不熟' : '不熟'}</button><button className="study-mark" disabled={row.missing} onClick={() => onOpenWord(row.id)} aria-label={`第 ${number(row.id)} 词详情`}><MarkDots count={row.markCount} /></button></div></li>)}</ol>}
           {showMeanings && <button className="text-button" aria-label="返回英文词表" onClick={scrollToEnglish}>返回词表</button>}

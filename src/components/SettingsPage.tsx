@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { BookOpen, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, RefreshCw, Settings2, Sparkles, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
-import type { Appearance } from '../model'
+import type { Appearance, PageFont } from '../model'
 import { appRelease, loadCloudAccount } from '../cloud'
-import { dayKey, type Store } from '../model'
-import { hasLearned } from '../study'
+import { pageFontAttrs, type Store } from '../model'
 import { prepareAvatar } from '../profile'
 import DailyWordCount, { validDailyCount } from './DailyWordCount'
 import { Segmented, SelectButton, SettingRow } from './Controls'
@@ -68,25 +67,28 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
       <span className="profile-avatar">{store.profile.avatar ? <img src={store.profile.avatar} alt="" /> : <UserRound size={30} />}</span>
       <span className="profile-summary-text"><strong>{store.profile.nickname}</strong><span>{store.profile.goal || '个人资料'}</span></span><ChevronRight size={18} />
     </button>
-    <dl className="profile-statistics">
-      <div><dt>学习天数</dt><dd>{new Set(store.reviews.map(review => dayKey(review.at))).size}</dd></div>
-      <div><dt>已学单词</dt><dd>{store.words.filter(hasLearned).length.toLocaleString()}</dd></div>
-      <div><dt>已读文章</dt><dd>{new Set(store.readArticleIds).size}</dd></div>
-    </dl>
     <div className="settings-menu" aria-label="个人设置">
       <h2 className="settings-group-title">学习</h2>
+      <div className="settings-group">
       <button onClick={onBooks} aria-label="管理目标词书"><BookOpen size={20} /><span>词书管理<small>{book ? `正在学习 ${book.title} · 更换或添加词书` : '选择一本词书'}</small></span><ChevronRight size={16} /></button>
       <button onClick={() => onSection('learning')} aria-label="学习设置"><Settings2 size={20} /><span>学习设置<small>每天词量、复习方法</small></span><ChevronRight size={16} /></button>
+      </div>
       <h2 className="settings-group-title">显示与声音</h2>
+      <div className="settings-group">
       <button onClick={() => onSection('appearance')} aria-label="外观"><Moon size={20} /><span>外观</span><small>{store.appearance.theme === 'dark' ? '深色' : '浅色'}</small><ChevronRight size={16} /></button>
       <button onClick={() => onSection('reading')} aria-label="发音与阅读"><Volume2 size={20} /><span>发音与阅读</span><ChevronRight size={16} /></button>
+      </div>
       <h2 className="settings-group-title">账号与数据</h2>
+      <div className="settings-group">
       <button onClick={() => onSection('profile')} aria-label="账号与资料"><UserRound size={20} /><span>账号与资料<small>昵称、头像、云端账号</small></span><small>{hasCloud ? '已连接' : '未登录'}</small><ChevronRight size={16} /></button>
       <button onClick={() => onSection('data')} aria-label="数据与备份"><Database size={20} /><span>数据与备份<small>导出、恢复、云端同步</small></span><ChevronRight size={16} /></button>
       <button onClick={() => onSection('ai')} aria-label="AI 服务"><Sparkles size={20} /><span>AI 服务<small>语境短文、单词助记</small></span><small>{ai.configured ? '已配置' : '未配置'}</small><ChevronRight size={16} /></button>
+      </div>
       <h2 className="settings-group-title">关于</h2>
+      <div className="settings-group">
       <button disabled={updateBusy} onClick={() => void checkUpdate()} aria-label="检查更新"><RefreshCw size={20} className={updateBusy ? 'spin' : ''} /><span>检查更新<small>{updateNote || `当前版本 ${appVersion}`}</small></span><ChevronRight size={16} /></button>
       <button onClick={onLicenses} aria-label="来源与开源许可"><FileText size={20} /><span>来源与开源许可</span><ChevronRight size={16} /></button>
+      </div>
     </div>
   </div>
 
@@ -208,25 +210,59 @@ const weights: { id: Appearance['weight']; label: string }[] = [
   { id: 'medium', label: '适中' },
   { id: 'bold', label: '稍粗' },
 ]
-function AppearanceSettings({ appearance, saving, onChange }: { appearance: Appearance; saving: boolean; onChange: (patch: Partial<Appearance>) => void }) {
-  return <section className="settings-section">
-    <SettingRow label="深色模式">
-      <Segmented label="深色模式" value={appearance.theme} disabled={saving}
-        options={[{ value: 'light', label: '浅色' }, { value: 'dark', label: '深色' }]} onChange={theme => onChange({ theme })} />
-    </SettingRow>
+const follow = 'follow'
+/** Font + weight for one page; "跟随全部" leaves the field unset so it tracks the global choice. */
+function PageFontRows({ name, value, saving, onChange }: { name: string; value: PageFont | undefined; saving: boolean; onChange: (next: PageFont | undefined) => void }) {
+  const set = (patch: PageFont) => {
+    const next = { ...value, ...patch }
+    for (const key of Object.keys(next) as (keyof PageFont)[]) if (next[key] === undefined) delete next[key]
+    onChange(Object.keys(next).length ? next : undefined)
+  }
+  return <>
     <SettingRow label="字体">
-      <Segmented label="字体" value={appearance.font} disabled={saving}
-        options={fonts.map(font => ({ value: font.id, label: font.label }))} onChange={font => onChange({ font })} />
+      <SelectButton label={`${name}字体`} value={value?.font || follow} disabled={saving}
+        options={[{ value: follow, label: '跟随全部' }, ...fonts.map(font => ({ value: font.id, label: font.label }))]}
+        onChange={font => set({ font: font === follow ? undefined : font as Appearance['font'] })} />
     </SettingRow>
     <SettingRow label="字重">
-      <Segmented label="字重" value={appearance.weight} disabled={saving}
-        options={weights.map(weight => ({ value: weight.id, label: weight.label }))} onChange={weight => onChange({ weight })} />
+      <Segmented label={`${name}字重`} value={value?.weight || follow} disabled={saving}
+        options={[{ value: follow, label: '跟随' }, ...weights.map(weight => ({ value: weight.id, label: weight.label }))]}
+        onChange={weight => set({ weight: weight === follow ? undefined : weight as Appearance['weight'] })} />
     </SettingRow>
-    <SettingRow label="字号">
-      <Segmented label="字号" value={appearance.size} disabled={saving}
-        options={[{ value: 'standard', label: '标准' }, { value: 'large', label: '大' }]} onChange={size => onChange({ size })} />
-    </SettingRow>
-    <p className="appearance-sample"><span lang="en">perspective</span><span>观点，看待问题的角度</span></p>
-    <p className="field-note">字体、字重、字号和深色会用在学习、阅读、词书和详情。</p>
-  </section>
+  </>
+}
+function AppearanceSettings({ appearance, saving, onChange }: { appearance: Appearance; saving: boolean; onChange: (patch: Partial<Appearance>) => void }) {
+  return <>
+    <section className="settings-section" aria-label="全部页面">
+      <h2>全部页面</h2>
+      <SettingRow label="深色模式">
+        <Segmented label="深色模式" value={appearance.theme} disabled={saving}
+          options={[{ value: 'light', label: '浅色' }, { value: 'dark', label: '深色' }]} onChange={theme => onChange({ theme })} />
+      </SettingRow>
+      <SettingRow label="字体">
+        <Segmented label="字体" value={appearance.font} disabled={saving}
+          options={fonts.map(font => ({ value: font.id, label: font.label }))} onChange={font => onChange({ font })} />
+      </SettingRow>
+      <SettingRow label="字重">
+        <Segmented label="字重" value={appearance.weight} disabled={saving}
+          options={weights.map(weight => ({ value: weight.id, label: weight.label }))} onChange={weight => onChange({ weight })} />
+      </SettingRow>
+      <SettingRow label="字号">
+        <Segmented label="字号" value={appearance.size} disabled={saving}
+          options={[{ value: 'standard', label: '标准' }, { value: 'large', label: '大' }]} onChange={size => onChange({ size })} />
+      </SettingRow>
+      <p className="appearance-sample"><span lang="en">perspective</span><span>观点，看待问题的角度</span></p>
+    </section>
+    <section className="settings-section font-scope" aria-label="学习页" {...pageFontAttrs(appearance.study)}>
+      <h2>学习页</h2>
+      <PageFontRows name="学习页" value={appearance.study} saving={saving} onChange={study => onChange({ study })} />
+      <p className="appearance-sample"><span lang="en">resilient</span><span>有韧性的，能迅速恢复的</span></p>
+    </section>
+    <section className="settings-section font-scope" aria-label="阅读页" {...pageFontAttrs(appearance.reading)}>
+      <h2>阅读页</h2>
+      <PageFontRows name="阅读页" value={appearance.reading} saving={saving} onChange={reading => onChange({ reading })} />
+      <p className="appearance-sample"><span lang="en">A library is a place where many books are kept.</span><span>图书馆是收藏许多书的地方。</span></p>
+    </section>
+    <p className="field-note">学习页和阅读页可以单独设置字体和字重，选“跟随”时使用全部页面的设置。中文偏细时，把字重调到“适中”或“稍粗”。</p>
+  </>
 }

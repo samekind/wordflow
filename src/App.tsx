@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { IonLabel, IonTabBar, IonTabButton, IonToast } from '@ionic/react'
 import { modalController } from '@ionic/core'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import { ChartColumn, ChevronLeft, LoaderCircle, Plus } from 'lucide-react'
 import { ProfileIcon, ReadIcon, StudyIcon } from './icons'
 import { dayKey, validateStore, type Store, type Word } from './model'
@@ -29,7 +29,7 @@ import { useAIServices } from './app/useAIServices'
 import { useBackButton } from './app/useBackButton'
 
 const tabs = [{ id: 'today', label: '学习', icon: StudyIcon }, { id: 'stats', label: '统计', icon: ChartColumn }, { id: 'story', label: '阅读', icon: ReadIcon }, { id: 'settings', label: '我的', icon: ProfileIcon }] as const
-const titles: Record<string, string> = { stats: '统计', books: '词书管理', story: '阅读', settings: '我的', library: '我的单词', frequency: '考频查询' }
+const titles: Record<string, string> = { stats: '统计', books: '词书管理', story: '阅读', settings: '我的', library: '我的单词', frequency: '考频查询', article: '英语选读', stories: '自选词短文' }
 const titleOf = (screen: Screen) => screen.name === 'section' ? settingsTitles[screen.section] : titles[screen.name]
 
 /** App shell: wires the data, study, word and AI hooks to the screens, the tab bar and the sheets.
@@ -49,7 +49,6 @@ export default function App() {
   const ai = useAIServices({ storeRef, pendingSave: data.pendingSave, commit, notify: toast.notify, changeStudy: study.changeStudy })
   aiConfigRef.current = ai.setConfig
 
-  const [readingView, setReadingView] = useState<'story' | 'daily'>('daily')
   const [shelfView, setShelfView] = useState<ShelfView | null>(null)
   const [importOpen, setImportOpen] = useState(false)
   const [detailId, setDetailId] = useState('')
@@ -93,10 +92,8 @@ export default function App() {
         }}>放弃改动并重载</button>
       </div></div>}
       {!!store.learning.notice && <div className="save-problem" role="status"><p>{store.learning.notice}</p><button className="text-button" disabled={saving} onClick={() => void commit({ ...storeRef.current, learning: { ...storeRef.current.learning, notice: '' } })}>知道了</button></div>}
-      <AnimatePresence mode="wait" initial={false} custom={nav.direction}>
-        <motion.div className="view-transition" key={screenKey(screen)} custom={nav.direction}
-          variants={{ enter: (d: number) => ({ opacity: 0, x: reduced ? 0 : d * 24 }), center: { opacity: 1, x: 0 }, exit: (d: number) => ({ opacity: 0, x: reduced ? 0 : d * -24 }) }}
-          initial="enter" animate="center" exit="exit" transition={{ duration: reduced ? 0 : nav.direction ? .16 : .1, ease: 'easeOut' }}>
+      {/* Tabs swap instantly; pushed screens slide in. Nothing ever fades the page out. */}
+        <div className="view-transition" key={screenKey(screen)} data-enter={reduced || !nav.direction ? 'none' : nav.direction > 0 ? 'push' : 'pop'}>
           <ScrollTo key={nav.seq} top={nav.scroll} />
           {screen.name !== 'today' && <header className={`topbar${secondary ? '' : ' primary-topbar'}`}>
             {secondary && <button className="icon-button" aria-label="返回" title="返回" onClick={back}><ChevronLeft size={23} /></button>}
@@ -117,7 +114,7 @@ export default function App() {
             {screen.name === 'frequency' && <ExamFrequencyView initialExam={words.catalog.find(book => book.id === store.activeBookId)?.exam || (store.activeBookId === 'ecdict-ky' ? 'ky1' : 'cet4')} />}
             {screen.name === 'library' && <LibraryPage store={store} onWord={openWord} onBooks={() => go({ name: 'books' })} />}
             {screen.name === 'stats' && <StatsPage store={store} now={data.clock} onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onBooks={() => go({ name: 'books' })} />}
-            {screen.name === 'story' && <ReadingPage store={store} now={data.clock} view={readingView} onView={view => { speech.stop(); setReadingView(view) }} saving={saving} aiConfigured={ai.config.configured} onAssist={ai.assistArticle} onAISettings={openAISettings}
+            {(screen.name === 'story' || screen.name === 'article' || screen.name === 'stories') && <ReadingPage store={store} now={data.clock} view={screen.name === 'story' ? 'hub' : screen.name === 'article' ? 'daily' : 'story'} onOpen={view => go({ name: view === 'daily' ? 'article' : 'stories' })} saving={saving} aiConfigured={ai.config.configured} onAssist={ai.assistArticle} onAISettings={openAISettings}
               onStudy={async () => { const current = storeRef.current; const mode = studyView(current); const draft = currentStudyDraft(current, mode === 'review' ? 'review' : 'learn'); if (!draft || await study.changeStudy(draft, { type: 'method', method: 'context' })) goStudy() }}
               onRead={id => {
                 const current = storeRef.current
@@ -143,8 +140,7 @@ export default function App() {
                 return `新版本 ${release.versionName} 已下载并通过校验，正在打开安装程序`
               }} />}
           </div>
-        </motion.div>
-      </AnimatePresence>
+        </div>
     </main>
     <nav className="mobile-nav" id="phone-tabs" aria-label="主导航">
       <motion.div aria-hidden className="tab-glass-selection" initial={false} animate={{ x: `${tabs.findIndex(tab => tab.id === selectedTab) * 100}%` }}

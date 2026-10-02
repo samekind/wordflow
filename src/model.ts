@@ -41,7 +41,14 @@ export type Appearance = {
   font: 'system' | 'serif' | 'gothic' | 'mono'
   weight: 'regular' | 'medium' | 'bold'
   size: 'standard' | 'large'
+  /** Per-page overrides; anything unset follows the global font / weight. */
+  study?: PageFont
+  reading?: PageFont
 }
+export type PageFont = { font?: Appearance['font']; weight?: Appearance['weight'] }
+/** Attributes that scope a page's own font / weight (see .font-scope in appearance.css). */
+export const pageFontAttrs = (page?: PageFont) => ({ 'data-font': page?.font, 'data-weight': page?.weight })
+const pageFontSchema = z.object({ font: z.enum(['system', 'serif', 'gothic', 'mono']).optional(), weight: z.enum(['regular', 'medium', 'bold']).optional() })
 export const defaultAppearance: Appearance = { theme: 'light', font: 'system', weight: 'regular', size: 'standard' }
 export type AIPreferences = { autoStory: boolean }
 export type Store = {
@@ -142,6 +149,8 @@ export function validateStore(input: unknown): Store {
       font: z.enum(['system', 'serif', 'gothic', 'mono']),
       weight: z.enum(['regular', 'medium', 'bold']),
       size: z.enum(['standard', 'large']),
+      study: pageFontSchema.optional(),
+      reading: pageFontSchema.optional(),
     }).default(defaultAppearance),
     aiPreferences: z.object({ autoStory: z.boolean() }).default({ autoStory: false }),
     readArticleIds: z.array(z.string().min(1).max(200)).max(2000).default([]),

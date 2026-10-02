@@ -4,8 +4,8 @@
 :root {
   /* Text */
   --text-primary: #1c1c1e;
-  --text-secondary: #525e70;
-  --text-muted: #6e7681;
+  --text-secondary: #404b5c;
+  --text-muted: #5d6673;
   --text-faint: #98a1ad;
   --text-on-accent: #fff;
 
@@ -53,10 +53,7 @@
   --fs-title: 18px;
   --fs-page: 22px;
   --fs-display: 28px;
-  --fw-regular: 400;
-  --fw-medium: 500;
-  --fw-semibold: 600;
-  --fw-bold: 650;
+  /* --fw-* are set in appearance.css from the chosen weight (global or per page). */
 
   /* Shape */
   --radius-xs: 8px;
