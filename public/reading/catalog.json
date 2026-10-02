@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-23T09:37:07.830Z",
+  "generatedAt": "2026-10-02T04:54:42.567Z",
   "articles": [
     {
       "id": "simple-library",
@@ -219,6 +219,140 @@
       }
     },
     {
+      "id": "simple-volcano",
+      "title": "Volcano",
+      "wikiTitle": "Volcano",
+      "lang": "simple",
+      "level": "easy",
+      "topic": "自然",
+      "paragraphs": [
+        "A volcano is a mountain that has lava (hot, liquid rock) coming out from a magma chamber under the ground, or did have in the past. Volcanoes are formed by the movement of tectonic plates.",
+        "Volcanoes can also form where there is stretching and thinning of the crust's plates, e.g., in the East African Rift. Volcanoes are not typically found where two tectonic plates slide past one another.",
+        "Volcanism away from plate boundaries is caused by mantle plumes. These so-called \"hotspots\", for example Hawaii, are thought to arise from upwelling magma from the core–mantle boundary, 3,000 km deep in the Earth.",
+        "Most volcanoes have a volcanic crater at the top. When a volcano is active, materials come out of it. The materials include lava, steam, gaseous sulfur compounds, ash and broken rock pieces.",
+        "When there is enough pressure, the volcano erupts. Some volcanic eruptions blow off the top of the volcano. Sometimes, the magma comes out quickly or slowly depending on the eruption. Some eruptions come out at a side instead of the top.",
+        "Volcanoes are found on planets other than Earth. An example is Olympus Mons on Mars."
+      ],
+      "source": "Simple English Wikipedia",
+      "sourceUrl": "https://simple.wikipedia.org/wiki/Volcano",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-10-02T04:53:29.205Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/simple-volcano.jpg",
+        "alt": "Volcano",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Mount_St._Helens_erupting_blue.jpg",
+        "credit": "U.S. government",
+        "license": {
+          "name": "Public domain",
+          "url": "https://creativecommons.org/publicdomain/mark/1.0/"
+        }
+      }
+    },
+    {
+      "id": "simple-coffee",
+      "title": "Coffee",
+      "wikiTitle": "Coffee",
+      "lang": "simple",
+      "level": "easy",
+      "topic": "生活",
+      "paragraphs": [
+        "Coffee is a caffeinated drink prepared from roasted coffee beans. It's also a plant (Coffea) and the name of the drink that is made from this plant. The coffee plant is a bush or tree that can grow up to ten meters (about 32 feet) high, but is usually cut shorter. Coffee plants originally grew in Ethiopia, and now also grow in South America, Central America, Southeast Asia and Turkey. They are an important crop for the economies of many countries.",
+        "The drink is made from the seeds of the coffee plant, called coffee beans. Coffee is usually served hot, and is a popular drink in many countries.",
+        "To make a drink from coffee beans, the beans must first be specially prepared by drying the beans and then roasting. The beans are dried a short time after they are picked. This preserves them and makes them ready to be packed or roasted. Before the beans are made into a drink, they must be roasted and ground (crushed into tiny pieces in a coffee mill). When the ground coffee is placed into boiling water, the flavour and dark brown colour of the beans goes into the water. Making coffee is called brewing coffee. There are several different ways that coffee can be brewed.",
+        "Coffee contains a number of useful nutrients, including riboflavin, niacin, magnesium, potassium, and various phenolic compounds, or antioxidants.",
+        "There are two main types of coffee plants: coffea arabica and coffea robusta. Arabica is the most common. Most of the world's coffee is made from Arabica beans Robusta is easier to grow in places where Arabica will not grow."
+      ],
+      "source": "Simple English Wikipedia",
+      "sourceUrl": "https://simple.wikipedia.org/wiki/Coffee",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-10-02T04:53:39.222Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/simple-coffee.jpg",
+        "alt": "Coffee",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Coffee_in_white_cup.jpg",
+        "credit": "<a href=\"//commons.wikimedia.org/wiki/User:DaSupremo\" title=\"User:DaSupremo\">daSupremo</a>",
+        "license": {
+          "name": "CC BY-SA 4.0",
+          "url": "https://creativecommons.org/licenses/by-sa/4.0"
+        }
+      }
+    },
+    {
+      "id": "simple-bridge",
+      "title": "Bridge",
+      "wikiTitle": "Bridge",
+      "lang": "simple",
+      "level": "easy",
+      "topic": "城市",
+      "paragraphs": [
+        "A bridge is a structure to cross an open space or gap. Bridges are mostly made for crossing rivers, valleys, or roads. Nowadays most big bridges are made to carry vehicles but people have also walked across bridges for thousands of years. Bridges called highway overpasses carry a road over another road.",
+        "Military bridges are portable, so that they may be easily moved to where they are needed. This makes them much more complex than most civilian bridges.",
+        "The first man-made bridges were probably made from cut wood or stones. Some stone bridges have lasted thousands of years. In recent centuries large bridges are made mostly of steel. They do not last as long. Many bridges are in a state of disrepair."
+      ],
+      "source": "Simple English Wikipedia",
+      "sourceUrl": "https://simple.wikipedia.org/wiki/Bridge",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-10-02T04:53:50.450Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/simple-bridge.jpg",
+        "alt": "Bridge",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ironbridge_6.jpg",
+        "credit": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/photos/95441602@N00\">Roantrum</a>",
+        "license": {
+          "name": "CC BY 2.0",
+          "url": "https://creativecommons.org/licenses/by/2.0"
+        }
+      }
+    },
+    {
+      "id": "simple-sleep",
+      "title": "Sleep",
+      "wikiTitle": "Sleep",
+      "lang": "simple",
+      "level": "easy",
+      "topic": "健康",
+      "paragraphs": [
+        "Sleep (also called napping) is a state of resting. It happens in most animals, including humans. To sleep is to be unconscious.",
+        "During deep sleep, most of the muscles that animals can control are not active, but resting to regain the energy they need for the next time they wake up. When asleep, humans cannot tell what is happening around them. Like most animals, healthy sleep in humans most often happens at night.",
+        "When something is asleep, it cannot react like it would if it was awake. However, waking up from sleep is easier than waking up from hibernation or a coma. All mammals and birds, as well as many reptiles, amphibians and fish have a sleep cycle. In humans and many other animals, regular sleep is essential for survival.",
+        "It seems that all animals with complex brains have sleep. We know that sleep is extremely important to human health and well-being. Humans and animals need sleep but we do not know exactly why. If one is tired (from not getting enough sleep), one will not be able to function properly in common activities. Being sleep-deprived leads to struggling to remember information, changing one's mood, energy, health, focus and a number of other effects. This is why people are told to not drive or use big machines when they feel tired. Sleep deprivation (not allowing a person enough sleep) can even be used as torture. Sleep deprivation causes negative effects for the person such as: irritability (annoyed mood), forgetting things or amnesia, and some pains (for example back ache or neck pain) in different areas of the body. Also, the immune system normally releases compounds known as cytokines which are used to help fight inflammation and infection. If a person does not get enough sleep, their body cannot protect them from illness. The body may not have time to complete memory recollection, muscle repair, and release hormones that regulate growth and appetite. During daytime, the Sun is out, and most people are awake. People work, go to school, or complete daily errands and activities. Some people sleep for a short time in the early afternoon for a quick rest—or because they are not able to sleep during the day. This is called a nap. A good nap should is recommended to last between 15 and 30 minutes. Naps that are 30–60 minutes can make someone feel dazed, confused, and less focused. It can also make it harder to sleep at night."
+      ],
+      "source": "Simple English Wikipedia",
+      "sourceUrl": "https://simple.wikipedia.org/wiki/Sleep",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-10-02T04:53:59.710Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/simple-sleep.jpg",
+        "alt": "Sleep",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sleeping-girl.jpg",
+        "credit": "<bdi lang=\"en\" dir=\"ltr\" title=\"archived on 10 February 2021 at the Wayback Machine\"><a rel=\"nofollow\" class=\"external text\" href=\"https://web.archive.org/web/20210210103022/https://www.flickr.com/people/64130452@N08\">rachel CALAMUSA</a> at the <span lang=\"en\" dir=\"ltr\"><a href=\"https://en.wikipedia.org/wiki/Wayback_Machine\" class=\"extiw\" title=\"en:Wayback Machine\"><span lang=\"en\" dir=\"ltr\">Wayback Machine</span></a></span></bdi>",
+        "license": {
+          "name": "CC BY-SA 2.0",
+          "url": "https://creativecommons.org/licenses/by-sa/2.0"
+        }
+      }
+    },
+    {
       "id": "en-library",
       "title": "Library",
       "wikiTitle": "Library",
@@ -433,6 +567,125 @@
         "license": {
           "name": "CC BY 2.0",
           "url": "https://creativecommons.org/licenses/by/2.0"
+        }
+      }
+    },
+    {
+      "id": "en-volcano",
+      "title": "Volcano",
+      "wikiTitle": "Volcano",
+      "lang": "en",
+      "level": "standard",
+      "topic": "自然",
+      "paragraphs": [
+        "A volcano is a vent or fissure in the crust of a planetary-mass object that allows hot lava, volcanic ash, and gases to escape from a magma chamber below the surface. On Earth, volcanoes are most often found where tectonic plates are diverging or converging, and because most of Earth's plate boundaries are underwater, most volcanoes are found underwater. For example, a mid-ocean ridge, such as the Mid-Atlantic Ridge, has volcanoes caused by divergent tectonic plates whereas the Pacific Ring of Fire has volcanoes caused by convergent tectonic plates. Volcanoes resulting from divergent tectonic activity are usually non-explosive whereas those resulting from convergent tectonic activity cause violent eruptions. Volcanoes can also form where there is stretching and thinning of the crust's plates, such as in the East African Rift, the Wells Gray-Clearwater volcanic field, and the Rio Grande rift in North America. Volcanism away from plate boundaries most likely arises from upwelling diapirs from the core–mantle boundary called mantle plumes, 3,000 kilometres (1,900 mi) deep within Earth. This results in hotspot volcanism or intraplate volcanism, in which the plume may cause thinning of the crust and result in a volcanic island chain due to the continuous movement of the tectonic plate, of which the Hawaiian hotspot is an example. Volcanoes are usually not created at transform tectonic boundaries where two tectonic plates slide past one another.",
+        "Volcanoes, based on their frequency of eruption or volcanism, are referred to as either active, dormant, or extinct. Active volcanoes have a history of volcanism and are likely to erupt again, while extinct ones are not capable of eruption at all as they have no magma source. \"Dormant\" volcanoes have not erupted in a long time – generally accepted as since the start of the Holocene, about 12,000 years ago – but may erupt again. However, dormant volcanoes are technically considered to be seismically \"active\". These categories are not entirely uniform; they may overlap for certain examples. Large eruptions can affect atmospheric temperature as ash and droplets of sulfuric acid obscure the Sun and cool Earth's troposphere. Historically, large volcanic eruptions have been followed by volcanic winters which have caused catastrophic famines."
+      ],
+      "source": "Wikipedia",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Volcano",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-10-02T04:54:09.642Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/en-volcano.jpg",
+        "alt": "Volcano",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Augustine_volcano_Jan_24_2006_-_Cyrus_Read.jpg",
+        "credit": "<p>Cyrus Read\nGeophysicist\nUSGS, Alaska Volcano Observatory\n</p>\ncread@usgs.gov",
+        "license": {
+          "name": "Public domain",
+          "url": "https://creativecommons.org/publicdomain/mark/1.0/"
+        }
+      }
+    },
+    {
+      "id": "en-coffee",
+      "title": "Coffee",
+      "wikiTitle": "Coffee",
+      "lang": "en",
+      "level": "standard",
+      "topic": "生活",
+      "paragraphs": [
+        "Coffee is a beverage brewed from roasted, ground coffee beans. Dark-colored and bitter, coffee has a stimulating effect on humans due to its caffeine content; however decaffeinated coffee is also commercially available. There are also various coffee substitutes.",
+        "Coffee production begins when the seeds from coffee cherries, the Coffea plant's fruits, are separated to produce unroasted green coffee beans. The \"beans\" are roasted and then ground into fine particles. Coffee is brewed from the ground roasted beans, which are typically steeped in hot water before being filtered out. It is usually served hot, although chilled or iced coffee is common. Coffee can be prepared and presented in a variety of ways, e.g., espresso, French press, caffè latte, or already-brewed canned coffee. Sugar, sugar substitutes, milk, and cream are often added and change the flavor.",
+        "Though coffee has become a global commodity, it has a history tied to food traditions around the Red Sea. The earliest reports of coffee drinking pertain to the plant's use among the Sufis of Yemen in southern Arabia in the middle of the 15th century. Up to the end of the 17th century, most of the world's coffee was imported from Yemen. As it gained in popularity, coffee started to be cultivated in Java in the 17th century and the Americas from the 18th century.",
+        "The two most commonly grown coffee bean types are C. arabica and C. robusta. Coffee plants are cultivated in over 70 countries, primarily in the equatorial regions of the Americas, Southeast Asia, the Indian subcontinent, and Africa. Green, unroasted coffee is traded as an agricultural commodity. The global coffee industry was worth US$495.50 billion in 2023. In 2023, Brazil was the leading grower of coffee beans, producing 31% of the world's total, followed by Vietnam. While coffee sales reach billions of dollars annually worldwide, coffee farmers disproportionately live in poverty. Critics of the coffee industry have pointed to its negative impact on the environment, including clearing of land for coffee growing and water use."
+      ],
+      "source": "Wikipedia",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Coffee",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-10-02T04:54:19.719Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/en-coffee.jpg",
+        "alt": "Coffee",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Latte_and_dark_coffee.jpg",
+        "credit": "Bex Walton",
+        "license": {
+          "name": "CC BY 2.0",
+          "url": "https://creativecommons.org/licenses/by/2.0"
+        }
+      }
+    },
+    {
+      "id": "en-bridge",
+      "title": "Bridge",
+      "wikiTitle": "Bridge",
+      "lang": "en",
+      "level": "standard",
+      "topic": "城市",
+      "paragraphs": [
+        "A bridge is a structure designed to span an obstacle, such as a river or railway, allowing vehicles, pedestrians, and other loads to pass across. Most bridges consist of a flat deck, supported by beams, arches, or cables. These structures rest on a foundation that is carefully designed to transfer the weight of the bridge to the subsoil without settling.",
+        "Bridges can be constructed in a wide variety of forms, determined by the location, intended purpose, and available construction technologies. Simple bridge structures include beam bridges made from logs, and suspension bridges made of ropes or vines. The Romans and ancient Chinese built major arch bridges of timber, stone, and brick. During the Renaissance, advances in science and engineering led to wider bridge spans and more elegant designs. Concrete was perfected in the early 19th century, and arch bridges are now built primarily of concrete or steel.",
+        "With the Industrial Revolution came mass-produced steel, which enabled the creation of more complex forms – including truss and cantilever bridges – that permitted bridges to cross wide rivers or deep valleys. The longest spans use suspension or cable-stayed designs, both of which rely on high-strength steel cables to support the deck. Over time, the maximum achievable span of bridges has steadily increased, reaching 2 kilometers (1.2 miles) in 2022. Other bridge forms include multi-span viaducts, which can cross wide valleys; trestles, a common design for carrying heavy trains; and movable bridges including drawbridges and swing bridges.",
+        "The design of a bridge must satisfy many requirements, namely connecting to a transportation network, providing adequate clearances, and safely transporting its users. A bridge must be strong enough to support its own weight as well as the weight of the traffic passing over it. It must also tolerate violent, hard-to-predict stresses imposed by the environment, including winds, floods, and earthquakes. To meet all these goals, bridge engineers typically use limit state design processes and the finite element method."
+      ],
+      "source": "Wikipedia",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Bridge",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-10-02T04:54:29.804Z",
+      "revision": ""
+    },
+    {
+      "id": "en-sleep",
+      "title": "Sleep",
+      "wikiTitle": "Sleep",
+      "lang": "en",
+      "level": "standard",
+      "topic": "健康",
+      "paragraphs": [
+        "Sleep is a state of reduced mental and physical activity in which consciousness is altered and certain sensory activity is inhibited. During sleep, there is a marked decrease in muscle activity and interactions with the surrounding environment. While sleep differs from wakefulness in terms of the ability to react to stimuli, it still involves active brain patterns, making it more reactive than a coma or disorders of consciousness.",
+        "Sleep occurs in repeating periods, during which the body alternates between two distinct modes: rapid eye movement sleep (REM) and non-REM sleep. Although REM stands for \"rapid eye movement\", this mode of sleep has many other aspects, including virtual paralysis of the body. Dreams are a succession of images, ideas, emotions, and sensations that usually occur involuntarily in the mind during certain stages of sleep.",
+        "During sleep, most of the body's systems are in an anabolic state, helping to restore the immune, nervous, skeletal, and muscular systems; these are vital processes that maintain mood, memory, and cognitive function, and play a large role in the function of the endocrine and immune systems. The internal circadian clock promotes sleep daily at night, when it is dark. However, midday naps may also be necessary: current research is studying power naps. The diverse purposes and mechanisms of sleep are the subject of substantial ongoing research. Sleep is a highly conserved behavior across animal evolution, likely going back hundreds of millions of years, and originating as a means for the brain to cleanse itself of waste products. Researchers have found that cleansing, including the removal of amyloid, may be a core purpose of sleep."
+      ],
+      "source": "Wikipedia",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Sleep",
+      "author": "Wikipedia contributors",
+      "license": {
+        "name": "CC BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "retrievedAt": "2026-10-02T04:54:37.216Z",
+      "revision": "",
+      "image": {
+        "path": "/reading/images/en-sleep.jpg",
+        "alt": "Sleep",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Domenico_Fetti_-_Sleeping_Girl_-_WGA7863.jpg",
+        "credit": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Domenico_Fetti\" class=\"extiw\" title=\"w:en:Domenico Fetti\"><span title=\"Italian painter (c.1589–1623)\">Domenico Fetti</span></a></bdi>",
+        "license": {
+          "name": "Public domain",
+          "url": "https://creativecommons.org/publicdomain/mark/1.0/"
         }
       }
     }

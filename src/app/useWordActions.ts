@@ -41,12 +41,13 @@ export function useWordActions({ storeRef, commit, notify, clearUndo, onStudyBoo
     } catch (error) { notify((error as Error).message); return false }
     finally { setBookBusy(false) }
   }
-  /** Adds rows to 我的词本 (frequency ordered). Resolves true when saved. */
-  async function importRows(rows: ImportRow[], title: string) {
+  /** Adds rows to 我的词本 (frequency ordered). Resolves true when saved; `stay` keeps the current tab. */
+  async function importRows(rows: ImportRow[], title: string, stay = false) {
     const result = importToPersonal(storeRef.current, rows, title)
     if (!await commit(await withFrequencyOrder(result.store))) return false
     clearUndo(); notify(`已加入我的词本 · 新增 ${result.added} 词，复用 ${result.skipped} 词`)
-    onStudyBook(); return true
+    if (!stay) onStudyBook()
+    return true
   }
   async function saveWord(edited: Word) {
     const current = storeRef.current, meaning = edited.meaning.trim()

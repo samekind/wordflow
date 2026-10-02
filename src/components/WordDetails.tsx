@@ -9,6 +9,9 @@ import { dictionaryUrl, isAndroidApp } from '../platform'
 import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dictionary'
 import Sheet from './Sheet'
 import MarkDots from './MarkDots'
+import { Segmented } from './Controls'
+
+type DetailTab = 'meaning' | 'memory' | 'dictionary'
 
 type Props = {
   word?: Word; lesson?: Lesson; saving: boolean; generating: boolean;
@@ -28,13 +31,14 @@ export default function WordDetails({ word, lesson, saving, generating, configur
   const [frequency, setFrequency] = useState<{ title: string; papers: number; occurrences: number }[] | null>(null)
   const [builtin, setBuiltin] = useState<BundledMnemonic | undefined>()
   const [editing, setEditing] = useState(false)
+  const [tab, setTab] = useState<DetailTab>('meaning')
   const [draftMnemonic, setDraftMnemonic] = useState('')
   const [draftExample, setDraftExample] = useState('')
   const [draftTranslation, setDraftTranslation] = useState('')
   const sequence = useRef(0)
   const audio = useRef<HTMLAudioElement | null>(null)
   useEffect(() => {
-    sequence.current++; setEntries([]); setLookupError(''); setLoading(false); setEditing(false); setFrequency(null); setBuiltin(undefined)
+    sequence.current++; setEntries([]); setLookupError(''); setLoading(false); setEditing(false); setFrequency(null); setBuiltin(undefined); setTab('meaning')
     const current = word
     if (!current) return () => { sequence.current++; audio.current?.pause(); onStop() }
     let stop = false
@@ -79,15 +83,6 @@ export default function WordDetails({ word, lesson, saving, generating, configur
         </div>
         <button className="icon-button" aria-label="编辑单词" title="编辑单词" disabled={saving} onClick={() => onEdit(word)}><Pencil size={16} /></button>
       </header>
-      <section className="detail-meaning">
-        <p className="gloss-label">核心</p>
-        <p className="word-action-meaning">{coreGloss(word.meaning)}</p>
-        {word.meaning.trim().replace(/\s+/g, '') !== coreGloss(word.meaning).replace(/\s+/g, '') && <>
-          <p className="gloss-label">标准释义</p>
-          <p className="standard-meaning">{word.meaning.trim()}</p>
-        </>}
-        {word.example && <p className="word-detail-example" lang="en">{word.example}</p>}
-      </section>
       <div className="detail-status">
         <div className="word-mark-row"><span>标记</span><div className="mark-stepper">
           <button aria-label="减少标记" title="减少标记" disabled={saving || word.markCount === 0} onClick={() => onMark(word.id, -1)}><Minus size={16} /></button>
@@ -96,14 +91,28 @@ export default function WordDetails({ word, lesson, saving, generating, configur
         </div></div>
         <IonToggle className="known-toggle" checked={word.known} disabled={saving} onIonChange={event => { void onKnown(word.id, event.detail.checked) }}>熟词</IonToggle>
       </div>
-      <p className="detail-status-note">六点标记帮助你关注难词；标为熟词后，会移出学习和复习队列。</p>
-      <section className="word-frequency" aria-label="考频">
+      <Segmented<DetailTab> label="详情分页" className="detail-tabs" value={tab} onChange={setTab}
+        options={[{ value: 'meaning', label: '释义' }, { value: 'memory', label: '助记' }, { value: 'dictionary', label: '词典' }]} />
+      {tab === 'meaning' && <>
+      <section className="detail-meaning detail-panel">
+        <p className="gloss-label">核心</p>
+        <p className="word-action-meaning">{coreGloss(word.meaning)}</p>
+        {word.meaning.trim().replace(/\s+/g, '') !== coreGloss(word.meaning).replace(/\s+/g, '') && <>
+          <p className="gloss-label">标准释义</p>
+          <p className="standard-meaning">{word.meaning.trim()}</p>
+        </>}
+        {word.example && <p className="word-detail-example" lang="en">{word.example}</p>}
+      </section>
+      {word.definition && <section className="detail-panel local-definition" aria-label="英英释义"><p className="gloss-label">英英释义</p><p lang="en">{word.definition}</p></section>}
+      <section className="word-frequency detail-panel" aria-label="考频">
         <h4>近五年考频</h4>
         {!frequency && <p className="frequency-note">正在读取</p>}
         {frequency && heard.length === 0 && <p className="frequency-note">四级、六级、考研近五年没考到</p>}
         {heard.length > 0 && <div className="frequency-chips">{heard.map(item => <span key={item.title}>{item.title} {item.papers} 套 · {item.occurrences} 次</span>)}</div>}
       </section>
-      <section className="word-mnemonic" aria-label="助记">
+      <p className="detail-status-note">六点标记帮助你关注难词；标为熟词后，会移出学习和复习队列。</p>
+      </>}
+      {tab === 'memory' && <section className="word-mnemonic detail-panel" aria-label="助记">
         <div className="word-mnemonic-heading"><h4>助记</h4>{mnemonicLabel && <span>{mnemonicLabel}</span>}</div>
         {!editing && <>
           <p className="mnemonic-line">{mnemonic?.mnemonic || '这条助记还在整理，可以先自己写一句。'}</p>
@@ -124,9 +133,8 @@ export default function WordDetails({ word, lesson, saving, generating, configur
             <button className="primary" disabled={saving} onClick={async () => { if (await onSaveMnemonic(word.id, { mnemonic: draftMnemonic, example: draftExample, translation: draftTranslation })) setEditing(false) }}>保存</button></div>
         </div>}
         {error && <p className="error-banner" role="alert">{error}</p>}
-      </section>
-      {word.definition && <details className="local-definition"><summary>英英释义</summary><p lang="en">{word.definition}</p></details>}
-      <section className="dictionary-section">
+      </section>}
+      {tab === 'dictionary' && <section className="dictionary-section detail-panel">
         <div className="dictionary-actions">
           <button disabled={loading} onClick={lookup}>{loading ? <LoaderCircle className="spin" size={16} /> : <Globe size={16} />}{loading ? '查询中' : '在线词典'}</button>
           <a href={dictionaryUrl(word.word)} target="_blank" rel="noopener noreferrer" onClick={event => { if (isAndroidApp) { event.preventDefault(); onDictionary(word.word) } }}><ExternalLink size={15} />欧路</a>
@@ -145,7 +153,7 @@ export default function WordDetails({ word, lesson, saving, generating, configur
             {safeExternalUrl(entry.license?.url) && <a href={safeExternalUrl(entry.license?.url)} target="_blank" rel="noopener noreferrer">{entry.license?.name || '许可'}</a>}
           </div>
         </div>)}
-      </section>
+      </section>}
     </div>}
   </Sheet>
 }

@@ -19,10 +19,8 @@
 .period-bar>.icon-button{width:28px;height:28px}
 .next-pass{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color: var(--text-secondary);font-variant-numeric:tabular-nums}
 .english-stack{display:flex;flex-direction:column;justify-content:center;min-width:0;gap:1px}
-.card-phonetic{font-size: var(--fs-tab);line-height:1.15;color: var(--text-muted);font-weight: var(--fw-regular);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .layout-test .english-line{padding-top:4px;padding-bottom:4px;min-height:44px}
 .layout-test .english-word{font-size: var(--fs-body-l);line-height:1.15}
-.layout-test .card-phonetic{font-size: var(--fs-caption)}
 .word-card-content{display:flex;flex:1;flex-direction:column;min-width:0;gap:5px}
 .card-meaning{font-size: var(--fs-small);line-height:1.55;color: var(--text-muted);overflow-wrap:anywhere;font-weight: var(--fw-regular);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
 .layout-preview .english-grid{grid-template-columns:minmax(0,1fr)}
@@ -66,6 +64,6 @@
 }
 @media(prefers-reduced-transparency:reduce),(prefers-contrast:more){
   .study-layout-switch,.study-topbar>.plan-trigger,.english-entry{background:var(--glass-fill);backdrop-filter:none}
-  .card-meaning,.period-bar,.card-phonetic{color:var(--text-secondary)}
+  .card-meaning,.period-bar{color:var(--text-secondary)}
   .period-row button{background:var(--glass-fill)}
 }

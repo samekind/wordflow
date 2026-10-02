@@ -31,8 +31,7 @@ type Props = {
   onDay: (book: WordBook, day: number) => Promise<void>; onOpenWord: (id: string) => void;
   onUndo: () => void; onBooks: () => void; onImport: () => void;
   onLayout: (layout: Store['studyLayout']) => void;
-  /** Study-page display preferences kept in appearance (e.g. hiding phonetics). */
-  onAppearance: (patch: Partial<Store['appearance']>) => void; onSpeak: (text: string) => void; onStop: () => void;
+  onSpeak: (text: string) => void; onStop: () => void;
   contextServices: ContextServices;
 }
 /** ⋯ menu for everything that is not the current word list. */
@@ -52,9 +51,8 @@ function StudyMenu({ children }: { children: (close: () => void) => ReactNode })
   </div>
 }
 
-export default function StudyList({ start, store, now, saving, canUndo, onMark, onKnown, onStudy, onRestart, onLearning, onDay, onOpenWord, onUndo, onBooks, onImport, onLayout, onAppearance, onSpeak, onStop, contextServices }: Props) {
+export default function StudyList({ start, store, now, saving, canUndo, onMark, onKnown, onStudy, onRestart, onLearning, onDay, onOpenWord, onUndo, onBooks, onImport, onLayout, onSpeak, onStop, contextServices }: Props) {
   const reduced = useReducedMotion()
-  const hidePhonetic = !!store.appearance.hidePhonetic
   const [daysOpen, setDaysOpen] = useState(false), [showMeanings, setShowMeanings] = useState(false), [planOpen, setPlanOpen] = useState(false)
   const [replaceKind, setReplaceKind] = useState<StudyKind | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -80,7 +78,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
   const remainingPage = nextPage >= 0 ? nextPage : draft ? groups.findIndex((_, index) => !draft.completed.includes(index)) : -1
   const rows = ids.map(id => {
     const word = byId.get(id), old = draft?.words.find(item => item.id === id)
-    return { id, word: word?.word || old?.word || '已删除', meaning: word?.meaning || old?.meaning || '', phonetic: word?.phonetic || '', markCount: word?.markCount || 0,
+    return { id, word: word?.word || old?.word || '已删除', meaning: word?.meaning || old?.meaning || '', markCount: word?.markCount || 0,
       missing: !word, status: draft && !completed ? studyWordStatus(store, draft, id, moment) : '', forgotten: mode === 'practice' ? !!practice?.forgottenIds.includes(id) : !!draft?.forgotten[id] }
   })
   const eligible = rows.filter(row => !row.status && !row.missing), forgotten = eligible.filter(row => row.forgotten).length
@@ -170,7 +168,6 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
           </div>}
           <StudyMenu>{close => <>
             <button onClick={() => { close(); setPlanOpen(true) }}><Clock3 size={16} />复习计划</button>
-            <button aria-pressed={hidePhonetic} onClick={() => { close(); onAppearance({ hidePhonetic: !hidePhonetic }) }}>{hidePhonetic ? <Eye size={16} /> : <EyeOff size={16} />}{hidePhonetic ? '显示音标' : '隐藏音标'}</button>
             {!!rows.length && <button disabled={saving} onClick={() => { close(); onSpeak(rows.filter(row => !row.missing).map(row => row.word).join('. ')) }}><Volume2 size={16} />朗读本组</button>}
             {!!rows.length && mode !== 'practice' && <button aria-pressed={contextMode} disabled={saving || contextServices.busy} onClick={() => { close(); chooseStage('context') }}><BookOpen size={16} />读短文</button>}
             {book && mode !== 'review' && <button disabled={saving} onClick={() => { close(); switchMode(mode === 'practice' ? 'learn' : 'practice') }}><RotateCcw size={16} />{mode === 'practice' ? '返回当天新词' : '回看当天 · 不改变复习计划'}</button>}
@@ -209,7 +206,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
                 onPointerDown={event => { if (event.button !== 0) return; cancelPress(); press.current = { x: event.clientX, y: event.clientY, moved: false, held: false }; timer.current = setTimeout(() => { press.current.held = true; onOpenWord(row.id) }, 480) }}
                 onPointerMove={event => { if (Math.hypot(event.clientX - press.current.x, event.clientY - press.current.y) > 8) { press.current.moved = true; cancelPress() } }} onPointerUp={cancelPress} onPointerLeave={cancelPress} onPointerCancel={cancelPress}
                 onContextMenu={event => { event.preventDefault(); cancelPress(); press.current.held = true; onOpenWord(row.id) }} onClick={event => { if (event.detail === 0 || (!press.current.held && !press.current.moved)) { if (completed && !preview) onOpenWord(row.id); else void tapWord(row) } }}>
-                <span className="word-index"><span className="word-number">{number(row.id)}</span><MarkDots count={row.markCount} /></span><span className="word-card-content"><span className="english-stack"><span className={`english-word${row.word.length > 14 ? ' long-word' : ''}`} lang="en">{row.word}</span>{row.phonetic && !hidePhonetic && <span className="card-phonetic" lang="en">{row.phonetic}</span>}</span>{preview && <span className="card-meaning">{coreGloss(row.meaning)}</span>}{!!row.status && <span className="study-word-state">{row.status}</span>}{!preview && row.forgotten && <span className="study-word-state">本轮不熟</span>}</span>
+                <span className="word-index"><span className="word-number">{number(row.id)}</span><MarkDots count={row.markCount} /></span><span className="word-card-content"><span className="english-stack"><span className={`english-word${row.word.length > 14 ? ' long-word' : ''}`} lang="en">{row.word}</span></span>{preview && <span className="card-meaning">{coreGloss(row.meaning)}</span>}{!!row.status && <span className="study-word-state">{row.status}</span>}{!preview && row.forgotten && <span className="study-word-state">本轮不熟</span>}</span>
               </button>
             </SwipeRow>
           </li>)}

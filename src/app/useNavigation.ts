@@ -7,7 +7,7 @@ export type Screen =
   | { name: 'books' }
   | { name: 'library' }
   | { name: 'frequency' }
-  | { name: 'article' }
+  | { name: 'article'; id?: string }
   | { name: 'stories' }
   | { name: 'section'; section: Exclude<SettingsSection, 'home'> }
 type Entry = { screen: Screen; scroll: number }

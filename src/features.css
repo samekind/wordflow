@@ -206,6 +206,13 @@ progress::-moz-progress-bar{background:#7aabed}
 .word-mnemonic .text-button{margin-top:8px;min-height:32px;padding:0}
 .mnemonic-editor{display:grid;gap:10px;margin-top:12px}
 .word-detail .local-definition{margin:12px 2px 0}
+.word-detail .detail-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;margin:12px 0 0}
+.word-detail .detail-tabs button{justify-content:center;min-height:38px}
+.word-detail .detail-panel{margin:12px 0 0}
+.word-detail .local-definition.detail-panel,.word-detail .word-frequency.detail-panel{padding:14px 16px;border-radius: var(--radius-md);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.word-detail .local-definition p:last-child{margin:0}
+.word-detail .detail-sound>p{font-size: var(--fs-body);color: var(--text-secondary)}
+.word-detail .detail-status-note{margin:12px 2px 0}
 .word-detail .dictionary-section{border:0;margin:14px 0 0;padding:0}
 .word-detail .dictionary-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .word-detail .dictionary-actions>button,.word-detail .dictionary-actions>a{display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;border:1px solid var(--glass-edge);border-radius: var(--radius-md);background:var(--glass-fill);box-shadow:var(--glass-card-shadow);color:var(--text-secondary);font-size: var(--fs-meta);font-weight: var(--fw-semibold)}

@@ -44,8 +44,6 @@ export type Appearance = {
   /** Per-page overrides; anything unset follows the global font / weight. */
   study?: PageFont
   reading?: PageFont
-  /** Hide phonetics on the study cards. */
-  hidePhonetic?: boolean
 }
 export type PageFont = { font?: Appearance['font']; weight?: Appearance['weight'] }
 /** Attributes that scope a page's own font / weight (see .font-scope in appearance.css). */
@@ -153,7 +151,6 @@ export function validateStore(input: unknown): Store {
       size: z.enum(['standard', 'large']),
       study: pageFontSchema.optional(),
       reading: pageFontSchema.optional(),
-      hidePhonetic: z.boolean().optional(),
     }).default(defaultAppearance),
     aiPreferences: z.object({ autoStory: z.boolean() }).default({ autoStory: false }),
     readArticleIds: z.array(z.string().min(1).max(200)).max(2000).default([]),

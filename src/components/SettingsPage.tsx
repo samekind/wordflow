@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { BookOpen, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, RefreshCw, Settings2, Sparkles, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
 import type { Appearance, PageFont } from '../model'
-import { appRelease, loadCloudAccount } from '../cloud'
+import { installedRelease, loadCloudAccount } from '../cloud'
+import UpdatePage from './UpdatePage'
 import { pageFontAttrs, type Store } from '../model'
 import { prepareAvatar } from '../profile'
 import DailyWordCount, { validDailyCount } from './DailyWordCount'
 import { Segmented, SelectButton, SettingRow } from './Controls'
 
 export type AIConfig = { provider: string; model: string; configured: boolean }
-export type SettingsSection = 'home' | 'profile' | 'learning' | 'appearance' | 'reading' | 'ai' | 'data'
+export type SettingsSection = 'home' | 'profile' | 'learning' | 'appearance' | 'reading' | 'ai' | 'data' | 'update'
 export const settingsTitles: Record<SettingsSection, string> = {
-  home: '我的', profile: '账号与资料', learning: '学习设置', appearance: '外观', reading: '发音与阅读', ai: 'AI 服务', data: '数据与备份',
+  home: '我的', profile: '账号与资料', learning: '学习设置', appearance: '外观', reading: '发音与阅读', ai: 'AI 服务', data: '数据与备份', update: '检查更新',
 }
 const defaults: Record<string, string> = { deepseek: 'deepseek-flash', openai: 'gpt-4.1-mini', qwen: 'qwen-plus' }
 type Props = {
@@ -22,9 +23,8 @@ type Props = {
   onBooks: () => void; onLibrary: () => void;
   onCloudCreate: () => Promise<string>; onCloudRecover: (code: string) => Promise<void>;
   onCloudUpload: (force: boolean) => Promise<string>; onCloudRestore: () => Promise<void>;
-  onCheckUpdate: () => Promise<string>;
 }
-export default function SettingsPage({ store, ai, saving, aiBusy, error, section, onSection, onSaveAI, onRemoveAI, onPreferences, onBackup, onRestore, onSpeak, onLicenses, onBooks, onLibrary, onCloudCreate, onCloudRecover, onCloudUpload, onCloudRestore, onCheckUpdate }: Props) {
+export default function SettingsPage({ store, ai, saving, aiBusy, error, section, onSection, onSaveAI, onRemoveAI, onPreferences, onBackup, onRestore, onSpeak, onLicenses, onBooks, onLibrary, onCloudCreate, onCloudRecover, onCloudUpload, onCloudRestore }: Props) {
   const [provider, setProvider] = useState(ai.provider)
   const [model, setModel] = useState(ai.model)
   const [customModel, setCustomModel] = useState(ai.model !== defaults[ai.provider])
@@ -40,13 +40,13 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
   const [recoveryCode, setRecoveryCode] = useState('')
   const [recoverInput, setRecoverInput] = useState('')
   const [cloudConflict, setCloudConflict] = useState(false)
-  const [updateBusy, setUpdateBusy] = useState(false)
-  const [updateNote, setUpdateNote] = useState('')
-  const appVersion = appRelease.versionName
-  async function checkUpdate() {
-    setUpdateBusy(true); setUpdateNote('')
-    try { setUpdateNote(await onCheckUpdate()) } catch (reason) { setUpdateNote((reason as Error).message) } finally { setUpdateBusy(false) }
-  }
+  const [appVersion, setAppVersion] = useState('')
+  useEffect(() => {
+    if (section !== 'home') return
+    let active = true
+    installedRelease().then(release => { if (active) setAppVersion(release.versionName) }).catch(() => {})
+    return () => { active = false }
+  }, [section])
   const avatarInput = useRef<HTMLInputElement>(null)
   const avatarRequest = useRef(0)
   const book = store.books.find(book => book.id === store.activeBookId)
@@ -86,14 +86,15 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
       </div>
       <h2 className="settings-group-title">关于</h2>
       <div className="settings-group">
-      <button disabled={updateBusy} onClick={() => void checkUpdate()} aria-label="检查更新"><RefreshCw size={20} className={updateBusy ? 'spin' : ''} /><span>检查更新<small>{updateNote || `当前版本 ${appVersion}`}</small></span><ChevronRight size={16} /></button>
+      <button onClick={() => onSection('update')} aria-label="检查更新"><RefreshCw size={20} /><span>检查更新<small>{appVersion ? `当前版本 ${appVersion}` : '查看当前版本和新版本'}</small></span><ChevronRight size={16} /></button>
       <button onClick={onLicenses} aria-label="来源与开源许可"><FileText size={20} /><span>来源与开源许可</span><ChevronRight size={16} /></button>
       </div>
     </div>
   </div>
 
   return <div className="settings-layout">
-    <p className="page-purpose">{({ profile: '设置昵称、头像和学习目标，管理云端账号。', learning: '设置新词书每天学多少词，以及后续复习的方法。', appearance: '调整整个应用的外观，选择后自动保存。', reading: '设置单词和文章的朗读，以及阅读时的显示方式。', ai: '用于生成语境短文和单词助记，普通背词无需配置。', data: '学习记录先保存在本机。可导出文件，或手动备份到云端。', home: '' })[section]}</p>
+    <p className="page-purpose">{({ profile: '设置昵称、头像和学习目标，管理云端账号。', learning: '设置新词书每天学多少词，以及后续复习的方法。', appearance: '调整整个应用的外观，选择后自动保存。', reading: '设置单词和文章的朗读，以及阅读时的显示方式。', ai: '用于生成语境短文和单词助记，普通背词无需配置。', data: '学习记录先保存在本机。可导出文件，或手动备份到云端。', update: '先确认当前版本，再查看新版本，确认后才会下载安装。', home: '' })[section]}</p>
+    {section === 'update' && <UpdatePage />}
     {section === 'profile' && <form className="profile-form" onSubmit={async event => {
       event.preventDefault()
       if (avatarBusy || saving || !profile.nickname.trim()) return
@@ -256,10 +257,6 @@ function AppearanceSettings({ appearance, saving, onChange }: { appearance: Appe
     <section className="settings-section font-scope" aria-label="学习页" {...pageFontAttrs(appearance.study)}>
       <h2>学习页</h2>
       <PageFontRows name="学习页" value={appearance.study} saving={saving} onChange={study => onChange({ study })} />
-      <SettingRow label="音标">
-        <Segmented label="学习页音标" value={appearance.hidePhonetic ? 'hide' : 'show'} disabled={saving}
-          options={[{ value: 'show', label: '显示' }, { value: 'hide', label: '隐藏' }]} onChange={value => onChange({ hidePhonetic: value === 'hide' || undefined })} />
-      </SettingRow>
       <p className="appearance-sample"><span lang="en">resilient</span><span>有韧性的，能迅速恢复的</span></p>
     </section>
     <section className="settings-section font-scope" aria-label="阅读页" {...pageFontAttrs(appearance.reading)}>

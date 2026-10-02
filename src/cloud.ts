@@ -1,8 +1,20 @@
 import { z } from 'zod'
+import { App as AndroidApp } from '@capacitor/app'
 import type { Store } from './model'
+import { isAndroidApp } from './platform'
 
 export const cloudBase = 'https://wordflow.43.134.190.112.sslip.io'
-export const appRelease = { versionCode: 18, versionName: '0.2.7' }
+/** Build-time fallback for the browser preview. On Android the installed version comes from the
+ * package itself (see installedRelease), so it can never drift from the APK actually running. */
+export const appRelease = { versionCode: 19, versionName: '0.2.8' }
+export type InstalledRelease = { versionCode: number; versionName: string; source: 'package' | 'preview' }
+export async function installedRelease(): Promise<InstalledRelease> {
+  if (!isAndroidApp) return { ...appRelease, source: 'preview' }
+  const info = await AndroidApp.getInfo()
+  const versionCode = Number(info.build)
+  if (!info.version || !Number.isInteger(versionCode) || versionCode <= 0) throw new Error('无法读取当前安装的版本，请稍后重试')
+  return { versionCode, versionName: info.version, source: 'package' }
+}
 const accountKey = 'wordflow-cloud-account'
 const revisionKey = 'wordflow-cloud-revision'
 

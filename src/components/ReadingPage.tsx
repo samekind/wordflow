@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Eye, EyeOff, Globe, LoaderCircle, RefreshCw, Square, Volume2 } from 'lucide-react'
+import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Eye, EyeOff, Globe, LoaderCircle, Plus, RefreshCw, Square, Volume2 } from 'lucide-react'
 import { DailyIcon, EssayIcon } from '../icons'
 import { dayKey, normalize, pageFontAttrs, wordsForDay, type ImportRow, type Store } from '../model'
 import { cachedArticle, dailyReadingIndex, englishWordCount, loadReadingCatalog, readingLevel, refreshReadingArticle, type ReadingArticle } from '../reading'
@@ -9,13 +9,18 @@ import { lookupLocalWord } from '../wordbooks'
 import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dictionary'
 import { coreGloss } from '../gloss'
 import ChoiceSheet from './ChoiceSheet'
+import { SelectButton } from './Controls'
 import Sheet from './Sheet'
 
 type Props = {
   store: Store; now: number;
   /** hub = the 阅读 tab (two entry cards); daily / story = the pushed reader screens. */
-  view: 'hub' | 'story' | 'daily'; onOpen: (view: 'story' | 'daily') => void;
+  view: 'hub' | 'story' | 'daily'; onOpen: (view: 'story' | 'daily', articleId?: string) => void;
+  /** Article chosen from the hub list; the reader starts on it instead of today's pick. */
+  articleId?: string;
   saving: boolean; onRead: (id: string) => Promise<boolean>; onWord: (id: string) => void;
+  /** Adds a looked-up word to 我的词本 without leaving the article. */
+  onAddWord: (row: ImportRow) => Promise<boolean>;
   onSpeak: (text: string) => void; onStop: () => void; children: ReactNode;
   aiConfigured: boolean; onAssist: (data: { mode: ArticleAssistMode; title: string; text: string }) => Promise<ArticleAssistResult>;
   onAISettings: () => void;
@@ -33,15 +38,21 @@ export default function ReadingPage(props: Props) {
 /** 阅读 tab: one card per way to read, each opening its own screen. */
 function ReadingHub({ store, now, onOpen }: Props) {
   const [catalog, setCatalog] = useState<ReadingArticle[]>([])
+  const [topic, setTopic] = useState('all')
   useEffect(() => { let active = true; loadReadingCatalog().then(articles => { if (active) setCatalog(articles) }).catch(() => {}); return () => { active = false } }, [])
   const level = readingLevel(store)
   const choices = catalog.filter(article => article.level === level)
   const today = choices.length ? choices[dailyReadingIndex(choices.length, new Date(now))] : undefined
   const article = today ? cachedArticle(today) : undefined
   const words = article ? englishWordCount(article.paragraphs.join(' ')) : 0
-  const read = !!article && store.readArticleIds.includes(article.id)
+  const readIds = new Set(store.readArticleIds)
+  const read = !!article && readIds.has(article.id)
   const book = store.books.find(item => item.id === store.activeBookId)
   const dayWords = book ? wordsForDay(store, book).length : 0
+  const topics = [...new Set(choices.map(item => item.topic))]
+  const shown = choices.filter(item => topic === 'all' || item.topic === topic)
+  const finished = choices.filter(item => readIds.has(item.id)).length
+  const nextUnread = choices.find(item => !readIds.has(item.id) && item.id !== today?.id) || choices.find(item => !readIds.has(item.id))
   return <div className="reading-hub">
     <button className="reading-entry reading-entry-daily" aria-label="英语选读" onClick={() => onOpen('daily')}>
       {article?.image ? <img src={article.image.path} alt="" /> : <span className="reading-entry-icon"><DailyIcon size={26} /></span>}
@@ -61,7 +72,23 @@ function ReadingHub({ store, now, onOpen }: Props) {
       </span>
       <ChevronRight size={18} className="reading-entry-chevron" />
     </button>
-    <p className="reading-hub-note">已读文章 {new Set(store.readArticleIds).size} 篇 · 阅读设置在“我的 → 发音与阅读”</p>
+    {choices.length > 0 && <section className="reading-library" aria-label="全部选读">
+      <div className="reading-library-head">
+        <div><h2>全部选读</h2><span>{level === 'easy' ? '基础' : '进阶'} · 已读 {finished} / {choices.length} 篇</span></div>
+        <SelectButton label="选读主题" value={topic} options={[{ value: 'all', label: '全部主题' }, ...topics.map(item => ({ value: item, label: item }))]} onChange={setTopic} />
+      </div>
+      <div className="reading-progress" role="progressbar" aria-label="选读进度" aria-valuemin={0} aria-valuemax={choices.length} aria-valuenow={finished}><i style={{ width: `${Math.round(finished / choices.length * 100)}%` }} /></div>
+      {nextUnread && <button className="text-button reading-next" onClick={() => onOpen('daily', nextUnread.id)}>读下一篇没读过的：{nextUnread.title}<ChevronRight size={15} /></button>}
+      <ul className="reading-list">{shown.map(item => {
+        const count = englishWordCount(item.paragraphs.join(' '))
+        return <li key={item.id}><button className="reading-list-item" aria-label={`${item.title}，${item.topic}`} onClick={() => onOpen('daily', item.id)}>
+          {item.image ? <img src={item.image.path} alt="" loading="lazy" /> : <span className="reading-list-icon"><DailyIcon size={20} /></span>}
+          <span className="reading-list-body"><strong lang="en">{item.title}</strong><small>{item.topic} · {count} 词 · 约 {Math.max(1, Math.ceil(count / 120))} 分钟</small></span>
+          {readIds.has(item.id) ? <CheckCheck size={16} className="reading-list-read" aria-label="已读" /> : <ChevronRight size={16} />}
+        </button></li>
+      })}</ul>
+    </section>}
+    <p className="reading-hub-note">已读文章 {readIds.size} 篇 · 阅读设置在“我的 → 发音与阅读”</p>
   </div>
 }
 function plainCredit(value: string) {
@@ -81,7 +108,7 @@ function ReadableParagraph({ text, targets, onWord }: { text: string; targets: S
   parts.push(text.slice(previous))
   return <p lang="en">{parts}</p>
 }
-function DailyEnglish({ store, now, saving, onRead, onWord, onSpeak, onStop }: Props) {
+function DailyEnglish({ store, now, saving, articleId, onRead, onWord, onAddWord, onSpeak, onStop }: Props) {
   const [catalog, setCatalog] = useState<ReadingArticle[]>([])
   const [loadError, setLoadError] = useState('')
   const [reload, setReload] = useState(0)
@@ -93,6 +120,7 @@ function DailyEnglish({ store, now, saving, onRead, onWord, onSpeak, onStop }: P
   const [selectedWord, setSelectedWord] = useState('')
   const [translated, setTranslated] = useState(false)
   const refreshRequest = useRef(0)
+  const wanted = useRef(articleId)
   const level = readingLevel(store)
   const date = dayKey(new Date(now))
   useEffect(() => {
@@ -106,6 +134,12 @@ function DailyEnglish({ store, now, saving, onRead, onWord, onSpeak, onStop }: P
   const todayIndex = dailyReadingIndex(choices.length, new Date(now))
   const index = choices.length ? ((todayIndex + offset) % choices.length + choices.length) % choices.length : 0
   const base = choices[index]
+  useEffect(() => {
+    if (!wanted.current || !choices.length) return
+    const target = choices.findIndex(item => item.id === wanted.current)
+    wanted.current = undefined
+    if (target >= 0) setOffset(target - todayIndex)
+  }, [choices.length])
   const fallback = useMemo(() => base ? cachedArticle(base) : null, [base])
   const article = updated?.id === base?.id ? updated : fallback
   useEffect(() => { refreshRequest.current++; setRefreshing(false); setRefreshError(''); setUpdated(null); setTranslated(false) }, [base?.id])
@@ -113,6 +147,16 @@ function DailyEnglish({ store, now, saving, onRead, onWord, onSpeak, onStop }: P
   const knownSet = useMemo(() => new Set(knownWords.keys()), [knownWords])
   const book = store.books.find(book => book.id === store.activeBookId)
   const targets = new Set((book ? wordsForDay(store, book) : []).map(word => normalize(word.word)))
+  const inBook = useMemo(() => {
+    if (!article || !book) return []
+    const members = new Set(book.wordIds), byId = new Map(store.words.map(word => [word.id, word]))
+    const found = new Map<string, string>()
+    for (const match of article.paragraphs.join(' ').matchAll(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g)) {
+      const id = knownWords.get(normalize(match[0])), word = id ? byId.get(id) : undefined
+      if (id && word && !word.known && members.has(id) && !found.has(id)) found.set(id, word.word)
+    }
+    return [...found].map(([id, text]) => ({ id, text }))
+  }, [article, book, knownWords, store.words])
   function selectWord(word: string) {
     onStop()
     const id = knownWords.get(normalize(word))
@@ -159,6 +203,11 @@ function DailyEnglish({ store, now, saving, onRead, onWord, onSpeak, onStop }: P
         {translated && translations && <p className="article-translation">{translations[i]}</p>}
       </div>)}</div>
     </article>
+    {book && <section className="article-vocab" aria-label="文中的词书单词">
+      <h3>文中出现的词书单词 <span>{inBook.length}</span></h3>
+      {inBook.length ? <div className="vocab-chips">{inBook.slice(0, 24).map(item => <button key={item.id} className="vocab-chip" lang="en" onClick={() => onWord(item.id)}>{item.text}</button>)}{inBook.length > 24 && <span className="vocab-more">等 {inBook.length} 个</span>}</div>
+        : <p className="field-note">这篇文章里没有出现《{book.title}》里还在学的单词。</p>}
+    </section>}
     <div className="article-completion"><button className={read ? 'secondary' : 'primary'} disabled={saving || read} onClick={() => void onRead(article.id)}>{read ? <CheckCheck size={17} /> : <Check size={17} />}{read ? '已读' : '完成阅读'}</button>{read && <button className="secondary" onClick={() => move(offset + 1)}>读下一篇<ChevronRight size={16} /></button>}
       <a className="text-button" href={article.sourceUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={15} />原文</a>
     </div>
@@ -171,14 +220,15 @@ function DailyEnglish({ store, now, saving, onRead, onWord, onSpeak, onStop }: P
     <ChoiceSheet title="英语选读" open={pickerOpen} onClose={() => setPickerOpen(false)} value={article.id}
       options={choices.map((choice, i) => ({ value: choice.id, label: `${choice.title}${i === todayIndex ? ' · 今日' : ''}`, count: englishWordCount(choice.paragraphs.join(' ')) }))}
       onSelect={id => move(choices.findIndex(choice => choice.id === id) - todayIndex)} />
-    <ReadingWord word={selectedWord} onClose={() => { onStop(); setSelectedWord('') }} onSpeak={onSpeak} onStop={onStop} />
+    <ReadingWord word={selectedWord} onClose={() => { onStop(); setSelectedWord('') }} onSpeak={onSpeak} onStop={onStop} onAdd={onAddWord} />
   </div>
 }
-function ReadingWord({ word, onClose, onSpeak, onStop }: { word: string; onClose: () => void; onSpeak: (text: string) => void; onStop: () => void }) {
+function ReadingWord({ word, onClose, onSpeak, onStop, onAdd }: { word: string; onClose: () => void; onSpeak: (text: string) => void; onStop: () => void; onAdd: (row: ImportRow) => Promise<boolean> }) {
   const [local, setLocal] = useState<ImportRow | undefined>()
   const [entries, setEntries] = useState<DictionaryEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [onlineBusy, setOnlineBusy] = useState(false)
+  const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
   const sequence = useRef(0)
   useEffect(() => {
@@ -204,6 +254,11 @@ function ReadingWord({ word, onClose, onSpeak, onStop }: { word: string; onClose
       {loading ? <LoaderCircle size={20} className="spin" /> : local ? <>
         {local.word.toLowerCase() !== word && <p className="source-note">原形：{local.word}</p>}
         <p className="muted">{local.phonetic}</p><p className="word-action-meaning">{coreGloss(local.meaning)}</p><p className="source-note">ECDICT 本地释义</p>
+        <button className="secondary" disabled={adding} onClick={async () => {
+          setAdding(true)
+          try { if (await onAdd({ word: local.word, meaning: local.meaning, phonetic: local.phonetic, example: '', definition: local.definition, exchange: local.exchange, source: local.source })) onClose() }
+          finally { setAdding(false) }
+        }}><Plus size={16} />加入我的词本</button>
       </> : <p className="field-note">本地词库未收录</p>}
       <button className="text-button" disabled={loading || onlineBusy} onClick={online}>{onlineBusy ? <LoaderCircle size={16} className="spin" /> : <Globe size={16} />}在线词典</button>
       {error && <p className="error-banner" role="alert">{error}</p>}

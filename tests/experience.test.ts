@@ -75,8 +75,8 @@ test('daily selection is stable by local day and the reference level follows the
 test('bundled reading sources have both levels, safe attribution and local licensed images', () => {
   const data = JSON.parse(readFileSync('public/reading/catalog.json', 'utf8'))
   const articles = data.articles.map((article: unknown) => readingArticleSchema.parse(article))
-  assert.equal(new Set(articles.map((article: { id: string }) => article.id)).size, 14)
-  assert.equal(articles.filter((article: { level: string }) => article.level === 'easy').length, 7)
+  assert.equal(new Set(articles.map((article: { id: string }) => article.id)).size, 22)
+  assert.equal(articles.filter((article: { level: string }) => article.level === 'easy').length, 11)
   for (const article of articles) {
     assert.ok(englishWordCount(article.paragraphs.join(' ')) >= 12)
     assert.equal(article.license.name, 'CC BY-SA 4.0')

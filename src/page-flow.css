@@ -51,3 +51,15 @@
 .library-toolbar .sort-field{margin-right:auto}
 .empty>p{font-size: var(--fs-meta);line-height:1.8;color:var(--text-secondary);max-width:320px}
 @media(max-width:360px){.topbar{padding-left:16px;padding-right:16px}.study-stage-switch button{padding:5px;font-size: var(--fs-caption)}.study-stage-switch svg{width:13px}.study-instruction{font-size: var(--fs-caption)}.shelf-links .text-button{font-size: var(--fs-caption)}.data-block .button-row>*{min-width:0}}
+
+.update-page{display:grid;gap:12px}
+.update-card{display:grid;gap:8px;padding:16px;border-radius: var(--radius-md);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.update-card>.primary,.update-card>.secondary{width:100%;margin-top:4px}
+.update-step{margin:0;font-size: var(--fs-caption);color: var(--text-muted)}
+.update-version{font-size: var(--fs-display);line-height:1.15;font-weight: var(--fw-bold);color:var(--text-primary);letter-spacing:-.02em}
+.update-build{display:inline-flex;align-items:center;gap:6px;font-size: var(--fs-meta);color: var(--text-secondary)}
+.update-result{display:flex;align-items:center;gap:8px;margin:0;font-size: var(--fs-body);color:var(--text-primary)}
+.update-result svg{color:var(--accent)}
+.update-change{display:flex;align-items:center;gap:8px;margin:0;font-size: var(--fs-body-l);color: var(--text-secondary)}
+.update-change strong{font-size: var(--fs-display);color:var(--accent);line-height:1.15}
+.update-notes{margin:4px 0 0;font-size: var(--fs-meta);line-height:1.75;color: var(--text-secondary);white-space:pre-line;overflow-wrap:anywhere}

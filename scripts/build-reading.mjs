@@ -11,6 +11,7 @@ const agent = 'WordflowReading/0.1 (personal reading prototype; curated offline 
 const topics = [
   ['Library', '文化'], ['Bicycle', '城市'], ['Rainbow', '自然'], ['Moon', '探索'],
   ['Tea', '生活'], ['Photography', '艺术'], ['National park', '自然'],
+  ['Volcano', '自然'], ['Coffee', '生活'], ['Bridge', '城市'], ['Sleep', '健康'],
 ]
 const license = { name: 'CC BY-SA 4.0', url: 'https://creativecommons.org/licenses/by-sa/4.0/' }
 const retrieved = new Map()

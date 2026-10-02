@@ -18,7 +18,7 @@ import { useConfirm } from './components/Controls'
 import { EditWordSheet, ImportSheet, LicensesSheet, RestorePicker, RestoreSheet } from './components/AppSheets'
 import LibraryPage from './pages/LibraryPage'
 import StatsPage from './pages/StatsPage'
-import { appRelease, createCloudAccount, downloadCloudState, fetchCloudRelease, recoverCloudAccount, uploadCloudState, CloudConflict } from './cloud'
+import { createCloudAccount, downloadCloudState, recoverCloudAccount, uploadCloudState, CloudConflict } from './cloud'
 import { isTab, screenKey, useNavigation, type Screen, type TabId } from './app/useNavigation'
 import { useStoreSync } from './app/useStoreSync'
 import { useToast } from './app/useToast'
@@ -106,7 +106,6 @@ export default function App() {
               onMark={study.changeMarks} onKnown={id => study.changeKnown(id, true)} onStudy={study.changeStudy} onRestart={study.restartStudy} onDay={study.selectDay} onOpenWord={openWord} onUndo={study.undoLastAction}
               onLearning={learning => commit({ ...storeRef.current, learning })}
               onLayout={studyLayout => { void commit({ ...storeRef.current, studyLayout }) }}
-              onAppearance={patch => { void commit({ ...storeRef.current, appearance: { ...storeRef.current.appearance, ...patch } }) }}
               contextServices={{ busy: ai.busy || saving, generatingKey: ai.contextKey, configured: ai.config.configured, live: ai.live, error: ai.error, onGenerate: ai.generateContextStory, onSettings: openAISettings }} onStop={speech.stop}
               onBooks={() => go({ name: 'books' })} onImport={() => setImportOpen(true)} onSpeak={speech.speak} />}
             {screen.name === 'books' && <BookShelf store={store} catalog={words.catalog} busy={words.bookBusy || saving} error={words.catalogError} onRetry={words.refreshCatalog}
@@ -115,7 +114,7 @@ export default function App() {
             {screen.name === 'frequency' && <ExamFrequencyView initialExam={words.catalog.find(book => book.id === store.activeBookId)?.exam || (store.activeBookId === 'ecdict-ky' ? 'ky1' : 'cet4')} />}
             {screen.name === 'library' && <LibraryPage store={store} onWord={openWord} onBooks={() => go({ name: 'books' })} />}
             {screen.name === 'stats' && <StatsPage store={store} now={data.clock} onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onBooks={() => go({ name: 'books' })} />}
-            {(screen.name === 'story' || screen.name === 'article' || screen.name === 'stories') && <ReadingPage store={store} now={data.clock} view={screen.name === 'story' ? 'hub' : screen.name === 'article' ? 'daily' : 'story'} onOpen={view => go({ name: view === 'daily' ? 'article' : 'stories' })} saving={saving} aiConfigured={ai.config.configured} onAssist={ai.assistArticle} onAISettings={openAISettings}
+            {(screen.name === 'story' || screen.name === 'article' || screen.name === 'stories') && <ReadingPage store={store} now={data.clock} view={screen.name === 'story' ? 'hub' : screen.name === 'article' ? 'daily' : 'story'} onOpen={(view, id) => go(view === 'daily' ? { name: 'article', id } : { name: 'stories' })} articleId={screen.name === 'article' ? screen.id : undefined} onAddWord={row => words.importRows([row], '阅读收藏', true)} saving={saving} aiConfigured={ai.config.configured} onAssist={ai.assistArticle} onAISettings={openAISettings}
               onStudy={async () => { const current = storeRef.current; const mode = studyView(current); const draft = currentStudyDraft(current, mode === 'review' ? 'review' : 'learn'); if (!draft || await study.changeStudy(draft, { type: 'method', method: 'context' })) goStudy() }}
               onRead={id => {
                 const current = storeRef.current
@@ -132,14 +131,7 @@ export default function App() {
               onCloudCreate={async () => (await createCloudAccount()).recoveryCode}
               onCloudRecover={async code => { await recoverCloudAccount(code) }}
               onCloudUpload={async force => { try { const saved = await uploadCloudState(storeRef.current, force); return `已上传 · ${saved.savedAt}` } catch (error) { if (error instanceof CloudConflict) throw new Error('云端有更新的记录'); throw error } }}
-              onCloudRestore={async () => { setRestoreCandidate(validateStore(await downloadCloudState())) }}
-              onCheckUpdate={async () => {
-                const release = await fetchCloudRelease()
-                if (release.versionCode <= appRelease.versionCode) return `已是最新版本 ${appRelease.versionName}`
-                if (!isAndroidApp) { window.open(release.url, '_blank', 'noopener'); return `有新版本 ${release.versionName}，已打开下载` }
-                await phone.downloadUpdate({ url: release.url, sha256: release.sha256 })
-                return `新版本 ${release.versionName} 已下载并通过校验，正在打开安装程序`
-              }} />}
+              onCloudRestore={async () => { setRestoreCandidate(validateStore(await downloadCloudState())) }} />}
           </div>
         </div>
     </main>
