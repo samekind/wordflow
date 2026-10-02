@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import type { SettingsSection } from '../components/SettingsPage'
+import type { ReadingScope } from '../reading'
 
 export type TabId = 'today' | 'stats' | 'story' | 'settings'
 export type Screen =
@@ -7,7 +8,8 @@ export type Screen =
   | { name: 'books' }
   | { name: 'library' }
   | { name: 'frequency' }
-  | { name: 'article'; id?: string }
+  | { name: 'article'; id?: string; scope?: ReadingScope }
+  | { name: 'shelf'; cefr: ReadingScope['cefr']; topic?: string }
   | { name: 'stories' }
   | { name: 'section'; section: Exclude<SettingsSection, 'home'> }
 type Entry = { screen: Screen; scroll: number }
@@ -15,7 +17,7 @@ type State = { stack: Entry[]; direction: -1 | 0 | 1; seq: number }
 
 const tabIds: readonly string[] = ['today', 'stats', 'story', 'settings']
 export const isTab = (screen: Screen): screen is { name: TabId } => tabIds.includes(screen.name)
-export const screenKey = (screen: Screen) => screen.name === 'section' ? `section:${screen.section}` : screen.name
+export const screenKey = (screen: Screen) => screen.name === 'section' ? `section:${screen.section}` : screen.name === 'shelf' ? `shelf:${screen.cefr}:${screen.topic ?? ''}` : screen.name
 
 const scrollTop = () => document.getElementById('app-scroll')?.scrollTop || 0
 

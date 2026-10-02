@@ -115,3 +115,20 @@
 .article-intro{margin:0 0 10px;font-size: var(--fs-body);color: var(--text-secondary);line-height:1.55}
 .article-tags{display:inline-flex;flex-wrap:wrap;gap:6px;margin-left:8px;vertical-align:middle}
 .article-tags i{font-style:normal;font-size: var(--fs-caption);padding:1px 8px;border-radius:99px;background:var(--glass-fill);border:1px solid var(--glass-edge);color: var(--text-muted)}
+
+.reading-levels{display:grid;gap:12px;padding:16px;border-radius: var(--radius-md);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.level-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin:0;padding:0;list-style:none}
+.level-tile{display:grid;gap:2px;justify-items:start;width:100%;min-height:78px;padding:10px 12px;border-radius: var(--radius-md);background:var(--glass-fill);border:1px solid var(--glass-edge);color:var(--text-primary);text-align:left}
+.level-tile strong{font-size: var(--fs-title);font-weight: var(--fw-bold);color:var(--accent)}
+.level-tile span{font-size: var(--fs-small);color:var(--text-secondary)}
+.level-tile small{font-size: var(--fs-caption);color: var(--text-muted)}
+.level-tile:disabled{opacity:.5}
+.reading-shelf{display:grid;gap:12px;padding:16px;border-radius: var(--radius-md);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.shelf-head h2{margin:0;font-size: var(--fs-body-l);font-weight: var(--fw-bold);color:var(--text-primary)}
+.shelf-head span{display:block;margin-top:2px;font-size: var(--fs-caption);color: var(--text-muted)}
+.topic-list{display:grid;margin:0;padding:0;list-style:none}
+.topic-row{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:8px 0;text-align:left;border-bottom:1px solid var(--line);color:var(--text-primary)}
+.topic-list li:last-child .topic-row{border-bottom:0}
+.topic-row strong{flex:1;font-size: var(--fs-body)}
+.topic-row small{font-size: var(--fs-caption);color: var(--text-muted)}
+.topic-row>svg{flex:0 0 auto;color: var(--text-muted)}

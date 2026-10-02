@@ -82,6 +82,10 @@ class StatsTests(unittest.TestCase):
         self.assertEqual(pipeline.reconcile("B1", easy), "B1")
         self.assertEqual(pipeline.reconcile("C1", easy), "B2")
 
+    def test_statistical_level_spans_a2_to_c2(self):
+        levels = [pipeline.stat_cefr({"rareRatio": ratio, "grade": 6}) for ratio in (0.02, 0.07, 0.12, 0.2, 0.3)]
+        self.assertEqual(levels, ["A2", "B1", "B2", "C1", "C2"])
+
     def test_wordlist_maps_inflected_forms_to_the_rank_of_the_headword(self):
         ranks = pipeline.load_wordlist(ROOT / "cloud" / "library-wordlist.txt")
         self.assertEqual(ranks["was"], ranks["be"])
@@ -97,8 +101,11 @@ class ReviewTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             pipeline.validate_review(good_review(2), 3)
 
-    def test_c2_and_explicit_rejects_do_not_publish(self):
-        self.assertEqual(pipeline.validate_review({**good_review(1), "cefr": "C2"}, 1)["verdict"], "reject")
+    def test_every_level_from_a2_to_c2_is_accepted_and_explicit_rejects_are_not(self):
+        for level in ("A2", "B1", "B2", "C1", "C2"):
+            self.assertEqual(pipeline.validate_review({**good_review(1), "cefr": level}, 1)["cefr"], level)
+        with self.assertRaises(ValueError):
+            pipeline.validate_review({**good_review(1), "cefr": "A1"}, 1)
         self.assertEqual(pipeline.validate_review({"verdict": "reject", "reason": "争议"}, 3)["verdict"], "reject")
 
     def test_translation_must_be_chinese_and_topic_must_be_known(self):
@@ -150,6 +157,21 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(len(body["translations"]), len(body["paragraphs"]))
         self.assertEqual(body["revision"], "101")
         self.assertIn(body["level"], ("easy", "standard"))
+
+    def test_everyday_titles_are_queued_once_and_ahead_of_everything_else(self):
+        self.db.execute("INSERT INTO candidates (title, topic, position) VALUES ('Quantum field theory', '科学', 0)")
+        first = pipeline.add_basic_candidates(self.db)
+        self.assertGreater(first, 50)
+        self.assertEqual(pipeline.add_basic_candidates(self.db), 0)
+        queue = [r["title"] for r in self.db.execute("SELECT title FROM candidates WHERE state = 'new' ORDER BY position")]
+        self.assertEqual(queue[-1], "Quantum field theory")
+        self.assertEqual(queue[0], "Dog")
+
+    def test_a_short_plain_page_is_judged_again_after_the_rules_were_loosened(self):
+        self.page = {**self.page, "extract": "Dogs are animals. " * 3}
+        self.assertEqual(pipeline.process(self.db, "simple", "Bridge", "", self.ranks, FakeAI()), "rejected: 正文太短")
+        self.page = {**self.page, "extract": EXTRACT}
+        self.assertTrue(pipeline.process(self.db, "simple", "Bridge", "", self.ranks, FakeAI()).startswith("published"))
 
     def test_without_an_ai_key_articles_wait_and_are_not_served(self):
         ai = pipeline.DeepSeek()

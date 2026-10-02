@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type SyntheticEve
 import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Eye, EyeOff, Globe, LoaderCircle, Plus, RefreshCw, Square, Volume2 } from 'lucide-react'
 import { DailyIcon, EssayIcon } from '../icons'
 import { dayKey, normalize, pageFontAttrs, wordsForDay, type ImportRow, type Store } from '../model'
-import { cachedArticle, dailyReadingIndex, englishWordCount, readingLevel, readingLevels, refreshReadingArticle, type ReadingArticle } from '../reading'
+import { articleCefr, cachedArticle, cefrNames, dailyReadingIndex, englishWordCount, inScope, readingLevel, readingLevels, refreshReadingArticle, type ReadingArticle, type ReadingScope } from '../reading'
 import { fitLabels, recommendArticles } from '../library-fit'
 import { useReadingArticles } from '../app/useReadingLibrary'
 import type { ArticleAssistMode, ArticleAssistResult } from '../platform'
@@ -11,15 +11,17 @@ import { lookupLocalWord } from '../wordbooks'
 import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dictionary'
 import { coreGloss } from '../gloss'
 import ChoiceSheet from './ChoiceSheet'
-import { SelectButton } from './Controls'
 import Sheet from './Sheet'
 
 type Props = {
   store: Store; now: number;
-  /** hub = the 阅读 tab (two entry cards); daily / story = the pushed reader screens. */
-  view: 'hub' | 'story' | 'daily'; onOpen: (view: 'story' | 'daily', articleId?: string) => void;
-  /** Article chosen from the hub list; the reader starts on it instead of today's pick. */
+  /** hub = the 阅读 tab (entry cards); shelf = one difficulty's topics / list; daily / story = the pushed reader screens. */
+  view: 'hub' | 'shelf' | 'story' | 'daily'; onOpen: (view: 'story' | 'daily', articleId?: string, scope?: ReadingScope) => void;
+  onShelf: (cefr: ReadingScope['cefr'], topic?: string) => void;
+  /** Article chosen from a list; the reader starts on it instead of today's pick. */
   articleId?: string;
+  /** Shelf screen: the difficulty (and topic) shown. Reader: the set previous/next stays inside. */
+  scope?: ReadingScope;
   saving: boolean; onRead: (id: string) => Promise<boolean>; onWord: (id: string) => void;
   /** Adds a looked-up word to 我的词本 without leaving the article. */
   onAddWord: (row: ImportRow) => Promise<boolean>;
@@ -30,7 +32,7 @@ type Props = {
 }
 export default function ReadingPage(props: Props) {
   return <div className="reading-page font-scope" data-size={props.store.readingPreferences.textSize} {...pageFontAttrs(props.store.appearance.reading)}>
-    {props.view === 'hub' ? <ReadingHub {...props} /> : props.view === 'story' ? <>
+    {props.view === 'hub' ? <ReadingHub {...props} /> : props.view === 'shelf' && props.scope ? <ReadingShelf {...props} scope={props.scope} /> : props.view === 'story' ? <>
       <div className="reading-intro"><p>用自己选的词生成短文，扩展阅读。背当天的词请回到学习页。</p>
         <button className="text-button" disabled={props.saving} onClick={props.onStudy}>去本组语境记忆<ChevronRight size={15} /></button></div>
       {props.children}
@@ -43,13 +45,11 @@ function syncedText(at: number, now: number) {
   const minutes = Math.max(0, Math.round((now - at) / 60000))
   return minutes < 2 ? '刚刚' : minutes < 90 ? `${minutes} 分钟前` : minutes < 2880 ? `${Math.round(minutes / 60)} 小时前` : `${Math.round(minutes / 1440)} 天前`
 }
-/** 阅读 tab: one card per way to read, each opening its own screen. */
-function ReadingHub({ store, now, onOpen }: Props) {
+const pageSize = 15
+const minutesFor = (words: number) => Math.max(1, Math.ceil(words / 120))
+/** 阅读 tab: a few entry points only. The long lists live one tap deeper (难度 → 主题 → 文章). */
+function ReadingHub({ store, now, onOpen, onShelf }: Props) {
   const { articles: catalog, library, refreshLibrary } = useReadingArticles(true)
-  const [topic, setTopic] = useState('all')
-  const [grade, setGrade] = useState('all')
-  const [limit, setLimit] = useState(30)
-  useEffect(() => setLimit(30), [topic, grade, store.readingPreferences.level])
   const level = readingLevel(store)
   const choices = useMemo(() => catalog.filter(article => article.level === level), [catalog, level])
   const today = choices.length ? choices[dailyReadingIndex(choices.length, new Date(now))] : undefined
@@ -59,20 +59,18 @@ function ReadingHub({ store, now, onOpen }: Props) {
   const read = !!article && readIds.has(article.id)
   const book = store.books.find(item => item.id === store.activeBookId)
   const dayWords = book ? wordsForDay(store, book).length : 0
-  const topics = [...new Set(choices.map(item => item.topic))]
-  const grades = readingLevels.filter(item => choices.some(article => article.cefr === item))
-  const matching = choices.filter(item => (topic === 'all' || item.topic === topic) && (grade === 'all' || item.cefr === grade))
-  const shown = matching.slice(0, limit)
-  const picks = useMemo(() => recommendArticles(choices, store, readIds, 3), [choices, store.words, store.books, store.activeBookId, store.readArticleIds])
-  const finished = choices.filter(item => readIds.has(item.id)).length
-  const nextUnread = choices.find(item => !readIds.has(item.id) && item.id !== today?.id) || choices.find(item => !readIds.has(item.id))
+  const picks = useMemo(() => recommendArticles(catalog, store, readIds, 3), [catalog, store.words, store.books, store.activeBookId, store.readArticleIds])
+  const shelves = readingLevels.map(cefr => {
+    const items = catalog.filter(item => articleCefr(item) === cefr)
+    return { cefr, total: items.length, done: items.filter(item => readIds.has(item.id)).length }
+  })
   return <div className="reading-hub">
     <button className="reading-entry reading-entry-daily" aria-label="英语选读" onClick={() => onOpen('daily')}>
       {article?.image ? <img src={article.image.path} alt="" /> : <span className="reading-entry-icon"><DailyIcon size={26} /></span>}
       <span className="reading-entry-body">
         <small>今日英语选读 · {level === 'easy' ? '基础' : '进阶'}</small>
         <strong lang="en">{article?.title || '正在读取…'}</strong>
-        <span>{article ? `${article.topic} · ${words} 词 · 约 ${Math.max(1, Math.ceil(words / 120))} 分钟` : '百科段落选读，点单词即可查义'}</span>
+        <span>{article ? `${article.topic} · ${words} 词 · 约 ${minutesFor(words)} 分钟` : '百科段落选读，点单词即可查义'}</span>
       </span>
       <span className="reading-entry-state" data-read={read}>{read ? <><CheckCheck size={14} />已读</> : <>开始读<ChevronRight size={15} /></>}</span>
     </button>
@@ -88,40 +86,74 @@ function ReadingHub({ store, now, onOpen }: Props) {
     {picks.length > 0 && <section className="reading-picks" aria-label="适合你">
       <div className="reading-library-head"><div><h2>适合你</h2><span>按你已掌握的词估算，生词占 2%–7% 最合适</span></div></div>
       <ul className="reading-list">{picks.map(({ article: item, fit }) => <li key={item.id}>
-        <button className="reading-list-item" aria-label={`推荐 ${item.title}`} onClick={() => onOpen('daily', item.id)}>
+        <button className="reading-list-item" aria-label={`推荐 ${item.title}`} onClick={() => onOpen('daily', item.id, { cefr: articleCefr(item) })}>
           {item.image ? <img src={item.image.path} alt="" loading="lazy" onError={hideBroken} /> : <span className="reading-list-icon"><DailyIcon size={20} /></span>}
           <span className="reading-list-body"><strong lang="en">{item.title}</strong>
             <small>{item.cefr} · {fitLabels[fit.label]} · 约 {Math.round(fit.coverage * 100)}% 的词认识{fit.bookWords ? ` · 含 ${fit.bookWords} 个在学词` : ''}</small></span>
           <ChevronRight size={16} />
         </button></li>)}</ul>
     </section>}
-    {choices.length > 0 && <section className="reading-library" aria-label="全部选读">
-      <div className="reading-library-head">
-        <div><h2>全部选读</h2><span>{level === 'easy' ? '基础' : '进阶'} · 已读 {finished} / {choices.length} 篇</span></div>
-        <div className="reading-filters">
-          {grades.length > 0 && <SelectButton label="选读级别" value={grade} options={[{ value: 'all', label: '全部级别' }, ...grades.map(item => ({ value: item, label: item }))]} onChange={setGrade} />}
-          <SelectButton label="选读主题" value={topic} options={[{ value: 'all', label: '全部主题' }, ...topics.map(item => ({ value: item, label: item }))]} onChange={setTopic} />
-        </div>
-      </div>
-      <div className="reading-progress" role="progressbar" aria-label="选读进度" aria-valuemin={0} aria-valuemax={choices.length} aria-valuenow={finished}><i style={{ width: `${Math.round(finished / choices.length * 100)}%` }} /></div>
-      {nextUnread && <button className="text-button reading-next" onClick={() => onOpen('daily', nextUnread.id)}>读下一篇没读过的：{nextUnread.title}<ChevronRight size={15} /></button>}
-      <ul className="reading-list">{shown.map(item => {
-        const count = englishWordCount(item.paragraphs.join(' '))
-        return <li key={item.id}><button className="reading-list-item" aria-label={`${item.title}，${item.topic}`} onClick={() => onOpen('daily', item.id)}>
-          {item.image ? <img src={item.image.path} alt="" loading="lazy" onError={hideBroken} /> : <span className="reading-list-icon"><DailyIcon size={20} /></span>}
-          <span className="reading-list-body"><strong lang="en">{item.title}</strong><small>{item.topic}{item.cefr ? ` · ${item.cefr}` : ''} · {count} 词 · 约 {Math.max(1, Math.ceil(count / 120))} 分钟</small>{item.intro && <small className="reading-list-intro">{item.intro}</small>}</span>
-          {readIds.has(item.id) ? <CheckCheck size={16} className="reading-list-read" aria-label="已读" /> : <ChevronRight size={16} />}
-        </button></li>
-      })}</ul>
-      {matching.length > shown.length && <button className="text-button reading-more" onClick={() => setLimit(value => value + 30)}>显示更多（还有 {matching.length - shown.length} 篇）</button>}
-      {matching.length === 0 && <p className="field-note">没有符合条件的文章，换个级别或主题试试。</p>}
-    </section>}
+    <section className="reading-levels" aria-label="按难度选读">
+      <div className="reading-library-head"><div><h2>按难度选读</h2><span>从入门到精通，先选难度再选主题</span></div></div>
+      <ul className="level-grid">{shelves.map(({ cefr, total, done }) => <li key={cefr}>
+        <button className="level-tile" data-level={cefr} disabled={!total} aria-label={`${cefr} ${cefrNames[cefr]}，${total} 篇`} onClick={() => onShelf(cefr, total <= pageSize ? '*' : undefined)}>
+          <strong>{cefr}</strong><span>{cefrNames[cefr]}</span>
+          <small>{total ? `${total} 篇 · 已读 ${done}` : '暂无'}</small>
+        </button></li>)}</ul>
+    </section>
     <div className="reading-sync" role="status">
       <span>{library.syncing ? '正在更新在线选读库…' : library.fromLibrary ? `在线选读库 ${library.fromLibrary} 篇${library.syncedAt ? ` · ${syncedText(library.syncedAt, now)}更新` : ''}` : '在线选读库暂无文章，联网后自动更新'}</span>
       <button className="text-button" disabled={library.syncing} onClick={() => void refreshLibrary()}><RefreshCw size={14} className={library.syncing ? 'spin' : undefined} />更新选读库</button>
     </div>
     {library.error && <p className="field-note">{library.error}</p>}
     <p className="reading-hub-note">已读文章 {readIds.size} 篇 · 阅读设置在“我的 → 发音与阅读”</p>
+  </div>
+}
+/** One difficulty: first its topics (when there are many articles), then a short paged list. */
+function ReadingShelf({ store, scope, onOpen, onShelf }: Props & { scope: ReadingScope }) {
+  const { articles: catalog } = useReadingArticles(false)
+  const [limit, setLimit] = useState(pageSize)
+  useEffect(() => setLimit(pageSize), [scope.cefr, scope.topic])
+  const readIds = new Set(store.readArticleIds)
+  const level = useMemo(() => catalog.filter(item => articleCefr(item) === scope.cefr), [catalog, scope.cefr])
+  const topics = useMemo(() => {
+    const counts = new Map<string, { total: number; done: number }>()
+    for (const item of level) {
+      const entry = counts.get(item.topic) ?? { total: 0, done: 0 }
+      entry.total++; if (readIds.has(item.id)) entry.done++
+      counts.set(item.topic, entry)
+    }
+    return [...counts].sort((a, b) => b[1].total - a[1].total || a[0].localeCompare(b[0]))
+  }, [level, store.readArticleIds])
+  const finished = level.filter(item => readIds.has(item.id)).length
+  if (!catalog.length) return <div className="empty" role="status"><LoaderCircle className="spin" size={24} /><p>正在读取选读</p></div>
+  if (!level.length) return <div className="empty"><BookOpen size={28} /><p>这个难度暂时没有文章，在线选读库更新后会出现。</p></div>
+  const progress = <div className="reading-progress" role="progressbar" aria-label="选读进度" aria-valuemin={0} aria-valuemax={level.length} aria-valuenow={finished}><i style={{ width: `${Math.round(finished / level.length * 100)}%` }} /></div>
+  if (scope.topic === undefined && topics.length > 1) return <div className="reading-shelf">
+    <div className="shelf-head"><h2>{scope.cefr} · {cefrNames[scope.cefr]}</h2><span>共 {level.length} 篇 · 已读 {finished} 篇，选一个主题继续</span></div>
+    {progress}
+    <ul className="topic-list">
+      <li><button className="topic-row" onClick={() => onShelf(scope.cefr, '*')}><strong>全部主题</strong><small>{level.length} 篇</small><ChevronRight size={16} /></button></li>
+      {topics.map(([topic, { total, done }]) => <li key={topic}><button className="topic-row" aria-label={`${topic}，${total} 篇`} onClick={() => onShelf(scope.cefr, topic)}>
+        <strong>{topic}</strong><small>{total} 篇{done ? ` · 已读 ${done}` : ''}</small><ChevronRight size={16} /></button></li>)}
+    </ul>
+  </div>
+  const matching = level.filter(item => inScope(item, scope))
+  const shown = matching.slice(0, limit)
+  const next = matching.find(item => !readIds.has(item.id))
+  return <div className="reading-shelf">
+    <div className="shelf-head"><h2>{scope.cefr} · {cefrNames[scope.cefr]}{scope.topic && scope.topic !== '*' ? ` · ${scope.topic}` : ''}</h2>
+      <span>共 {matching.length} 篇 · 已读 {matching.filter(item => readIds.has(item.id)).length} 篇</span></div>
+    {next && <button className="text-button reading-next" onClick={() => onOpen('daily', next.id, scope)}>读下一篇没读过的：{next.title}<ChevronRight size={15} /></button>}
+    <ul className="reading-list">{shown.map(item => {
+      const count = englishWordCount(item.paragraphs.join(' '))
+      return <li key={item.id}><button className="reading-list-item" aria-label={`${item.title}，${item.topic}`} onClick={() => onOpen('daily', item.id, scope)}>
+        {item.image ? <img src={item.image.path} alt="" loading="lazy" onError={hideBroken} /> : <span className="reading-list-icon"><DailyIcon size={20} /></span>}
+        <span className="reading-list-body"><strong lang="en">{item.title}</strong><small>{item.topic}{item.cefr ? ` · ${item.cefr}` : ''} · {count} 词 · 约 {minutesFor(count)} 分钟</small>{item.intro && <small className="reading-list-intro">{item.intro}</small>}</span>
+        {readIds.has(item.id) ? <CheckCheck size={16} className="reading-list-read" aria-label="已读" /> : <ChevronRight size={16} />}
+      </button></li>
+    })}</ul>
+    {matching.length > shown.length && <button className="text-button reading-more" onClick={() => setLimit(value => value + pageSize)}>显示更多（还有 {matching.length - shown.length} 篇）</button>}
   </div>
 }
 function plainCredit(value: string) {
@@ -141,7 +173,7 @@ function ReadableParagraph({ text, targets, onWord }: { text: string; targets: S
   parts.push(text.slice(previous))
   return <p lang="en">{parts}</p>
 }
-function DailyEnglish({ store, now, saving, articleId, onRead, onWord, onAddWord, onSpeak, onStop }: Props) {
+function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, onAddWord, onSpeak, onStop }: Props) {
   const { articles: catalog, loadError, reload } = useReadingArticles(false)
   const [offset, setOffset] = useState(0)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -155,8 +187,9 @@ function DailyEnglish({ store, now, saving, articleId, onRead, onWord, onAddWord
   const level = readingLevel(store)
   const date = dayKey(new Date(now))
   useEffect(() => () => { refreshRequest.current++ }, [])
-  useEffect(() => { setOffset(0); setTranslated(false); onStop() }, [level, date])
-  const choices = useMemo(() => catalog.filter(article => article.level === level), [catalog, level])
+  const scopeKey = scope ? `${scope.cefr}:${scope.topic ?? ''}` : ''
+  useEffect(() => { setOffset(0); setTranslated(false); onStop() }, [level, date, scopeKey])
+  const choices = useMemo(() => scope ? catalog.filter(article => inScope(article, scope)) : catalog.filter(article => article.level === level), [catalog, level, scopeKey])
   const todayIndex = dailyReadingIndex(choices.length, new Date(now))
   const index = choices.length ? ((todayIndex + offset) % choices.length + choices.length) % choices.length : 0
   const base = choices[index]
@@ -209,13 +242,13 @@ function DailyEnglish({ store, now, saving, articleId, onRead, onWord, onAddWord
     <div className="daily-article-toolbar">
       <div className="article-picker">
         <button className="icon-button" aria-label="上一篇文章" title="上一篇文章" onClick={() => move(offset - 1)}><ChevronLeft size={18} /></button>
-        <button className="article-picker-title" onClick={() => setPickerOpen(true)} aria-label="选择英语文章">{index === todayIndex ? '今日选读' : '精选选读'}<ChevronDown size={12} /></button>
+        <button className="article-picker-title" onClick={() => setPickerOpen(true)} aria-label="选择英语文章">{scope ? `${scope.cefr} · 第 ${index + 1} / ${choices.length} 篇` : index === todayIndex ? '今日选读' : '精选选读'}<ChevronDown size={12} /></button>
         <button className="icon-button" aria-label="下一篇文章" title="下一篇文章" onClick={() => move(offset + 1)}><ChevronRight size={18} /></button>
       </div>
       <span>{new Date(now).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}</span>
     </div>
     <article className="source-article">
-      <div className="article-meta"><span>{article.topic} · {level === 'easy' ? '基础选读' : '进阶选读'}{article.cefr ? ` · ${article.cefr}` : ''}</span><span>{words} 词 · 约 {Math.max(1, Math.ceil(words / 120))} 分钟</span></div>
+      <div className="article-meta"><span>{article.topic} · {article.cefr ? `${article.cefr} ${cefrNames[article.cefr]}` : level === 'easy' ? '基础选读' : '进阶选读'}</span><span>{words} 词 · 约 {Math.max(1, Math.ceil(words / 120))} 分钟</span></div>
       <h2 lang="en">{article.title}</h2>
       {article.intro && <p className="article-intro">{article.intro}{article.tags?.length ? <span className="article-tags">{article.tags.map(tag => <i key={tag}>{tag}</i>)}</span> : null}</p>}
       {article.image && <figure className="reading-image"><img src={article.image.path} alt={article.image.alt} onError={hideBroken} /></figure>}
@@ -246,7 +279,7 @@ function DailyEnglish({ store, now, saving, articleId, onRead, onWord, onAddWord
       {article.image && <p>图片：{plainCredit(article.image.credit)} · <a href={article.image.sourceUrl} target="_blank" rel="noopener noreferrer">来源</a> · <a href={article.image.license.url} target="_blank" rel="noopener noreferrer">{article.image.license.name}</a></p>}
     </details>
     <ChoiceSheet title="英语选读" open={pickerOpen} onClose={() => setPickerOpen(false)} value={article.id}
-      options={choices.map((choice, i) => ({ value: choice.id, label: `${choice.title}${i === todayIndex ? ' · 今日' : ''}`, count: englishWordCount(choice.paragraphs.join(' ')) }))}
+      options={choices.map((choice, i) => ({ value: choice.id, label: `${choice.title}${!scope && i === todayIndex ? ' · 今日' : ''}`, count: englishWordCount(choice.paragraphs.join(' ')) }))}
       onSelect={id => move(choices.findIndex(choice => choice.id === id) - todayIndex)} />
     <ReadingWord word={selectedWord} onClose={() => { onStop(); setSelectedWord('') }} onSpeak={onSpeak} onStop={onStop} onAdd={onAddWord} />
   </div>

@@ -97,3 +97,19 @@ test('articles whose translation count differs from the paragraphs are not accep
   assert.equal(result.skipped, 1)
   assert.equal(cachedLibrary().length, 0)
 })
+
+test('articles sit on the shelf by AI grade, bundled ones by their basic/advanced level, and scopes narrow by topic', async () => {
+  const { articleCefr, inScope, readingLevels } = await import('../src/reading')
+  assert.deepEqual([...readingLevels], ['A2', 'B1', 'B2', 'C1', 'C2'])
+  const graded = { ...article('graded', []), cefr: 'C2' as const, level: 'standard' as const }
+  const bundledEasy = { ...article('b1', []), cefr: undefined }
+  const bundledStandard = { ...article('b2', []), cefr: undefined, level: 'standard' as const }
+  assert.equal(articleCefr(graded), 'C2')
+  assert.equal(articleCefr(bundledEasy), 'B1')
+  assert.equal(articleCefr(bundledStandard), 'B2')
+  assert.ok(inScope(graded, { cefr: 'C2' }))
+  assert.ok(inScope(graded, { cefr: 'C2', topic: '*' }))
+  assert.ok(inScope(graded, { cefr: 'C2', topic: '自然' }))
+  assert.ok(!inScope(graded, { cefr: 'C2', topic: '科学' }))
+  assert.ok(!inScope(graded, { cefr: 'C1' }))
+})

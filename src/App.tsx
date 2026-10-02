@@ -13,6 +13,7 @@ import BookShelf, { type ShelfView } from './components/BookShelf'
 import DailyReader from './components/DailyReader'
 import SettingsPage, { settingsTitles } from './components/SettingsPage'
 import ReadingPage from './components/ReadingPage'
+import { cefrNames } from './reading'
 import ExamFrequencyView from './components/ExamFrequencyView'
 import { useConfirm } from './components/Controls'
 import { EditWordSheet, ImportSheet, LicensesSheet, RestorePicker, RestoreSheet } from './components/AppSheets'
@@ -30,7 +31,8 @@ import { useBackButton } from './app/useBackButton'
 
 const tabs = [{ id: 'today', label: '学习', icon: StudyIcon }, { id: 'stats', label: '统计', icon: ChartColumn }, { id: 'story', label: '阅读', icon: ReadIcon }, { id: 'settings', label: '我的', icon: ProfileIcon }] as const
 const titles: Record<string, string> = { stats: '统计', books: '词书管理', story: '阅读', settings: '我的', library: '我的单词', frequency: '考频查询', article: '英语选读', stories: '自选词短文' }
-const titleOf = (screen: Screen) => screen.name === 'section' ? settingsTitles[screen.section] : titles[screen.name]
+const titleOf = (screen: Screen) => screen.name === 'section' ? settingsTitles[screen.section] : screen.name === 'shelf'
+  ? `${screen.cefr} ${cefrNames[screen.cefr]}${screen.topic && screen.topic !== '*' ? ` · ${screen.topic}` : ''}` : titles[screen.name]
 
 /** App shell: wires the data, study, word and AI hooks to the screens, the tab bar and the sheets.
  * Navigation is a screen stack (app/useNavigation): tabs reset it, everything else is pushed. */
@@ -114,7 +116,9 @@ export default function App() {
             {screen.name === 'frequency' && <ExamFrequencyView initialExam={words.catalog.find(book => book.id === store.activeBookId)?.exam || (store.activeBookId === 'ecdict-ky' ? 'ky1' : 'cet4')} />}
             {screen.name === 'library' && <LibraryPage store={store} onWord={openWord} onBooks={() => go({ name: 'books' })} />}
             {screen.name === 'stats' && <StatsPage store={store} now={data.clock} onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onBooks={() => go({ name: 'books' })} />}
-            {(screen.name === 'story' || screen.name === 'article' || screen.name === 'stories') && <ReadingPage store={store} now={data.clock} view={screen.name === 'story' ? 'hub' : screen.name === 'article' ? 'daily' : 'story'} onOpen={(view, id) => go(view === 'daily' ? { name: 'article', id } : { name: 'stories' })} articleId={screen.name === 'article' ? screen.id : undefined} onAddWord={row => words.importRows([row], '阅读收藏', true)} saving={saving} aiConfigured={ai.config.configured} onAssist={ai.assistArticle} onAISettings={openAISettings}
+            {(screen.name === 'story' || screen.name === 'article' || screen.name === 'stories' || screen.name === 'shelf') && <ReadingPage store={store} now={data.clock} view={screen.name === 'story' ? 'hub' : screen.name === 'article' ? 'daily' : screen.name === 'shelf' ? 'shelf' : 'story'}
+              onOpen={(view, id, scope) => go(view === 'daily' ? { name: 'article', id, scope } : { name: 'stories' })} onShelf={(cefr, topic) => go({ name: 'shelf', cefr, topic })}
+              articleId={screen.name === 'article' ? screen.id : undefined} scope={screen.name === 'article' ? screen.scope : screen.name === 'shelf' ? { cefr: screen.cefr, topic: screen.topic } : undefined} onAddWord={row => words.importRows([row], '阅读收藏', true)} saving={saving} aiConfigured={ai.config.configured} onAssist={ai.assistArticle} onAISettings={openAISettings}
               onStudy={async () => { const current = storeRef.current; const mode = studyView(current); const draft = currentStudyDraft(current, mode === 'review' ? 'review' : 'learn'); if (!draft || await study.changeStudy(draft, { type: 'method', method: 'context' })) goStudy() }}
               onRead={id => {
                 const current = storeRef.current

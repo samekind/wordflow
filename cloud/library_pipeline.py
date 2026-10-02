@@ -42,12 +42,20 @@ SOURCES = {
 }
 LICENSE = {"name": "CC BY-SA 4.0", "url": "https://creativecommons.org/licenses/by-sa/4.0/"}
 TOPICS = ["自然", "科学", "技术", "生活", "文化", "艺术", "健康", "城市", "社会", "探索"]
-CEFR = ["A2", "B1", "B2", "C1"]
+CEFR = ["A2", "B1", "B2", "C1", "C2"]
 VITAL_PREFIX = "Wikipedia:Vital articles/Level 4/"
 VITAL_PAGES = [
     ("Everyday life", "生活"), ("Biology and health sciences", "自然"), ("Geography", "自然"), ("Physical sciences", "科学"),
     ("Technology", "技术"), ("Arts", "艺术"), ("Society and social sciences", "文化"),
 ]
+BASIC_TITLES = [(title, topic) for topic, titles in {
+    "自然": "Dog|Cat|Horse|Cow|Pig|Sheep|Chicken|Duck|Rabbit|Elephant|Bee|Butterfly|Bird|Fish|Tree|Flower|Grass|Rain|Snow|Wind|Cloud|Sun|Moon|River|Lake|Sea|Mountain|Forest|Desert|Spring|Summer|Autumn|Winter",
+    "生活": "Bread|Rice|Milk|Egg|Apple|Banana|Orange|Potato|Tomato|Cheese|Sugar|Salt|Tea|Coffee|Water|Breakfast|Lunch|Dinner|Kitchen|House|Bed|Clock|Money|Shop|Market|Family|Mother|Father|Baby|Friend|Birthday|Christmas",
+    "技术": "Bicycle|Car|Bus|Train|Airplane|Ship|Telephone|Television|Radio|Computer|Camera|Pencil|Paper|Book|Glass|Wheel",
+    "文化": "School|Teacher|Student|Library|Hospital|Farm|Football|Basketball|Swimming|Olympic Games|Game|Toy",
+    "艺术": "Music|Piano|Guitar|Song|Dance|Painting|Color|Red|Blue|Circus",
+    "健康": "Doctor|Medicine|Sleep|Exercise|Tooth|Hand|Eye|Heart",
+}.items() for title in titles.split("|")]
 # Sections that are mostly politics, war, law, single works or statistics are left out; the AI review is a second filter.
 SKIP_SECTION = re.compile(
     r"politic|government|military|\bwars?\b|warfare|weapon|ammunition|armour|artillery|explosive|fortification|incendiary|"
@@ -66,12 +74,13 @@ SECTION_TOPICS = [
     (re.compile(r"culture|language|education|anthropolog|festival|stages of life|family|clothing|cooking|housing|household|sports|recreation|entertainment", re.I), "生活"),
 ]
 BLOCKED_CATEGORY = re.compile(
-    r"living people|disambiguation|pornograph|sexual|genocide|massacre|terroris|suicide|abortion|nazi|war crime|slavery|hate speech",
+    r"living people|disambiguation pages|pornograph|sexual|genocide|massacre|terroris|suicide|abortion|nazi|war crime|slavery|hate speech",
     re.I,
 )
 END_HEADINGS = {"see also", "references", "external links", "notes", "further reading", "bibliography", "sources", "footnotes", "citations"}
 WORD = re.compile(r"[A-Za-z]+(?:['’-][A-Za-z]+)*")
-MIN_WORDS, MAX_WORDS, TARGET_WORDS, MAX_PARAGRAPHS = 130, 520, 260, 7
+MIN_WORDS, MAX_WORDS, TARGET_WORDS, MAX_PARAGRAPHS = 70, 520, 260, 7
+MAX_RARE_RATIO = 0.30
 RARE_RANK = 3000
 REVIEW_DAYS = 60
 
@@ -168,6 +177,17 @@ def titles_from_wikitext(text, default="生活"):
                 found.append((title, topic))
             break
     return found
+
+
+def add_basic_candidates(db):
+    """Everyday subjects whose Simple English pages are short and plain, so the shelf has real beginner material.
+    They go to the front of the queue; titles already queued are left alone."""
+    added = 0
+    for index, (title, topic) in enumerate(BASIC_TITLES):
+        cursor = db.execute("INSERT OR IGNORE INTO candidates (title, topic, position) VALUES (?, ?, ?)", (title, topic, -10000 + index))
+        added += cursor.rowcount
+    db.commit()
+    return added
 
 
 def fill_candidates(db, fetch=wiki_json):
@@ -306,13 +326,10 @@ def analyze(paragraphs, ranks):
 def stat_cefr(stats):
     ratio, grade = stats["rareRatio"], stats["grade"]
     score = ratio * 100 + max(0.0, grade - 8) * 0.8
-    if score < 4.5:
-        return "A2"
-    if score < 8.5:
-        return "B1"
-    if score < 13:
-        return "B2"
-    return "C1"
+    for level, ceiling in zip(CEFR, (5, 10, 16, 24)):
+        if score < ceiling:
+            return level
+    return "C2"
 
 
 def reconcile(ai_level, stats):
@@ -326,6 +343,7 @@ def reconcile(ai_level, stats):
 # ---------- AI review ----------
 SYSTEM_PROMPT = """你是面向中国英语学习者的分级阅读库编辑。用户给你一篇维基百科文章的节选（已按段落编号），读者正在备考四六级、考研、雅思。
 你的任务：判断它是否适合收入阅读库，并给出分级与辅助材料。绝对不要改写或续写英文原文。
+阅读库要覆盖从入门到高难度的完整范围，请如实使用全部等级：A2 = 日常高频词、短句、具体事物；B1 = 常见话题、句子较完整；B2 = 抽象话题、较多从句；C1 = 学术或专业话题、长句和低频词；C2 = 高度学术化、术语密集、结构复杂。不要把难度集中判在 B2。短小但语言简单的文章可以收入，不要因为短而拒绝。
 只输出一个 JSON 对象，不要输出其他文字。字段：
 {
   "verdict": "accept" 或 "reject",
@@ -354,8 +372,6 @@ def validate_review(data, paragraph_count):
     if data["verdict"] == "reject":
         return {"verdict": "reject", "reason": reason or "AI 判断不适合收录"}
     cefr = str(data.get("cefr") or "").strip().upper()
-    if cefr == "C2":
-        return {"verdict": "reject", "reason": reason or "难度过高"}
     if cefr not in CEFR:
         raise ValueError("cefr invalid")
     topic = str(data.get("topic") or "").strip()
@@ -497,9 +513,9 @@ def rule_reject(page, paragraphs, stats):
             return "分类不适合学习场景：" + category["title"]
     if stats["words"] < MIN_WORDS:
         return "正文太短"
-    if stats["rareRatio"] > 0.22:
+    if stats["rareRatio"] > MAX_RARE_RATIO:
         return "罕见词比例过高"
-    if len(paragraphs) < 2:
+    if len(paragraphs) < 2 and stats["words"] < 90:
         return "不足两个自然段"
     return ""
 
@@ -516,10 +532,12 @@ def process(db, lang, title, topic, ranks, ai, no_ai=False):
     revision = str((page.get("revisions") or [{}])[0].get("revid", ""))
     now = store.utc_now()
     content_hash = hashlib.sha256("\n".join(paragraphs).encode("utf-8")).hexdigest()
-    existing = db.execute("SELECT status, revision, content_hash FROM articles WHERE id = ?", (article_id,)).fetchone()
+    existing = db.execute("SELECT status, revision, content_hash, review FROM articles WHERE id = ?", (article_id,)).fetchone()
     if existing and existing["status"] == "hidden":
         return "hidden"  # taken down by hand; a later edit of the page must not bring it back
-    if existing and existing["revision"] == revision and existing["status"] in ("published", "rejected"):
+    by_rules = bool(existing) and existing["status"] == "rejected" and '"by": "rules"' in (existing["review"] or "")
+    # A rule rejection is judged again whenever the rules change; only AI verdicts and published text are final.
+    if existing and existing["revision"] == revision and existing["status"] in ("published", "rejected") and not by_rules:
         db.execute("UPDATE articles SET checked_at = ? WHERE id = ?", (now, article_id))
         db.commit()
         return "unchanged"
@@ -554,14 +572,24 @@ def process(db, lang, title, topic, ranks, ai, no_ai=False):
     return "published " + cefr
 
 
-def run(titles, refresh, no_ai):
+def reopen_rule_rejects(db):
+    """Puts titles that only the length/vocabulary rules turned away back in the queue."""
+    marks = ("rejected: 正文太短", "rejected: 罕见词比例过高", "rejected: 不足两个自然段", "needing disambiguation")
+    cursor = db.execute("UPDATE candidates SET state = 'new' WHERE state = 'done' AND (%s)" % " OR ".join("note LIKE ?" for _ in marks), tuple("%" + m + "%" for m in marks))
+    db.commit()
+    return cursor.rowcount
+
+
+def run(titles, refresh, no_ai, retry=False):
     LIB_DIR.mkdir(parents=True, exist_ok=True)
     db = store.connect(DB_PATH)
     ranks = load_wordlist()
+    if retry:
+        print("titles reopened: %d" % reopen_rule_rejects(db))
     ai = DeepSeek()
     if not ai.ready and not no_ai:
         print("No AI key configured (LIBRARY_AI_KEY): articles are collected but stay unpublished.")
-    print("candidates added: %d" % fill_candidates(db))
+    print("candidates added: %d" % (fill_candidates(db) + add_basic_candidates(db)))
     pending = [r for r in db.execute("SELECT id, lang, title FROM articles WHERE status = 'pending_ai' ORDER BY seq")] if ai.ready and not no_ai else []
     for row in pending[:titles * 2]:
         print("%s: %s" % (row["id"], safe(lambda: process(db, row["lang"], row["title"], "", ranks, ai))))
@@ -569,10 +597,11 @@ def run(titles, refresh, no_ai):
     room = max(0, int(os.environ.get("LIBRARY_MAX", "400")) - published)
     if not room:
         print("Library is at its size limit; only refreshing.")
-    rows = db.execute("SELECT title, topic FROM candidates WHERE state = 'new' ORDER BY position LIMIT ?", (titles if room else 0,)).fetchall()
+    rows = db.execute("SELECT title, topic, position FROM candidates WHERE state = 'new' ORDER BY position LIMIT ?", (titles if room else 0,)).fetchall()
     for row in rows:
         results = []
-        for lang in ("simple", "en"):
+        # The full English page of an everyday subject is far beyond a beginner; only the Simple English page is wanted.
+        for lang in (("simple",) if row["position"] < 0 else ("simple", "en")):
             results.append("%s=%s" % (lang, safe(lambda: process(db, lang, row["title"], row["topic"], ranks, ai, no_ai))))
         db.execute("UPDATE candidates SET state = 'done', note = ? WHERE title = ?", ("; ".join(results)[:300], row["title"]))
         db.commit()
@@ -605,12 +634,13 @@ def main(argv=None):
     runner.add_argument("--titles", type=int, default=int(os.environ.get("LIBRARY_BATCH", "20")))
     runner.add_argument("--refresh", type=int, default=10)
     runner.add_argument("--no-ai", action="store_true")
+    runner.add_argument("--retry", action="store_true", help="judge titles rejected only by length/vocabulary rules again")
     sub.add_parser("status")
     hide = sub.add_parser("hide")
     hide.add_argument("article_id")
     args = parser.parse_args(argv)
     if args.command == "run":
-        run(args.titles, args.refresh, args.no_ai)
+        run(args.titles, args.refresh, args.no_ai, args.retry)
     elif args.command == "status":
         status()
     else:

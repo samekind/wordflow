@@ -16,7 +16,11 @@ const attributionUrl = z.string().url().refine(value => {
 })
 const licenseSchema = z.object({ name: z.string().max(100), url: attributionUrl })
 const libraryImagePath = new RegExp(`^${cloudBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/v1/library/image/lib-(en|simple)-[a-z0-9-]{1,80}$`)
-export const readingLevels = ['A2', 'B1', 'B2', 'C1'] as const
+export const readingLevels = ['A2', 'B1', 'B2', 'C1', 'C2'] as const
+export type ReadingCefr = typeof readingLevels[number]
+export const cefrNames: Record<ReadingCefr, string> = { A2: '入门', B1: '初级', B2: '中级', C1: '高级', C2: '精通' }
+/** Where a reader session stays: the difficulty (and optionally the topic) picked on the way in. '*' = every topic. */
+export type ReadingScope = { cefr: ReadingCefr; topic?: string }
 export const readingArticleSchema = z.object({
   id: z.string().regex(/^(lib-)?(en|simple)-[a-z0-9-]+$/), title: z.string().min(1).max(200),
   wikiTitle: z.string().min(1).max(200), lang: z.enum(['simple', 'en']),
@@ -49,6 +53,10 @@ export function readingLevel(store: Pick<Store, 'readingPreferences' | 'activeBo
   if (store.readingPreferences.level !== 'auto') return store.readingPreferences.level
   return /^ecdict-(cet6|ky|ielts|toefl)/.test(store.activeBookId) ? 'standard' : 'easy'
 }
+/** Bundled articles carry no AI grade; they count as B1 (基础) or B2 (进阶) so they sit on the shelf. */
+export const articleCefr = (article: Pick<ReadingArticle, 'cefr' | 'level'>): ReadingCefr => article.cefr ?? (article.level === 'easy' ? 'B1' : 'B2')
+export const inScope = (article: ReadingArticle, scope: ReadingScope) =>
+  articleCefr(article) === scope.cefr && (!scope.topic || scope.topic === '*' || article.topic === scope.topic)
 export function dailyReadingIndex(length: number, date: Date): number {
   if (!length) return 0
   const day = Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000)
