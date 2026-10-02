@@ -60,8 +60,11 @@ const corrections = new Map(Object.entries(fixes as Record<string, string>).map(
 /** The few words for study cards. A reviewed correction is keyed by the exact stored text, so a
  * meaning the user edited never picks up a correction written for the original entry. */
 export function coreGloss(raw: string): string {
-  const fixed = corrections.get(raw.trim())
-  if (fixed) return fixed
+  return corrections.get(raw.trim()) ?? derivedGloss(raw)
+}
+
+/** The rule-based extraction alone, without reviewed corrections. */
+export function derivedGloss(raw: string): string {
   // Entries that only carry field-tagged lines ([计], [经], ...) still have a meaning worth showing.
   const chosen = senses(raw, false)
   const result = chosen.length ? chosen : senses(raw, true)
