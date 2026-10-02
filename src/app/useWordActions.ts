@@ -26,7 +26,8 @@ export function useWordActions({ storeRef, commit, notify, clearUndo, onStudyBoo
     try { return orderPersonalBook(next, await loadExamFrequency(), storeRef.current.books.find(book => book.id === 'personal')?.wordIds || []) }
     catch { return next }
   }
-  async function installCatalogBook(book: CatalogBook, daily: number) {
+  /** `extra` is merged into the same save, so first-run setup lands as one commit. */
+  async function installCatalogBook(book: CatalogBook, daily: number, extra: Partial<Store> = {}) {
     if (bookBusy) return false
     setBookBusy(true)
     try {
@@ -34,7 +35,7 @@ export function useWordActions({ storeRef, commit, notify, clearUndo, onStudyBoo
       if (rows.length !== book.count) throw new Error('词书目录与内容版本不一致，请重新打开应用')
       const source = book.exam ? `${book.source} · 2022–2026卷面考频` : book.source
       const installed = installBook(storeRef.current, book.id, book.title, source, rows, daily)
-      if (!await commit({ ...installed, learning: { ...installed.learning, view: 'learn' } })) return false
+      if (!await commit({ ...installed, ...extra, learning: { ...installed.learning, view: 'learn' } })) return false
       // Installed either from the 词书 sheet or inline from the first-run plan (no sheet open).
       if (await modalController.getTop()) await modalController.dismiss(undefined, 'saved')
       clearUndo(); onStudyBook(); return true
@@ -75,7 +76,7 @@ export function useWordActions({ storeRef, commit, notify, clearUndo, onStudyBoo
     return commit(next)
   }
   async function restore(candidate: Store) {
-    if (!await commit(candidate)) return false
+    if (!await commit({ ...candidate, onboarded: true })) return false
     await modalController.dismiss(undefined, 'saved'); clearUndo(); notify('备份已恢复'); return true
   }
 

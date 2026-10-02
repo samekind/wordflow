@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { completeBookGroup, emptyStore, importToPersonal, markLevel, markWord, validateStore } from '../src/model'
+import { completeBookGroup, emptyStore, importToPersonal, markLevel, markWord, needsSetup, validateStore } from '../src/model'
 import { applyStudyAction, createStudyDraft } from '../src/study'
 import { dailyReadingIndex, readingArticleSchema, readingLevel } from '../src/reading'
 import { readingTranslations } from '../src/reading-translations'
@@ -92,4 +92,12 @@ test('article excerpts keep complete paragraphs instead of cutting at an arbitra
   const result = selectReadingParagraphs(['Tiny caption.', paragraph, paragraph, `${paragraph} ${paragraph}`])
   assert.deepEqual(result, [paragraph, `${paragraph} ${paragraph}`])
   assert.equal(englishWordCount("It's a well-known place."), 4)
+})
+
+test('first-run setup is only required for a store that has no words, no books and was never set up', () => {
+  assert.equal(needsSetup(emptyStore()), true)
+  assert.equal(needsSetup(fixture()), false)
+  assert.equal(needsSetup({ ...emptyStore(), onboarded: true }), false)
+  assert.equal(validateStore(JSON.parse(JSON.stringify({ ...emptyStore(), onboarded: true }))).onboarded, true)
+  assert.equal(validateStore(JSON.parse(JSON.stringify(emptyStore()))).onboarded, undefined)
 })

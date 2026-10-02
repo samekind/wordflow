@@ -59,6 +59,8 @@ export type Store = {
   studyLayout: 'preview' | 'test'; reviewMethod: 'ebbinghaus' | 'fsrs';
   profile: Profile; readingPreferences: ReadingPreferences; appearance: Appearance; aiPreferences: AIPreferences; readArticleIds: string[];
   learning: LearningState;
+  /** Set once the first-run setup has been completed; stores from before it existed are treated as set up by `needsSetup`. */
+  onboarded?: true;
 }
 export type ImportRow = Pick<Word, 'word' | 'meaning' | 'phonetic' | 'example' | 'definition' | 'exchange' | 'source'>
 export const emptyStore = (): Store => ({
@@ -69,6 +71,8 @@ export const emptyStore = (): Store => ({
   learning: emptyLearning(),
   readingPreferences: { textSize: 'standard', level: 'auto' }, appearance: { ...defaultAppearance }, aiPreferences: { autoStory: false }, readArticleIds: [],
 })
+/** First run: nothing chosen yet. Anyone who already has words or a book skips the welcome setup. */
+export const needsSetup = (store: Pick<Store, 'onboarded' | 'books' | 'words'>) => !store.onboarded && !store.books.length && !store.words.length
 export function dayKey(date: Date | string = new Date()) {
   const d = new Date(date)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -154,6 +158,7 @@ export function validateStore(input: unknown): Store {
     }).default(defaultAppearance),
     aiPreferences: z.object({ autoStory: z.boolean() }).default({ autoStory: false }),
     readArticleIds: z.array(z.string().min(1).max(200)).max(2000).default([]),
+    onboarded: z.literal(true).optional(),
     learning: z.unknown().optional(),
   }).parse(input)
   if (new Set(data.words.map(w => w.id)).size !== data.words.length ||

@@ -493,7 +493,7 @@ test('legacy migration, independent pronunciation and marks, known words, day po
 })
 
 test('bundled wordbooks install real tagged data, plan days, retain shared progress and use local assets', async ({ page }) => {
-  await seed(page, emptyStore())
+  await seed(page, { ...emptyStore(), onboarded: true })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   await nav(page, '词库')
@@ -535,6 +535,74 @@ test('bundled wordbooks install real tagged data, plan days, retain shared progr
   await page.reload()
   await expect(page.locator('.english-entry')).toHaveCount(remainingNew.length)
   expect(await page.locator('.english-entry').evaluateAll(rows => rows.map(row => row.getAttribute('data-word-id')))).toEqual(remainingNew)
+})
+
+test('first launch needs a one-time setup before the app opens, and does not repeat', async ({ page }) => {
+  await seed(page, emptyStore())
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await expect(page.getByRole('region', { name: '欢迎使用拾词' })).toBeVisible()
+  // Nothing of the app is reachable yet: no tab bar, no way past the setup.
+  await expect(page.getByRole('navigation', { name: '主导航' })).toHaveCount(0)
+  await page.screenshot({ path: 'test-results/onboarding-welcome-390.png', animations: 'disabled' })
+  await page.getByRole('button', { name: /开始设置/ }).click()
+
+  const next = page.getByRole('button', { name: /下一步/ })
+  await expect(next).toBeDisabled()
+  await page.getByLabel('昵称', { exact: true }).fill('  小林 ')
+  await next.click()
+
+  await expect(next).toBeDisabled()
+  await page.locator('.start-book').filter({ hasText: '四级词汇' }).click()
+  await next.click()
+
+  await page.getByLabel('每天新词', { exact: true }).fill('3')
+  await expect(next).toBeDisabled()
+  await page.getByLabel('每天新词', { exact: true }).fill('30')
+  await next.click()
+
+  await page.getByRole('radio', { name: /^进阶/ }).click()
+  await page.screenshot({ path: 'test-results/onboarding-reading-390.png', animations: 'disabled' })
+  await next.click()
+
+  const recap = page.locator('.onboarding-recap')
+  await expect(recap).toContainText('小林')
+  await expect(recap).toContainText('四级词汇')
+  await expect(recap).toContainText('30 词')
+  await page.getByRole('button', { name: '上一步' }).click()
+  await next.click()
+  await page.getByRole('button', { name: '开始学习', exact: true }).click()
+
+  await expect(page.getByRole('navigation', { name: '主导航' })).toBeVisible()
+  await expect(page.locator('.english-entry')).toHaveCount(20)
+  const saved = await state(page)
+  expect(saved.onboarded).toBe(true)
+  expect(saved.profile.nickname).toBe('小林')
+  expect(saved.goal).toBe(30)
+  expect(saved.readingPreferences.level).toBe('standard')
+  expect(saved.books.map(book => book.id)).toEqual(['ecdict-cet4'])
+  expect(saved.books[0].dailyCount).toBe(30)
+
+  await page.reload()
+  await expect(page.getByRole('navigation', { name: '主导航' })).toBeVisible()
+  await expect(page.getByRole('region', { name: '欢迎使用拾词' })).toHaveCount(0)
+})
+
+test('welcome page offers restoring a backup and skips setup afterwards; existing users never see it', async ({ page }) => {
+  const backup = studied(importToPersonal(emptyStore(), starterRows.slice(0, 20), '备份').store)
+  await seed(page, emptyStore())
+  await page.goto('/')
+  await expect(page.getByRole('region', { name: '欢迎使用拾词' })).toBeVisible()
+  await page.locator('input[type=file][accept=".json"]').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) })
+  await page.getByRole('button', { name: '确认恢复', exact: true }).click()
+  await expect(page.getByRole('navigation', { name: '主导航' })).toBeVisible()
+  expect((await state(page)).words).toHaveLength(20)
+  expect((await state(page)).onboarded).toBe(true)
+
+  // A store saved before onboarding existed has words and books but no flag.
+  await seed(page, importToPersonal(emptyStore(), starterRows.slice(0, 20), '旧用户').store)
+  await page.reload()
+  await expect(page.getByRole('navigation', { name: '主导航' })).toBeVisible()
 })
 
 test('online dictionary renders definitions, audio and attribution; missing entries retain local meaning', async ({ page }) => {

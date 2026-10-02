@@ -4,7 +4,8 @@ import { modalController } from '@ionic/core'
 import { motion, useReducedMotion } from 'motion/react'
 import { ChartColumn, ChevronLeft, LoaderCircle, Plus } from 'lucide-react'
 import { ProfileIcon, ReadIcon, StudyIcon } from './icons'
-import { dayKey, validateStore, type Store, type Word } from './model'
+import { dayKey, needsSetup, validateStore, type Store, type Word } from './model'
+import Onboarding from './components/Onboarding'
 import StudyList from './StudyList'
 import { currentStudyDraft, studyView } from './study'
 import { isAndroidApp, phone } from './platform'
@@ -83,7 +84,8 @@ export default function App() {
   const screen = nav.screen
   const secondary = !isTab(screen)
   const selectedTab: TabId = nav.tab
-  return <div className={`app-shell ${screen.name === 'section' ? 'settings' : screen.name}-page`}>
+  const setup = needsSetup(store)
+  return <div className={`app-shell ${setup ? 'onboarding' : screen.name === 'section' ? 'settings' : screen.name}-page`}>
     <main className="main" id="app-scroll">
       {data.failedSave && <div className="save-problem" role="alert"><strong>当前改动尚未保存</strong><p>{data.failedSave.error}</p><p>请保持本页打开，重试或导出待保存备份。</p><div className="button-row">
         <button className="primary" disabled={data.savingNow} onClick={() => void commit(data.failedSave!.next, true)}>重试保存</button>
@@ -95,7 +97,13 @@ export default function App() {
       </div></div>}
       {!!store.learning.notice && <div className="save-problem" role="status"><p>{store.learning.notice}</p><button className="text-button" disabled={saving} onClick={() => void commit({ ...storeRef.current, learning: { ...storeRef.current.learning, notice: '' } })}>知道了</button></div>}
       {/* Tabs swap instantly; pushed screens slide in. Nothing ever fades the page out. */}
-        <div className="view-transition" key={screenKey(screen)} data-enter={reduced || !nav.direction ? 'none' : nav.direction > 0 ? 'push' : 'pop'}>
+        {setup ? <Onboarding catalog={words.catalog} catalogError={words.catalogError} busy={words.bookBusy || saving} onRetry={words.refreshCatalog} onRestore={() => restoreRef.current?.click()}
+          onFinish={choice => words.installCatalogBook(choice.book, choice.daily, {
+            profile: { ...storeRef.current.profile, nickname: choice.nickname, avatar: choice.avatar },
+            readingPreferences: { ...storeRef.current.readingPreferences, level: choice.readingLevel },
+            goal: choice.daily, onboarded: true,
+          })} />
+        : <div className="view-transition" key={screenKey(screen)} data-enter={reduced || !nav.direction ? 'none' : nav.direction > 0 ? 'push' : 'pop'}>
           <ScrollTo key={nav.seq} top={nav.scroll} />
           {screen.name !== 'today' && <header className={`topbar${secondary ? '' : ' primary-topbar'}`}>
             {secondary && <button className="icon-button" aria-label="返回" title="返回" onClick={back}><ChevronLeft size={23} /></button>}
@@ -137,15 +145,15 @@ export default function App() {
               onCloudUpload={async force => { try { const saved = await uploadCloudState(storeRef.current, force); return `已上传 · ${saved.savedAt}` } catch (error) { if (error instanceof CloudConflict) throw new Error('云端有更新的记录'); throw error } }}
               onCloudRestore={async () => { setRestoreCandidate(validateStore(await downloadCloudState())) }} />}
           </div>
-        </div>
+        </div>}
     </main>
-    <nav className="mobile-nav" id="phone-tabs" aria-label="主导航">
+    {!setup && <nav className="mobile-nav" id="phone-tabs" aria-label="主导航">
       <motion.div aria-hidden className="tab-glass-selection" initial={false} animate={{ x: `${tabs.findIndex(tab => tab.id === selectedTab) * 100}%` }}
         transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }} />
       <IonTabBar selectedTab={selectedTab}>
         {tabs.map(tab => <IonTabButton tab={tab.id} key={tab.id} selected={selectedTab === tab.id} onClick={() => go({ name: tab.id })} aria-label={tab.label}><tab.icon /><IonLabel>{tab.label}</IonLabel></IonTabButton>)}
-      </IonTabBar></nav>
-    <IonToast isOpen={!!toast.message} message={toast.message} duration={3500} position="bottom" positionAnchor="phone-tabs" cssClass="app-toast" animated={!reduced} onDidDismiss={toast.clear}
+      </IonTabBar></nav>}
+    <IonToast isOpen={!!toast.message} message={toast.message} duration={3500} position="bottom" positionAnchor={setup ? undefined : 'phone-tabs'} cssClass="app-toast" animated={!reduced} onDidDismiss={toast.clear}
       buttons={[...(toast.allowUndo && study.canUndo ? [{ text: '撤销', handler: () => { void study.undoLastAction(); return false } }] : []), { text: '关闭', role: 'cancel' }]} />
     <WordDetails word={store.words.find(w => w.id === detailId)} lesson={store.lessons.find(l => l.wordId === detailId)} saving={saving} generating={ai.busy} configured={ai.config.configured} error={ai.error}
       onClose={() => setDetailId('')} onMark={study.changeMarks} onKnown={study.changeKnown} onSpeak={speech.speak} onStop={speech.stop}
