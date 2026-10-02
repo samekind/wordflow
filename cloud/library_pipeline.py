@@ -17,6 +17,8 @@ import html
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import time
 import urllib.error
@@ -78,6 +80,24 @@ REVIEW_DAYS = 60
 _last_request = {}
 
 
+def curl_get(url, timeout):
+    """Wikimedia answers 403 to HTTP/1.1 from this host's cloud address range, but HTTP/2 passes.
+    urllib speaks only HTTP/1.1, so GETs to Wikimedia hosts go through curl."""
+    marker = "\n%{http_code}|%{content_type}"
+    done = subprocess.run(
+        ["curl", "-sS", "--http2", "-L", "--max-redirs", "3", "--max-time", str(int(timeout)), "-A", USER_AGENT, "-w", marker, url],
+        capture_output=True, timeout=timeout + 10,
+    )
+    if done.returncode != 0:
+        raise urllib.error.URLError(done.stderr.decode("utf-8", "replace").strip()[:200] or "curl failed")
+    body, _, tail = done.stdout.rpartition(b"\n")
+    code, _, content_type = tail.decode("ascii", "replace").partition("|")
+    if not code.isdigit() or int(code) >= 400:
+        reason = "Too Many Requests" if code == "429" else "HTTP " + code
+        raise urllib.error.HTTPError(url, int(code) if code.isdigit() else 502, reason, {}, None)
+    return body, content_type
+
+
 def http(url, data=None, headers=None, timeout=40, min_gap=1.3):
     host = urllib.parse.urlsplit(url).netloc
     gap = time.time() - _last_request.get(host, 0)
@@ -88,11 +108,14 @@ def http(url, data=None, headers=None, timeout=40, min_gap=1.3):
     for attempt in range(3):
         try:
             _last_request[host] = time.time()
+            if data is None and host.endswith((".wikipedia.org", ".wikimedia.org")) and shutil.which("curl"):
+                return curl_get(url, timeout)
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 return response.read(), response.headers.get("Content-Type", "")
         except urllib.error.HTTPError as error:
             last = error
-            if error.code not in (429, 500, 502, 503, 504):
+            # Wikimedia answers some rate limits with 403 "Too Many Requests".
+            if error.code not in (429, 500, 502, 503, 504) and "too many" not in str(error.reason).lower():
                 break
             retry = error.headers.get("Retry-After", "")
             time.sleep(min(90, int(retry)) if retry.isdigit() else 8 * (attempt + 1))
@@ -215,8 +238,9 @@ def load_wordlist(path=WORDLIST):
     for rank, line in enumerate(Path(path).read_text("utf-8").splitlines()):
         for form in line.split():
             ranks.setdefault(form, rank)
-    for form in "am are were cannot isn't aren't wasn't weren't don't doesn't didn't won't can't couldn't wouldn't shouldn't it's that's".split():
-        ranks.setdefault(form, 50)
+    # Irregular forms the dictionary lists under other headwords ("are" there is the unit of area).
+    for form in "am are were more less least cannot isn't aren't wasn't weren't don't doesn't didn't won't can't couldn't wouldn't shouldn't it's that's".split():
+        ranks[form] = min(ranks.get(form, 50), 50)
     return ranks
 
 
@@ -359,6 +383,8 @@ class DeepSeek:
         self.key = os.environ.get("LIBRARY_AI_KEY") or os.environ.get("DEEPSEEK_API_KEY") or ""
         self.base = (os.environ.get("LIBRARY_AI_BASE") or "https://api.deepseek.com").rstrip("/")
         self.model = os.environ.get("LIBRARY_AI_MODEL") or "deepseek-flash"
+        # Gateways such as Cline route by provider; this pins the upstream, e.g. "deepseek".
+        self.only = [name.strip() for name in (os.environ.get("LIBRARY_AI_GATEWAY_ONLY") or "").split(",") if name.strip()]
 
     @property
     def ready(self):
@@ -372,6 +398,8 @@ class DeepSeek:
             "response_format": {"type": "json_object"},
             "messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": build_prompt(title, paragraphs, stats)}],
         }
+        if self.only:
+            payload["providerOptions"] = {"gateway": {"only": self.only}}
         last = None
         for _ in range(2):
             try:
@@ -379,7 +407,10 @@ class DeepSeek:
                     self.base + "/chat/completions", data=json.dumps(payload).encode("utf-8"), timeout=240, min_gap=0.5,
                     headers={"Authorization": "Bearer " + self.key, "Content-Type": "application/json"},
                 )
-                content = json.loads(body.decode("utf-8"))["choices"][0]["message"]["content"]
+                answer = json.loads(body.decode("utf-8"))
+                if isinstance(answer.get("data"), dict):  # some gateways wrap the completion in "data"
+                    answer = answer["data"]
+                content = answer["choices"][0]["message"]["content"]
                 review = validate_review(json.loads(content), len(paragraphs))
                 review["model"] = self.model
                 return review

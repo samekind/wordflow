@@ -86,6 +86,8 @@ class StatsTests(unittest.TestCase):
         ranks = pipeline.load_wordlist(ROOT / "cloud" / "library-wordlist.txt")
         self.assertEqual(ranks["was"], ranks["be"])
         self.assertLess(ranks["the"], 5)
+        for form in ("are", "more", "were"):
+            self.assertLess(ranks[form], pipeline.RARE_RANK)
         self.assertEqual(pipeline.rank_of("Bridges", {"bridges": 7}), 7)
 
 
