@@ -1,7 +1,7 @@
 {
   "name": "wordflow",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.4.2",
   "type": "module",
   "scripts": {
     "dev": "node --env-file-if-exists=.env server/index.mjs",
@@ -25,7 +25,7 @@
     "@ionic/core": "^9.0.4",
     "@ionic/react": "^9.0.4",
     "express": "^5.1.0",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^1.51.0",
     "motion": "^13.4.0",
     "papaparse": "^5.5.3",
     "react": "^19.1.0",

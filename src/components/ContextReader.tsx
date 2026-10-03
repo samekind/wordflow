@@ -1,21 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Eye, EyeOff, LoaderCircle, RefreshCw, Sparkles, Square, Volume2 } from 'lucide-react'
+import { BookOpen, Eye, EyeOff, RefreshCw, Square, Volume2 } from 'lucide-react'
 import { normalize, storyCoverage, storyIsCurrent, type Store, type Word } from '../model'
 import { contextStoryKey, studyGroupWords, studyWordStatus } from '../study'
 import type { StudyDraft } from '../study-state'
 import { previewStoryDraft } from '../story-draft'
+import { AIIcon } from '../icons'
 import { LookupDock, LookupProvider, ReadableText } from './ReadableText'
 
 export function StoryProgress({ words, live }: { words: Word[]; live: string }) {
   const draft = previewStoryDraft(live)
   const steps = ['词表已交给模型', draft.title ? `标题：${draft.title}` : '模型正在拟定标题', draft.paragraphs.length ? `已完成 ${draft.paragraphs.length} 段` : '模型正在写英文', draft.paragraphs.some(item => item.translation) ? '译文正在跟上' : '模型接着写译文']
   const active = !live ? 0 : !draft.title ? 1 : !draft.paragraphs.length ? 2 : 3
-  return <section className="story-progress" role="status" aria-live="polite">
-    <div className="story-progress-head"><LoaderCircle className="spin" size={18} /><strong>模型正在写</strong><span>{words.length} 个词</span></div>
+  return <section className="story-progress ai-aura" role="status" aria-live="polite">
+    <div className="story-progress-head"><AIIcon size={20} active /><strong>模型正在写</strong><span>{words.length} 个词</span></div>
     <ol>{steps.map((label, index) => <li key={index} data-state={index < active ? 'done' : index === active ? 'active' : 'wait'}>{label}</li>)}</ol>
     <div className="story-live">
       {draft.paragraphs.map((paragraph, index) => <p lang="en" key={index}>{paragraph.english}</p>)}
-      <p className="story-live-tail" lang="en">{draft.tail || (!live ? `正在把 ${words.length} 个词送进模型` : '')}<span className="story-caret" /></p>
+      <p className="story-live-tail" lang="en" key="tail">{draft.tail || (!live ? `正在把 ${words.length} 个词送进模型` : '')}<span className="story-caret" /></p>
     </div>
   </section>
 }
@@ -70,7 +71,7 @@ export default function ContextReader({ store, draft, now, services, onWord, onS
       <BookOpen size={26} /><h2>在短文中记住本组单词</h2>
       <p>用这 {words.length} 个词生成语境短文，读完后回到同一组词自测。</p>
       <button className="primary" disabled={services.busy || changed || !words.length} onClick={() => services.onGenerate(draft)}>
-        {services.busy ? <LoaderCircle className="spin" size={17} /> : <Sparkles size={17} />}生成本组短文
+        <AIIcon size={19} active={services.busy} />生成本组短文
       </button>
     </div>)}
     <div className="context-check">

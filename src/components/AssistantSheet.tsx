@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { LoaderCircle, Send, Trash2, X } from 'lucide-react'
+import { Send, Trash2, X } from 'lucide-react'
+import { motion } from 'motion/react'
+import { AIIcon } from '../icons'
 import { aiRemaining, chat, onAIRemaining, type ChatMessage } from '../ai'
 import Sheet from './Sheet'
 import type { AssistantCtx } from './AssistantContext'
@@ -54,9 +56,12 @@ function Conversation({ ctx }: { ctx: AssistantCtx | null }) {
   const live = useRef({ key, mounted: true })
   live.current.key = key
   const end = useRef<HTMLDivElement>(null)
+  // Messages already on screen when a conversation opens appear at once; only new ones animate in.
+  const settled = useRef(messages.length)
+  useEffect(() => { settled.current = messages.length })
   const left = useSyncExternalStore(onAIRemaining, aiRemaining)
   useEffect(() => { live.current.mounted = true; return () => { live.current.mounted = false } }, [])
-  useEffect(() => { setMessages(loadChat(key)); setError('') }, [key])
+  useEffect(() => { const loaded = loadChat(key); settled.current = loaded.length; setMessages(loaded); setError('') }, [key])
   // Not scrollIntoView: it would also scroll the sheet's clipped wrapper and push the whole sheet out of view.
   useEffect(() => { void (end.current?.closest('ion-content') as HTMLIonContentElement | null)?.scrollToBottom(150) }, [messages.length, busy])
 
@@ -89,18 +94,25 @@ function Conversation({ ctx }: { ctx: AssistantCtx | null }) {
     </div>
     <div className="assistant-messages" role="log" aria-label="对话" aria-live="polite">
       {!messages.length && !busy && <div className="assistant-empty">
+        <div className="assistant-hero"><AIIcon size={40} active /></div>
         <p>{active ? '可以直接问我，我已经看到了当前内容。' : '问我任何英语学习的问题。'}</p>
-        <div className="assistant-hints">{hints.map(hint => <button type="button" className="reader-pill" key={hint} onClick={() => void send(hint)}>{hint}</button>)}</div>
+        <div className="assistant-hints">{hints.map((hint, index) => <motion.button type="button" className="reader-pill" key={hint} onClick={() => void send(hint)}
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} whileTap={{ scale: .96 }} transition={{ type: 'spring', stiffness: 380, damping: 30, delay: .1 + index * .06 }}>{hint}</motion.button>)}</div>
       </div>}
-      {messages.map((message, index) => <div className="assistant-bubble" data-role={message.role} key={index}>{message.content}</div>)}
-      {busy && <div className="assistant-bubble" data-role="assistant" role="status"><LoaderCircle size={16} className="spin" />思考中…</div>}
+      {messages.map((message, index) => <motion.div className="assistant-bubble" data-role={message.role} key={index}
+        style={{ transformOrigin: message.role === 'user' ? '100% 100%' : '0% 100%' }}
+        initial={index < settled.current ? false : { opacity: 0, y: 12, scale: .96 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 420, damping: 34 }}>{message.content}</motion.div>)}
+      {busy && <motion.div className="assistant-bubble ai-aura assistant-thinking" data-role="assistant" role="status" style={{ transformOrigin: '0% 100%' }}
+        initial={{ opacity: 0, y: 10, scale: .96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 420, damping: 34 }}>
+        <AIIcon size={18} active /><span className="ai-shimmer-text">思考中…</span></motion.div>}
       <div ref={end} />
     </div>
     {error && <p className="error-banner" role="alert">{error}</p>}
     <form className="assistant-form" onSubmit={event => { event.preventDefault(); void send(draft) }}>
       <textarea aria-label="向 AI 提问" rows={1} maxLength={1000} placeholder="输入问题…" value={draft} disabled={busy}
         onChange={event => setDraft(event.target.value)} />
-      <button type="submit" className="primary assistant-send" aria-label="发送" disabled={busy || !draft.trim()}><Send size={18} /></button>
+      <motion.button type="submit" className="primary assistant-send" aria-label="发送" disabled={busy || !draft.trim()} whileTap={{ scale: .9 }}><Send size={18} /></motion.button>
     </form>
     <p className="source-note assistant-note">内置 AI 生成，仅供参考。{left !== undefined ? `今日还剩 ${left} 点额度。` : '每天有免费额度，次日刷新。'}</p>
   </div>

@@ -1,4 +1,4 @@
-import type { ReactNode, SVGProps } from 'react'
+import { useId, type ReactNode, type SVGProps } from 'react'
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number }
 
@@ -56,4 +56,26 @@ export function DailyIcon(props: IconProps) {
     <rect x="4.5" y="5.2" width="15" height="14.2" rx="3" />
     <path d="M4.5 9.2h15M8 3.6v3.2M16 3.6v3.2" />
   </Glyph>
+}
+
+/** The AI mark: a large four-point spark with two small ones, drawn in the soft multi-colour gradient used for every AI surface.
+ * `active` makes the colours drift while the AI is working (the motion stops under reduced-motion). */
+export function AIIcon({ size = 24, active = false, className, ...props }: IconProps & { active?: boolean }) {
+  const id = useId()
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
+    className={`ai-icon${active ? ' ai-icon-active' : ''}${className ? ` ${className}` : ''}`} aria-hidden="true" {...props}>
+    <defs>
+      <linearGradient id={id} x1="3" y1="21" x2="21" y2="3" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stopColor="var(--ai-4)" />
+        <stop offset=".38" stopColor="var(--ai-3)" />
+        <stop offset=".7" stopColor="var(--ai-2)" />
+        <stop offset="1" stopColor="var(--ai-1)" />
+      </linearGradient>
+    </defs>
+    <g stroke={`url(#${id})`}>
+      <path d="M10.2 4.2c.5 3.7 2.3 5.5 6 6-3.7.5-5.5 2.3-6 6-.5-3.7-2.3-5.5-6-6 3.7-.5 5.5-2.3 6-6z" />
+      <path d="M18.4 14.6c.2 1.7 1 2.5 2.7 2.7-1.7.2-2.5 1-2.7 2.7-.2-1.7-1-2.5-2.7-2.7 1.7-.2 2.5-1 2.7-2.7z" />
+      <path d="M17.6 2.8v2.4M16.4 4h2.4" />
+    </g>
+  </svg>
 }

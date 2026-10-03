@@ -166,6 +166,29 @@ test('study header has direct controls: no vague ⋯ menu, plan sheet holds the 
   for (const name of ['读短文', '朗读本组', '撤销上一步']) await expect(tools.getByRole('button', { name })).toBeVisible()
   await expect(tools.getByRole('button', { name: /^回看当天/ })).toBeVisible()
 })
+test('story generation shows a live progress card that goes calm under reduced motion', async ({ page }) => {
+  await seed(page, fixture(40))
+  let release: (() => void) | undefined
+  await page.route('**/api/settings', route => route.fulfill({ json: { provider: 'deepseek', model: 'fixture-model', configured: true } }))
+  await page.route('**/api/story', async route => {
+    await new Promise<void>(resolve => { release = resolve })
+    await route.fulfill({ json: { model: 'fixture-model', story: { title: 'Calm Progress', paragraphs: [{ english: 'A short fixture story.', translation: '合成短文。' }] } } })
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await openStory(page)
+  await page.getByRole('button', { name: '生成本组短文', exact: true }).click()
+  const progress = page.locator('.story-progress')
+  await expect(progress).toBeVisible()
+  expect(await progress.evaluate(el => getComputedStyle(el, '::before').animationName)).toBe('ai-orbit')
+  expect(await progress.locator('.ai-icon-active').count()).toBe(1)
+  await page.screenshot({ path: 'test-results/story-progress-390.png' })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  expect(await progress.evaluate(el => getComputedStyle(el, '::before').animationName)).toBe('none')
+  release!()
+  await expect(page.locator('.context-reader .story-article h2')).toHaveText('Calm Progress')
+})
+
 test('review progress separates the current task from later due words and resumes the first unfinished group', async ({ page }) => {
   const started = new Date()
   let initial = fsrsFixture(61)

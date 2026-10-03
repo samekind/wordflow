@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Sparkles } from 'lucide-react'
+import { AIIcon } from '../icons'
 import type { AIContext } from '../ai'
 import AssistantSheet from './AssistantSheet'
 
@@ -48,5 +48,5 @@ export function useAssistantContext(ctx: AssistantCtx | null) {
 /** The entry point: opens the assistant about whatever the current screen published. */
 export function AssistantButton({ className = 'icon-button', context }: { className?: string; context?: AssistantCtx | null }) {
   const ask = useAssistant()
-  return <button type="button" className={className} aria-label="AI 助手" title="AI 助手" onClick={() => ask(context)}><Sparkles size={20} /></button>
+  return <button type="button" className={className} aria-label="AI 助手" title="AI 助手" onClick={() => ask(context)}><AIIcon size={23} /></button>
 }

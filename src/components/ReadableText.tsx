@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { BookmarkPlus, Globe, Languages, LoaderCircle, Sparkles, Volume2, X } from 'lucide-react'
+import { BookmarkPlus, Globe, Languages, LoaderCircle, Volume2, X } from 'lucide-react'
+import { AIIcon } from '../icons'
 import { explainWord, translateSentence } from '../ai'
 import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dictionary'
 import { lookupMeaning, shortGloss, type WordMeaning } from '../word-lookup'
@@ -114,8 +115,8 @@ function WordPeek({ peek, id, onClose, onSpeak, onStop, onAdd, onOpenWord }: {
     {meaning?.source === 'online' && <p className="source-note">来自有道词典（在线）</p>}
     {problem && <p className="error-banner" role="alert">{problem}</p>}
     <div className="word-peek-actions">
-      <button className="reader-pill" disabled={extra?.busy} onClick={() => void ask('sentence')}>{extra?.busy && extra.kind === 'sentence' ? <LoaderCircle size={15} className="spin" /> : <Languages size={15} />}翻译本句</button>
-      <button className="reader-pill" disabled={extra?.busy} onClick={() => void ask('context')}>{extra?.busy && extra.kind === 'context' ? <LoaderCircle size={15} className="spin" /> : <Sparkles size={15} />}语境释义</button>
+      <button className="reader-pill" disabled={extra?.busy} onClick={() => void ask('sentence')}>{extra?.busy && extra.kind === 'sentence' ? <AIIcon size={17} active /> : <Languages size={15} />}翻译本句</button>
+      <button className="reader-pill" disabled={extra?.busy} onClick={() => void ask('context')}><AIIcon size={17} active={extra?.busy && extra.kind === 'context'} />语境释义</button>
       <button className="reader-pill" disabled={dictBusy} onClick={() => void dictionary()}>{dictBusy ? <LoaderCircle size={15} className="spin" /> : <Globe size={15} />}在线词典</button>
       {id && onOpenWord ? <button className="reader-pill" onClick={() => onOpenWord(id)}>词条详情</button>
         : meaning?.source === 'local' && onAdd && <button className="reader-pill" disabled={adding} onClick={async () => {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { IonToggle } from '@ionic/react'
-import { ExternalLink, Globe, LoaderCircle, Minus, Pencil, Plus, Sparkles, Volume2 } from 'lucide-react'
+import { ExternalLink, Globe, LoaderCircle, Minus, Pencil, Plus, Volume2 } from 'lucide-react'
 import { markLevel, type Lesson, type Word } from '../model'
 import { examChoices, examFrequencyFor, loadExamFrequency } from '../exam-frequency'
 import { bundledMnemonic, loadMnemonics, type BundledMnemonic } from '../mnemonics'
@@ -8,6 +8,7 @@ import { coreGloss } from '../gloss'
 import { dictionaryUrl, isAndroidApp } from '../platform'
 import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dictionary'
 import Sheet from './Sheet'
+import { AIIcon } from '../icons'
 import { AssistantButton, useAssistant, type AssistantCtx } from './AssistantContext'
 import MarkDots from './MarkDots'
 import { Segmented } from './Controls'
@@ -125,7 +126,7 @@ export default function WordDetails({ word, lesson, saving, onClose, onMark, onK
             {mnemonic.example && <p lang="en">{mnemonic.example}</p>}
             {mnemonic.translation && <p>{mnemonic.translation}</p>}
           </div>}
-          {!mnemonic && <button className="text-button" onClick={() => ask(assistantContext)}><Sparkles size={14} />问 AI 怎么记</button>}
+          {!mnemonic && <button className="text-button" onClick={() => ask(assistantContext)}><AIIcon size={16} />问 AI 怎么记</button>}
           <button className="text-button" disabled={saving} onClick={() => { setDraftMnemonic(mnemonic?.mnemonic || ''); setDraftExample(mnemonic?.example || ''); setDraftTranslation(mnemonic?.translation || ''); setEditing(true) }}><Pencil size={14} />自己写助记</button>
         </>}
         {editing && <div className="mnemonic-editor">

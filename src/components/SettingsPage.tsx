@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { BookOpen, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, RefreshCw, Settings2, Smile, Sparkles, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
+import { BookOpen, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, RefreshCw, Settings2, Smile, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
+import { AIIcon } from '../icons'
 import type { Appearance, PageFont, TextSize } from '../model'
 import { installedRelease, loadCloudAccount } from '../cloud'
 import UpdatePage from './UpdatePage'
@@ -84,7 +85,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
       <div className="settings-group">
       <button onClick={() => onSection('profile')} aria-label="账号与资料"><UserRound size={20} /><span>账号与资料<small>昵称、头像、云端账号</small></span><small>{hasCloud ? '已连接' : '未登录'}</small><ChevronRight size={16} /></button>
       <button onClick={() => onSection('data')} aria-label="数据与备份"><Database size={20} /><span>数据与备份<small>导出、恢复、云端同步</small></span><ChevronRight size={16} /></button>
-      <button onClick={() => onSection('ai')} aria-label="AI 服务"><Sparkles size={20} /><span>AI 服务<small>AI 助手、语境短文</small></span><small>{ai.configured ? '自己的 Key' : '内置 AI'}</small><ChevronRight size={16} /></button>
+      <button onClick={() => onSection('ai')} aria-label="AI 服务"><AIIcon size={21} /><span>AI 服务<small>AI 助手、语境短文</small></span><small>{ai.configured ? '自己的 Key' : '内置 AI'}</small><ChevronRight size={16} /></button>
       </div>
       <h2 className="settings-group-title">关于</h2>
       <div className="settings-group">

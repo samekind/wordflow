@@ -949,6 +949,36 @@ test('a word without a mnemonic offers the assistant instead of a generate butto
   await expect(page.getByText('每台设备每天有 60 点额度')).toBeVisible()
 })
 
+test('the assistant shows a living thinking state, and stays still when motion is reduced', async ({ page }) => {
+  await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 20), '助手动效').store))
+  let release: (() => void) | undefined
+  await page.route('**/v1/ai/chat', async route => {
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST' }
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    await new Promise<void>(resolve => { release = resolve })
+    await route.fulfill({ headers: cors, json: { reply: '合成回答', model: 'fixture', remaining: 59 } })
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'AI 助手', exact: true }).click()
+  const assistant = page.locator('ion-modal').filter({ has: page.getByRole('heading', { name: 'AI 助手', exact: true }) })
+  await expect(assistant.locator('.assistant-hero')).toBeVisible()
+  await expect(assistant.getByRole('button', { name: '这组词里哪些容易混淆？', exact: true })).toBeVisible()
+  await page.screenshot({ path: 'test-results/assistant-empty-390.png' })
+  await assistant.getByRole('button', { name: '这组词里哪些容易混淆？', exact: true }).click()
+  const thinking = assistant.locator('.assistant-thinking')
+  await expect(thinking).toBeVisible()
+  const animated = (selector: string, pseudo?: string) => page.evaluate(([sel, ps]) => getComputedStyle(document.querySelector(sel as string)!, (ps as string) || null).animationName, [selector, pseudo ?? ''])
+  expect(await animated('.assistant-thinking', '::before')).toBe('ai-orbit')
+  await page.screenshot({ path: 'test-results/assistant-thinking-390.png' })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  expect(await animated('.assistant-thinking', '::before')).toBe('none')
+  expect(await animated('.assistant-thinking .ai-shimmer-text')).toBe('none')
+  release!()
+  await expect(assistant.locator('.assistant-bubble[data-role=assistant]')).toHaveText('合成回答')
+  await expect(thinking).toHaveCount(0)
+})
+
 test('a CC0 cartoon avatar is saved as a PNG profile picture', async ({ page }) => {
   await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 20), '头像').store))
   await page.setViewportSize({ width: 390, height: 844 })
