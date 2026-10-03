@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from 'react'
 import { BookA, BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, EyeOff, Languages, LoaderCircle, RefreshCw, SlidersHorizontal, Square, Volume2 } from 'lucide-react'
-import { DailyIcon } from '../icons'
+import { DailyIcon, EssayIcon } from '../icons'
 import { dayKey, normalize, pageFontAttrs, wordsForDay, type ImportRow, type Store } from '../model'
 import { articleCefr, cachedArticle, cefrNames, dailyReadingIndex, englishWordCount, inScope, readingLengthNames, readingLengths, readingLevel, readingLevels, refreshReadingArticle, scopeLabel, type ReadingArticle, type ReadingCefr, type ReadingLength, type ReadingScope } from '../reading'
 import { fitLabels, recommendArticles } from '../library-fit'
@@ -8,12 +8,11 @@ import { useReadingArticles } from '../app/useReadingLibrary'
 import { articleTranslations } from '../reading-translations'
 import ChoiceSheet from './ChoiceSheet'
 import { LookupDock, LookupProvider, ReadableText, articleGlosses } from './ReadableText'
-import { useAssistantContext } from './AssistantContext'
 
 type Props = {
   store: Store; now: number;
   /** hub = the 阅读 tab (entry cards); shelf = one difficulty's topics / list; daily = the pushed reader screen. */
-  view: 'hub' | 'picks' | 'shelf' | 'daily'; onOpen: (view: 'picks' | 'daily', articleId?: string, scope?: ReadingScope) => void;
+  view: 'hub' | 'picks' | 'shelf' | 'story' | 'daily'; onOpen: (view: 'picks' | 'story' | 'daily', articleId?: string, scope?: ReadingScope) => void;
   onShelf: (cefr: ReadingCefr, topic?: string) => void;
   /** Article chosen from a list; the reader starts on it instead of today's pick. */
   articleId?: string;
@@ -22,11 +21,16 @@ type Props = {
   saving: boolean; onRead: (id: string) => Promise<boolean>; onWord: (id: string) => void;
   /** Adds a looked-up word to 我的词本 without leaving the article. */
   onAddWord: (row: ImportRow) => Promise<boolean>;
-  onSpeak: (text: string) => void; onStop: () => void;
+  onSpeak: (text: string) => void; onStop: () => void; children?: ReactNode;
+  onStudy?: () => void;
 }
 export default function ReadingPage(props: Props) {
   return <div className="reading-page font-scope" data-size={props.store.readingPreferences.textSize} {...pageFontAttrs(props.store.appearance.reading)}>
-    {props.view === 'hub' ? <ReadingEntries {...props} /> : props.view === 'picks' ? <ReadingHub {...props} /> : props.view === 'shelf' && props.scope?.cefr ? <ReadingShelf {...props} scope={{ ...props.scope, cefr: props.scope.cefr }} /> : <DailyEnglish {...props} />}
+    {props.view === 'hub' ? <ReadingEntries {...props} /> : props.view === 'picks' ? <ReadingHub {...props} /> : props.view === 'shelf' && props.scope?.cefr ? <ReadingShelf {...props} scope={{ ...props.scope, cefr: props.scope.cefr }} /> : props.view === 'story' ? <>
+      <div className="reading-intro"><p>把当天的词放进一篇短文里，在上下文中记住它们。也可以自己挑词生成。</p>
+        {props.onStudy && <button className="text-button" disabled={props.saving} onClick={props.onStudy}>去本组语境记忆<ChevronRight size={15} /></button>}</div>
+      {props.children}
+    </> : <DailyEnglish {...props} />}
   </div>
 }
 /** An online image that cannot load (offline, taken down) must not leave a broken icon behind. */
@@ -37,13 +41,15 @@ function syncedText(at: number, now: number) {
 }
 const pageSize = 15
 const minutesFor = (words: number) => Math.max(1, Math.ceil(words / 120))
-/** 阅读 tab: one entry card. Everything else is one level down. */
+/** 阅读 tab: exactly two entries. Everything else is one level down. */
 function ReadingEntries({ store, now, onOpen }: Props) {
   const { articles: catalog } = useReadingArticles(true)
   const level = readingLevel(store)
   const choices = useMemo(() => catalog.filter(article => article.level === level), [catalog, level])
   const today = choices.length ? choices[dailyReadingIndex(choices.length, new Date(now))] : undefined
   const read = !!today && store.readArticleIds.includes(today.id)
+  const book = store.books.find(item => item.id === store.activeBookId)
+  const dayWords = book ? wordsForDay(store, book).length : 0
   return <div className="reading-hub reading-entries">
     <button className="reading-entry reading-entry-daily" aria-label="每日英语选读" onClick={() => onOpen('picks')}>
       {today?.image ? <img src={today.image.path} alt="" /> : <span className="reading-entry-icon"><DailyIcon size={26} /></span>}
@@ -53,6 +59,15 @@ function ReadingEntries({ store, now, onOpen }: Props) {
         <span>今日一篇、适合你的推荐，以及 A2–C2 按难度选读</span>
       </span>
       <span className="reading-entry-state" data-read={read}>{read ? <><CheckCheck size={14} />今日已读</> : <ChevronRight size={18} />}</span>
+    </button>
+    <button className="reading-entry" aria-label="语境记忆" onClick={() => onOpen('story')}>
+      <span className="reading-entry-icon"><EssayIcon size={26} /></span>
+      <span className="reading-entry-body">
+        <small>语境记忆</small>
+        <strong>把当天的词放进短文里记</strong>
+        <span>{dayWords ? `当天 ${dayWords} 个词` : '先选一本词书'} · 已保存 {store.stories.length} 篇</span>
+      </span>
+      <ChevronRight size={18} className="reading-entry-chevron" />
     </button>
     <p className="reading-hub-note">已读文章 {store.readArticleIds.length} 篇 · 阅读设置在“我的 → 发音与阅读”</p>
   </div>
@@ -259,7 +274,6 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
     }
     return [...found].map(([id, text]) => ({ id, text }))
   }, [article, book, knownWords, store.words])
-  useAssistantContext(article ? { kind: 'article', label: article.title, title: article.title, text: article.paragraphs.join('\n\n') } : null)
   const learning = useMemo(() => new Set(store.words.filter(word => !word.known).map(word => normalize(word.word))), [store.words])
   useEffect(() => {
     setGlosses(new Map())

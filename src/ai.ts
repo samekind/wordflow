@@ -3,13 +3,7 @@ import { cloudBase } from './cloud'
 import { storyContentSchema } from './model'
 
 /** The only place the app talks to the built-in AI (served by the Wordflow cloud with its own key).
- * Prompts live on the server; the app sends the question plus what the user is looking at.
- * Each device gets a daily allowance, tracked by an anonymous random id kept on this device. */
-export type ChatMessage = { role: 'user' | 'assistant'; content: string }
-export type AIContext =
-  | { kind: 'article'; title: string; text: string }
-  | { kind: 'word'; word: string; meaning?: string; sentence?: string }
-  | { kind: 'study'; words: { word: string; meaning: string }[] }
+ * Prompts live on the server. Each device gets a daily allowance, tracked by an anonymous random id kept on this device. */
 
 const deviceKey = 'wordflow.ai.device'
 function deviceId() {
@@ -23,28 +17,32 @@ function deviceId() {
   } catch { return undefined }
 }
 
-let remaining: number | undefined
-const listeners = new Set<() => void>()
-/** Units left today, as last reported by the server (undefined until the first answer). */
-export const aiRemaining = () => remaining
-export function onAIRemaining(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener) } }
-function noteRemaining(value: unknown) {
-  if (typeof value !== 'number' || value === remaining) return
-  remaining = value; listeners.forEach(listener => listener())
+const retryDelays = [800, 1800]
+/** A request that fails within a few seconds never reached the server (a dropped mobile connection, a DNS hiccup),
+ * so it is safe to send again, even for a story that costs points. A slow failure may have been charged: no retry. */
+async function send(url: string, init: RequestInit, fetcher: typeof fetch) {
+  for (let attempt = 0; ; attempt++) {
+    const started = Date.now()
+    try { return await fetcher(url, init) }
+    catch (error) {
+      const quick = Date.now() - started < 4000
+      if ((error as Error).name === 'TimeoutError' || !quick || attempt >= retryDelays.length) throw error
+      await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]))
+    }
+  }
 }
 
 async function post(path: string, body: Record<string, unknown>, fetcher: typeof fetch): Promise<unknown> {
   let response: Response
   try {
-    response = await fetcher(`${cloudBase}${path}`, {
+    response = await send(`${cloudBase}${path}`, {
       method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...body, device: deviceId() }), signal: AbortSignal.timeout(170000),
-    })
+    }, fetcher)
   } catch (error) {
-    throw new Error((error as Error).name === 'TimeoutError' ? 'AI 响应超时，请稍后重试' : '连不上内置 AI，请检查网络')
+    throw new Error((error as Error).name === 'TimeoutError' ? 'AI 响应超时，请稍后重试' : '连不上内置 AI，请检查网络后重试')
   }
-  const data = await response.json().catch(() => null) as { error?: unknown; remaining?: unknown } | null
-  noteRemaining(data?.remaining)
+  const data = await response.json().catch(() => null) as { error?: unknown } | null
   if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : `内置 AI 暂时不可用 (${response.status})`)
   return data
 }
@@ -57,9 +55,6 @@ async function ask(body: Record<string, unknown>, fetcher: typeof fetch) {
   return parsed.data.reply.replace(/\*\*(.+?)\*\*/g, '$1').replace(/^#{1,6}\s+/gm, '').trim()
 }
 
-/** A conversation turn: `messages` ends with the user's question; `context` is what they are looking at. */
-export const chat = (messages: ChatMessage[], context?: AIContext, fetcher: typeof fetch = fetch) =>
-  ask({ messages, ...(context ? { context } : {}) }, fetcher)
 /** One sentence into Chinese (the word card's 翻译本句). */
 export const translateSentence = (sentence: string, fetcher: typeof fetch = fetch) => ask({ task: { type: 'sentence', sentence } }, fetcher)
 /** What a word means in this sentence (the word card's 语境释义). */

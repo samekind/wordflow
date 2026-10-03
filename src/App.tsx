@@ -3,16 +3,16 @@ import { IonLabel, IonTabBar, IonTabButton, IonToast } from '@ionic/react'
 import { modalController } from '@ionic/core'
 import { motion, useReducedMotion } from 'motion/react'
 import { ChartColumn, ChevronLeft, LoaderCircle, Plus } from 'lucide-react'
-import { AssistantButton } from './components/AssistantContext'
 import { ProfileIcon, ReadIcon, StudyIcon } from './icons'
 import { dayKey, needsSetup, validateStore, type Store, type Word } from './model'
 import Onboarding from './components/Onboarding'
 import StudyList from './StudyList'
-import { checkIn } from './study'
+import { checkIn, currentStudyDraft, studyView } from './study'
 import { isAndroidApp, phone } from './platform'
 import WordDetails from './components/WordDetails'
 import BookShelf, { type ShelfView } from './components/BookShelf'
 import SettingsPage, { settingsTitles } from './components/SettingsPage'
+import DailyReader from './components/DailyReader'
 import ReadingPage from './components/ReadingPage'
 import { cefrNames } from './reading'
 import ExamFrequencyView from './components/ExamFrequencyView'
@@ -31,7 +31,7 @@ import { useAIServices } from './app/useAIServices'
 import { useBackButton } from './app/useBackButton'
 
 const tabs = [{ id: 'today', label: '学习', icon: StudyIcon }, { id: 'stats', label: '统计', icon: ChartColumn }, { id: 'story', label: '阅读', icon: ReadIcon }, { id: 'settings', label: '我的', icon: ProfileIcon }] as const
-const titles: Record<string, string> = { stats: '统计', books: '词书管理', story: '阅读', settings: '我的', library: '我的单词', frequency: '考频查询', article: '英语选读', picks: '每日英语选读' }
+const titles: Record<string, string> = { stats: '统计', books: '词书管理', story: '阅读', settings: '我的', library: '我的单词', frequency: '考频查询', article: '英语选读', stories: '语境记忆', picks: '每日英语选读' }
 const titleOf = (screen: Screen) => screen.name === 'section' ? settingsTitles[screen.section] : screen.name === 'shelf'
   ? `${screen.cefr} ${cefrNames[screen.cefr]}${screen.topic && screen.topic !== '*' ? ` · ${screen.topic}` : ''}` : titles[screen.name]
 
@@ -109,13 +109,12 @@ export default function App() {
             readingPreferences: { ...storeRef.current.readingPreferences, level: choice.readingLevel },
             goal: choice.daily, onboarded: true,
           })} />
-        : <div className="view-transition" key={screenKey(screen)} data-enter={reduced || !nav.direction ? 'none' : nav.direction > 0 ? 'push' : 'pop'}>
+        : <div className="view-transition" key={screenKey(screen)} data-enter={reduced ? 'none' : nav.direction > 0 ? 'push' : nav.direction < 0 ? 'pop' : nav.seq > 0 ? 'tab' : 'none'}>
           <ScrollTo key={nav.seq} top={nav.scroll} />
           {screen.name !== 'today' && <header className={`topbar${secondary ? '' : ' primary-topbar'}`}>
             {secondary && <button className="icon-button" aria-label="返回" title="返回" onClick={back}><ChevronLeft size={23} /></button>}
             <h1>{titleOf(screen)}</h1>
             {screen.name === 'books' || screen.name === 'library' ? <button className="text-button header-action" aria-label="导入词表" onClick={() => setImportOpen(true)}><Plus size={17} />导入词表</button> : null}
-            <AssistantButton className="icon-button header-assistant" />
           </header>}
           <div className={`content ${screen.name === 'today' ? 'study-view' : ''}`}>
             {screen.name === 'today' && <StudyList store={store} now={data.clock} saving={saving} canUndo={study.canUndo}
@@ -131,14 +130,18 @@ export default function App() {
             {screen.name === 'frequency' && <ExamFrequencyView initialExam={words.catalog.find(book => book.id === store.activeBookId)?.exam || (store.activeBookId === 'ecdict-ky' ? 'ky1' : 'cet4')} />}
             {screen.name === 'library' && <LibraryPage store={store} onWord={openWord} onBooks={() => go({ name: 'books' })} />}
             {screen.name === 'stats' && <StatsPage store={store} now={data.clock} saving={saving} onCheckIn={doCheckIn} onStudy={goStudy} onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onBooks={() => go({ name: 'books' })} />}
-            {(screen.name === 'story' || screen.name === 'article' || screen.name === 'shelf' || screen.name === 'picks') && <ReadingPage store={store} now={data.clock} view={screen.name === 'story' ? 'hub' : screen.name === 'picks' ? 'picks' : screen.name === 'article' ? 'daily' : 'shelf'}
-              onOpen={(view, id, scope) => go(view === 'daily' ? { name: 'article', id, scope } : { name: 'picks' })} onShelf={(cefr, topic) => go({ name: 'shelf', cefr, topic })}
+            {(screen.name === 'story' || screen.name === 'article' || screen.name === 'stories' || screen.name === 'shelf' || screen.name === 'picks') && <ReadingPage store={store} now={data.clock} view={screen.name === 'story' ? 'hub' : screen.name === 'picks' ? 'picks' : screen.name === 'article' ? 'daily' : screen.name === 'shelf' ? 'shelf' : 'story'}
+              onStudy={async () => { const current = storeRef.current; const mode = studyView(current); const draft = currentStudyDraft(current, mode === 'review' ? 'review' : 'learn'); if (!draft || await study.changeStudy(draft, { type: 'method', method: 'context' })) goStudy() }}
+              onOpen={(view, id, scope) => go(view === 'daily' ? { name: 'article', id, scope } : view === 'picks' ? { name: 'picks' } : { name: 'stories' })} onShelf={(cefr, topic) => go({ name: 'shelf', cefr, topic })}
               articleId={screen.name === 'article' ? screen.id : undefined} scope={screen.name === 'article' ? screen.scope : screen.name === 'shelf' ? { cefr: screen.cefr, topic: screen.topic } : undefined} onAddWord={row => words.importRows([row], '阅读收藏', true)} saving={saving}
               onRead={id => {
                 const current = storeRef.current
                 if (current.readArticleIds.includes(id)) return Promise.resolve(true)
                 return commit({ ...current, readArticleIds: [...current.readArticleIds, id].slice(-2000) })
-              }} onWord={openWord} onSpeak={speech.speak} onStop={speech.stop} />}
+              }} onWord={openWord} onSpeak={speech.speak} onStop={speech.stop}>
+              <DailyReader store={store} busy={ai.busy || saving} live={ai.live} error={ai.error} onGenerate={ai.generateStory}
+                onWord={openWord} onSpeak={speech.speak} onStop={speech.stop} onBooks={() => go({ name: 'books' })} onAddWord={row => words.importRows([row], '阅读收藏', true)} />
+            </ReadingPage>}
             {(screen.name === 'settings' || screen.name === 'section') && <SettingsPage store={store} ai={ai.config} saving={saving} aiBusy={ai.busy} error={ai.error} onSaveAI={ai.saveConfig} onRemoveAI={ai.removeConfig}
               section={screen.name === 'section' ? screen.section : 'home'} onSection={section => { if (section === 'home') back(); else go({ name: 'section', section }) }}
               onPreferences={patch => commit({ ...storeRef.current, ...patch })} onBackup={downloadBackup} onRestore={() => restoreRef.current?.click()} onSpeak={speech.speak} onLicenses={() => setLicensesOpen(true)}

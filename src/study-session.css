@@ -334,3 +334,8 @@ i.is-review{background:var(--success)}
 .known-note{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 0 0;font-size:var(--fs-caption);color:var(--text-muted)}
 .known-note .text-button{min-height:32px;padding:0 6px;font-size:var(--fs-caption)}
 @media(max-width:359px){.study-card .study-card-top .study-stage-switch .stage-text{display:none}.study-card .study-card-top .study-stage-switch button{padding:0 9px}}
+
+/* Switching tabs lifts the new page 8px into place; opacity never drops (see Screen transitions). */
+.view-transition[data-enter="tab"]{animation:screen-tab .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes screen-tab{from{transform:translate3d(0,8px,0)}to{transform:none}}
+@media(prefers-reduced-motion:reduce){.view-transition[data-enter]{animation:none}}

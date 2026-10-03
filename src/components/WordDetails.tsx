@@ -8,8 +8,6 @@ import { coreGloss } from '../gloss'
 import { dictionaryUrl, isAndroidApp } from '../platform'
 import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dictionary'
 import Sheet from './Sheet'
-import { AIIcon } from '../icons'
-import { AssistantButton, useAssistant, type AssistantCtx } from './AssistantContext'
 import MarkDots from './MarkDots'
 import { Segmented } from './Controls'
 
@@ -26,7 +24,6 @@ type Props = {
   onSaveMnemonic: (id: string, fields: { mnemonic: string; example: string; translation: string }) => Promise<boolean>;
 }
 export default function WordDetails({ word, lesson, saving, onClose, onMark, onKnown, onSpeak, onStop, onDictionary, onEdit, onSaveMnemonic }: Props) {
-  const ask = useAssistant()
   const [entries, setEntries] = useState<DictionaryEntry[]>([])
   const [lookupError, setLookupError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -69,7 +66,6 @@ export default function WordDetails({ word, lesson, saving, onClose, onMark, onK
   }
   const mnemonic = lesson?.mnemonic ? lesson : builtin
   const mnemonicLabel = lesson?.mnemonic ? '我写的' : builtin ? '内置' : ''
-  const assistantContext: AssistantCtx | null = word ? { kind: 'word', label: word.word, word: word.word, meaning: word.meaning, sentence: word.example || undefined } : null
   const heard = frequency?.filter(item => item.papers > 0) || []
   return <Sheet title="单词详情" open={!!word} onClose={onClose} dismissible={!saving} tall>
     {word && <div className="word-detail">
@@ -85,7 +81,6 @@ export default function WordDetails({ word, lesson, saving, onClose, onMark, onK
           </div>
         </div>
         <div className="detail-head-actions">
-          <AssistantButton className="icon-button" context={assistantContext} />
           <button className="icon-button" aria-label="编辑单词" title="编辑单词" disabled={saving} onClick={() => onEdit(word)}><Pencil size={16} /></button>
         </div>
       </header>
@@ -126,7 +121,6 @@ export default function WordDetails({ word, lesson, saving, onClose, onMark, onK
             {mnemonic.example && <p lang="en">{mnemonic.example}</p>}
             {mnemonic.translation && <p>{mnemonic.translation}</p>}
           </div>}
-          {!mnemonic && <button className="text-button" onClick={() => ask(assistantContext)}><AIIcon size={16} />问 AI 怎么记</button>}
           <button className="text-button" disabled={saving} onClick={() => { setDraftMnemonic(mnemonic?.mnemonic || ''); setDraftExample(mnemonic?.example || ''); setDraftTranslation(mnemonic?.translation || ''); setEditing(true) }}><Pencil size={14} />自己写助记</button>
         </>}
         {editing && <div className="mnemonic-editor">

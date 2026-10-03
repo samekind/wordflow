@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { storyContentSchema, storyIsCurrent, type ContextStory, type Store, type Word } from '../model'
+import { storyContentSchema, storyIsCurrent, storyKey, type ContextStory, type DailyStory, type Store, type Word } from '../model'
 import { contextStoryKey, studyGroupWords, studyWordStatus, type StudyAction } from '../study'
 import type { StudyDraft } from '../study-state'
 import { api, isAndroidApp, streamStory } from '../platform'
@@ -14,8 +14,8 @@ type Deps = {
   changeStudy: (draft: StudyDraft, action: StudyAction) => Promise<boolean>
 }
 
-/** AI provider settings and the 本组短文 generation request (the app's one AI story feature). Chat and word help
- * live in ai.ts and the assistant sheet. Only one request runs at a time; results are re-checked against the latest
+/** AI provider settings and the two story requests: 本组短文 in 学习 and 自选词短文 in 阅读 → 语境记忆. Word help lives
+ * in ai.ts. Only one request runs at a time; results are re-checked against the latest
  * store before saving, so edits made meanwhile are never overwritten by stale output. */
 export function useAIServices({ storeRef, pendingSave, commit, notify, changeStudy }: Deps) {
   const lock = useRef(false)
@@ -40,6 +40,21 @@ export function useAIServices({ storeRef, pendingSave, commit, notify, changeStu
     : isAndroidApp ? api('story', { method: 'POST', body: JSON.stringify({ ids: targets.map(word => word.id) }) })
     : streamStory(targets.map(word => word.id), setLive)
 
+  async function generateStory(bookId: string, day: number, part: number, words: Word[]) {
+    if (lock.current || !words.length) return
+    setLive('')
+    const targets = words.map(({ id, word, meaning }) => ({ id, word, meaning }))
+    await run(async () => {
+      const data = await requestStory(targets)
+      const content = storyContentSchema.parse(data.story)
+      await settled()
+      const current = storeRef.current, book = current.books.find(b => b.id === bookId)
+      const result: DailyStory = { ...content, id: storyKey(bookId, day, part), bookId, day, part, targets, model: data.model, createdAt: new Date().toISOString() }
+      const currentWords = words.map(word => current.words.find(item => item.id === word.id)).filter((word): word is Word => !!word)
+      if (!book || !storyIsCurrent(result, currentWords)) throw new Error('所选词汇或释义已改变，本次短文未保存，请重新生成')
+      if (await commit({ ...current, stories: [...current.stories.filter(s => s.id !== result.id), result] })) notify(`第 ${day + 1} 天短文已保存`)
+    }, () => setLive(''))
+  }
   async function generateContextStory(draft: StudyDraft) {
     if (lock.current) return
     if (storeRef.current.learning.drafts[draft.kind]?.id !== draft.id && !await changeStudy(draft, { type: 'method', method: 'context' })) return
@@ -73,6 +88,6 @@ export function useAIServices({ storeRef, pendingSave, commit, notify, changeStu
 
   return {
     config, setConfig, busy, live, contextKey, error, clearError: () => setError(''), locked: lock,
-    generateContextStory, saveConfig, removeConfig,
+    generateStory, generateContextStory, saveConfig, removeConfig,
   }
 }

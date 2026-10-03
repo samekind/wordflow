@@ -140,31 +140,8 @@
 .reading-token ruby{ruby-align:center}
 .reading-token rt{text-align:center}
 
-/* AI assistant: header button, context chip and the chat sheet */
-.topbar>.header-assistant{color:var(--accent)}
-.topbar>.header-assistant{width:44px;height:44px}
 .detail-head-actions{display:flex;gap:6px;flex-shrink:0}
-.assistant-chat{display:flex;flex-direction:column;gap:10px;min-height:min(62vh,520px)}
-.assistant-context{position:sticky;top:0;z-index:2;padding:2px 0 6px;background:var(--sheet-fill);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.assistant-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;min-height:30px;padding:0 6px 0 12px;border-radius:var(--radius-pill);background:var(--accent-soft);color:var(--accent);font-size:var(--fs-small);font-weight:var(--fw-semibold)}
-.assistant-chip>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.assistant-chip[data-kind=general]{background:var(--surface-inset);color:var(--text-secondary);padding-right:12px}
-.assistant-chip-x{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;color:inherit}
-.assistant-chip-x.text{width:auto;margin-left:6px;padding:0 4px;font-size:var(--fs-small);color:var(--accent);text-decoration:underline}
-.assistant-clear{font-size:var(--fs-small);gap:4px;margin-left:auto}
-.assistant-messages{display:flex;flex-direction:column;gap:10px;flex:1;min-height:200px}
-.assistant-empty{display:grid;gap:12px;color:var(--text-muted);font-size:var(--fs-small)}
-.assistant-empty p{margin:0}
-.assistant-hints{display:flex;flex-wrap:wrap;gap:8px}
-.assistant-bubble{display:flex;align-items:center;gap:6px;max-width:88%;padding:9px 13px;border-radius:var(--radius-md);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--fs-body)}
-.assistant-bubble[data-role=user]{align-self:flex-end;background:var(--accent);color:var(--text-on-accent);border-bottom-right-radius:6px}
-.assistant-bubble[data-role=assistant]{align-self:flex-start;background:var(--surface-inset);color:var(--text-primary);border-bottom-left-radius:6px;display:block}
-.assistant-bubble[role=status]{display:flex;color:var(--text-muted)}
-.assistant-form{display:flex;align-items:flex-end;gap:8px;position:sticky;bottom:0;z-index:2;padding-top:6px;background:var(--sheet-fill)}
-.assistant-form textarea{flex:1;min-width:0;max-height:120px;resize:none;padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--line-strong);background:var(--surface-solid);color:var(--text-primary);font:inherit;line-height:1.5}
-.assistant-send{width:44px;min-height:44px;height:44px;padding:0;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
-.assistant-note{margin:0;text-align:center}
-/* AI surfaces: one soft multi-colour palette shared by the icon, the thinking bubble and the story progress */
+/* AI surfaces: one soft multi-colour palette shared by the icon and the story progress */
 :root{--ai-1:#ff9f4a;--ai-2:#ff4f93;--ai-3:#9b5cff;--ai-4:#3b8bff;--ai-5:#2fd3c8}
 html[data-theme="dark"]{--ai-1:#ffb06a;--ai-2:#ff6aa6;--ai-3:#b585ff;--ai-4:#6aa7ff;--ai-5:#4fe0d5}
 .ai-icon{flex-shrink:0;overflow:visible}
@@ -174,15 +151,7 @@ html[data-theme="dark"]{--ai-1:#ffb06a;--ai-2:#ff6aa6;--ai-3:#b585ff;--ai-4:#6aa
 .ai-aura::before{content:"";position:absolute;left:50%;top:50%;width:max(260%,360px);aspect-ratio:1;z-index:-2;background:conic-gradient(from 0deg,var(--ai-1),var(--ai-2),var(--ai-3),var(--ai-4),var(--ai-5),var(--ai-1));transform:translate(-50%,-50%);animation:ai-orbit 3.4s linear infinite}
 .ai-aura::after{content:"";position:absolute;inset:2px;z-index:-1;border-radius:inherit;background:var(--aura-fill)}
 @keyframes ai-orbit{to{transform:translate(-50%,-50%) rotate(360deg)}}
-.ai-shimmer-text{background:linear-gradient(90deg,var(--text-muted) 0 38%,var(--ai-3) 50%,var(--text-muted) 62% 100%);background-size:260% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:ai-shimmer 1.8s linear infinite}
-@keyframes ai-shimmer{from{background-position:100% 0}to{background-position:-100% 0}}
 @keyframes ai-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@keyframes ai-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-.assistant-bubble.assistant-thinking{--aura-fill:var(--surface-solid);border-radius:var(--radius-md);border-bottom-left-radius:6px;padding:11px 15px;display:flex;align-items:center;gap:8px;color:var(--text-muted)}
-.assistant-hero{display:grid;place-items:center;width:76px;height:76px;margin:6px auto 0;border-radius:26px;background:radial-gradient(circle at 28% 18%,rgba(155,92,255,.2),transparent 62%),radial-gradient(circle at 80% 90%,rgba(59,139,255,.18),transparent 60%),var(--surface-inset);animation:ai-float 4.2s ease-in-out infinite}
-.assistant-empty{text-align:center;justify-items:center}
-.assistant-hints{justify-content:center}
-.assistant-form textarea:focus{outline:none;border-color:var(--ai-3);box-shadow:0 0 0 3px rgba(155,92,255,.18)}
 .story-progress.ai-aura{--aura-fill:var(--sheet-fill);border-color:transparent}
 .story-progress-head{color:var(--text-primary)}
 .story-progress li{transition:color .3s}
@@ -193,4 +162,20 @@ html[data-theme="dark"]{--ai-1:#ffb06a;--ai-2:#ff6aa6;--ai-3:#b585ff;--ai-4:#6aa
 .story-progress li:nth-child(2){animation-delay:.05s}.story-progress li:nth-child(3){animation-delay:.1s}.story-progress li:nth-child(4){animation-delay:.15s}
 .story-live{background:transparent;border-color:var(--line)}
 .story-caret{background:var(--ai-3)}
-@media(prefers-reduced-motion:reduce){.ai-icon-active,.ai-aura::before,.ai-shimmer-text,.assistant-hero,.story-progress li,.story-live p{animation:none}.ai-shimmer-text{color:var(--text-muted);background:none}}
+@media(prefers-reduced-motion:reduce){.ai-icon-active,.ai-aura::before,.story-progress li,.story-live p{animation:none}}
+
+/* ==================== Study card feedback ====================
+   A tap presses the row in; each newly filled mark dot pops; 熟词 is struck through before it fades. */
+.english-line{transition:transform .14s cubic-bezier(.2,.8,.2,1)}
+.english-line:active:not(:disabled){transform:scale(.97)}
+.mark-grid i{transition:background-color .2s ease}
+.mark-grid i[data-fresh=true]{animation:mark-pop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes mark-pop{0%{transform:scale(.3)}55%{transform:scale(1.9)}100%{transform:none}}
+.english-entry[data-leaving=true]{transition-delay:.18s}
+.english-entry[data-leaving=true] .english-word{position:relative;display:inline-block;max-width:100%}
+.english-entry[data-leaving=true] .english-word::after{content:"";position:absolute;left:-3px;right:-3px;top:54%;height:2px;border-radius:1px;background:var(--text-secondary);transform-origin:left center;animation:strike-draw .18s cubic-bezier(.4,0,.2,1) both}
+@keyframes strike-draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.study-submit-area p.group-done{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--text-primary);animation:ai-rise .32s cubic-bezier(.2,.8,.2,1)}
+.group-done .done-badge{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--success,#22a06b);color:#fff;flex-shrink:0;animation:done-pop .46s cubic-bezier(.34,1.56,.64,1)}
+@keyframes done-pop{0%{transform:scale(0)}100%{transform:none}}
+@media(prefers-reduced-motion:reduce){.mark-grid i[data-fresh=true],.english-entry[data-leaving=true] .english-word::after,.study-submit-area p.group-done,.group-done .done-badge{animation:none}.english-entry[data-leaving=true]{transition-delay:0s}}

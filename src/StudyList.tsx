@@ -14,7 +14,6 @@ import MarkDots from './components/MarkDots'
 import { Segmented } from './components/Controls'
 import ContextReader, { type ContextServices } from './components/ContextReader'
 import SwipeRow from './components/SwipeRow'
-import { AssistantButton, useAssistantContext } from './components/AssistantContext'
 import StartPlan from './components/StartPlan'
 import type { CatalogBook } from './wordbooks'
 
@@ -89,7 +88,6 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
   // The refilled group no longer contains a word that was just marked: keep it in place until its fade ends.
   previousRows.current.forEach((row, index) => { if (leaving.includes(row.id) && !rows.some(item => item.id === row.id)) shownRows.splice(Math.min(index, shownRows.length), 0, { ...row, known: true }) })
   useEffect(() => { previousRows.current = shownRows })
-  useAssistantContext(rows.some(row => !row.missing) ? { kind: 'study', label: '这组单词', words: rows.filter(row => !row.missing).map(row => ({ word: row.word, meaning: row.meaning })) } : null)
   const eligible = rows.filter(row => !row.status && !row.missing), forgotten = eligible.filter(row => row.forgotten).length
   const changed = rows.some(row => row.status.includes('重新检查')), stats = learningStatistics(store, moment)
   const scheduled = store.words.filter(word => hasLearned(word) && !word.known)
@@ -124,7 +122,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
   async function confirmKnown(target: { id: string; word: string }) {
     setLeaving(items => [...items, target.id])
     const done = await onKnown(target.id, true)
-    setTimeout(() => setLeaving(items => items.filter(id => id !== target.id)), done ? 260 : 0)
+    setTimeout(() => setLeaving(items => items.filter(id => id !== target.id)), done ? 420 : 0)
   }
   function scrollToEnglish() { document.getElementById('app-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }
   function cancelPress() { clearTimeout(timer.current) }
@@ -203,7 +201,6 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
               { value: 'preview' as const, ariaLabel: '快速记忆', title: '快速记忆：看词和释义', label: <><PreviewIcon size={15} /><span className="stage-text">速记</span></> },
               { value: 'test' as const, ariaLabel: '自己自查', title: '自己自查：先想再核对', label: <><RecallIcon size={15} /><span className="stage-text">自查</span></> },
             ]} />}
-          <AssistantButton className="icon-button plan-button" />
           <button className="icon-button plan-button" aria-label="复习计划" title="复习计划" onClick={() => setPlanOpen(true)}><Clock3 size={20} /></button>
         </div>
         {/* New vs due review only matters when something is due. */}
@@ -244,7 +241,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
           {showMeanings && <button className="text-button" aria-label="返回英文词表" onClick={scrollToEnglish}>返回词表</button>}
         </section>}
         {!preview && <div className="study-submit-area">
-          {completed ? <p role="status">本组已检查完，下次复习已安排。</p> : mode === 'practice' ? <p>自由练习保留反馈，不改变复习时间。{practiceDone && '本次练习已完成。'}</p> : <p>不熟 {forgotten} 词，其余 {eligible.length - forgotten} 词。提交表示其余词已自测记住。</p>}
+          {completed ? <p role="status" className="group-done"><span className="done-badge" aria-hidden="true"><Check size={14} strokeWidth={3} /></span>本组已检查完，下次复习已安排。</p> : mode === 'practice' ? <p>自由练习保留反馈，不改变复习时间。{practiceDone && '本次练习已完成。'}</p> : <p>不熟 {forgotten} 词，其余 {eligible.length - forgotten} 词。提交表示其余词已自测记住。</p>}
           {changed && draft && <button className="secondary" disabled={saving} onClick={() => void onStudy(draft, { type: 'refresh' })}>重新检查本组</button>}
           {mode === 'practice' ? <button className="secondary" disabled={saving || practiceDone} onClick={() => void practiceState({ completedAt: new Date(now).toISOString() })}><Check size={17} />练习完成</button> : draft && !completed ? <button className="primary complete-group" disabled={saving || changed} onClick={() => void onStudy(draft, { type: 'submit', token: draft.tokens[currentPage] })}><Check size={17} />本组已检查完</button> : <button className="secondary" disabled={saving} onClick={continueStudy}><CheckCheck size={17} />{continueLabel}</button>}
         </div>}
