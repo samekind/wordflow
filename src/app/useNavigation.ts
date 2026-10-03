@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { SettingsSection } from '../components/SettingsPage'
-import type { ReadingScope } from '../reading'
+import type { ReadingCefr, ReadingScope } from '../reading'
 
 export type TabId = 'today' | 'stats' | 'story' | 'settings'
 export type Screen =
@@ -9,7 +9,7 @@ export type Screen =
   | { name: 'library' }
   | { name: 'frequency' }
   | { name: 'article'; id?: string; scope?: ReadingScope }
-  | { name: 'shelf'; cefr: ReadingScope['cefr']; topic?: string }
+  | { name: 'shelf'; cefr: ReadingCefr; topic?: string }
   | { name: 'stories' }
   | { name: 'picks' }
   | { name: 'section'; section: Exclude<SettingsSection, 'home'> }

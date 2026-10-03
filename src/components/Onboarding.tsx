@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { BookOpen, Camera, Check, ChevronLeft, ChevronRight, LoaderCircle, Trash2, Upload, UserRound } from 'lucide-react'
+import { BookOpen, Camera, Check, ChevronLeft, ChevronRight, LoaderCircle, Smile, Trash2, Upload, UserRound } from 'lucide-react'
+import AvatarPicker from './AvatarPicker'
 import type { CatalogBook } from '../wordbooks'
 import type { ReadingPreferences } from '../model'
 import { prepareAvatar } from '../profile'
@@ -28,6 +29,7 @@ export default function Onboarding({ catalog, catalogError, busy, onRetry, onRes
   const [avatar, setAvatar] = useState('')
   const [avatarBusy, setAvatarBusy] = useState(false)
   const [avatarError, setAvatarError] = useState('')
+  const [cartoonOpen, setCartoonOpen] = useState(false)
   const [book, setBook] = useState<CatalogBook | null>(null)
   const [daily, setDaily] = useState(20)
   const [readingLevel, setReadingLevel] = useState<ReadingPreferences['level']>('auto')
@@ -76,11 +78,13 @@ export default function Onboarding({ catalog, catalogError, busy, onRetry, onRes
       <p className="start-lead">昵称和头像只保存在这台手机上，不会上传。</p>
       <div className="profile-avatar-editor"><span className="profile-avatar large">{avatar ? <img src={avatar} alt="个人头像" /> : <UserRound size={42} />}</span>
         <button type="button" className="icon-button" disabled={avatarBusy} title="选择头像" aria-label="选择头像" onClick={() => avatarInput.current?.click()}>{avatarBusy ? <LoaderCircle size={19} className="spin" /> : <Camera size={19} />}</button>
+        <button type="button" className="icon-button" disabled={avatarBusy} title="卡通头像" aria-label="选择卡通头像" onClick={() => setCartoonOpen(true)}><Smile size={19} /></button>
         {avatar && <button type="button" className="icon-button" disabled={avatarBusy} aria-label="移除头像" title="移除头像" onClick={() => setAvatar('')}><Trash2 size={17} /></button>}
       </div>
+      <AvatarPicker open={cartoonOpen} onClose={() => setCartoonOpen(false)} onPick={next => { avatarRequest.current++; setAvatarBusy(false); setAvatarError(''); setAvatar(next) }} />
       <input hidden ref={avatarInput} type="file" accept="image/png,image/jpeg,image/webp" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void pickAvatar(file) }} />
       <label className="form-label">昵称<input aria-label="昵称" maxLength={24} autoComplete="nickname" placeholder="例如：小林" value={nickname} onChange={event => setNickname(event.target.value)} /></label>
-      <p className="field-note">头像可以先不选，之后在“我的”里修改。</p>
+      <p className="field-note">可以用自己的照片，或挑一个卡通头像；也可以先不选，之后在“我的”里修改。</p>
       {avatarError && <p className="error-banner" role="alert">{avatarError}</p>}
     </div>}
 

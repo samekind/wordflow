@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { emptyStore, importToPersonal, installBook, markWord, setKnown, validateStore } from '../src/model'
-import { applyStudyAction, contextStoryKey, createStudyDraft, currentStudyDraft, learningStatistics, newWords, reviewQueue, selectStudyUnit, studyGroupWords, undoStudySubmission } from '../src/study'
+import { type Store, emptyStore, importToPersonal, installBook, markWord, setKnown, validateStore } from '../src/model'
+import { applyStudyAction, checkIn, checkInStreak, contextStoryKey, createStudyDraft, currentStudyDraft, dayPlan, learningStatistics, newWords, reviewQueue, selectStudyUnit, studyGroupWords, undoStudySubmission } from '../src/study'
 import { starterRows } from '../src/vocabulary'
 
 const now = new Date('2026-09-30T12:00:00Z')
@@ -129,8 +129,8 @@ test('manual marks do not grade a new self test or remove first-learning progres
   assert.deepEqual(after.reviews, state.reviews)
 })
 
-test('review queue spans books and shared learned words are not assigned as new words twice', () => {
-  let state = fixture(20)
+test('FSRS review queue spans books and shared learned words are not assigned as new words twice', () => {
+  let state: Store = { ...fixture(20), reviewMethod: 'fsrs' }
   const draft = createStudyDraft(state, 'learn', now)!
   state = applyStudyAction(state, draft, { type: 'submit', token: draft.tokens[0] }, now)
   state = installBook(state, 'second', '第二本', '测试', starterRows.slice(0, 30), 40)
@@ -205,4 +205,59 @@ test('legacy completion evidence migrates without invented first dates; malforme
   assert.deepEqual(damaged.words, migrated.words)
   assert.equal(damaged.learning.drafts.learn, null)
   assert.match(damaged.learning.notice, /草稿无法恢复/)
+})
+
+test('按天复习: day N reviews days N-1, N-2, N-4… once each, and check-in opens only when the day is done', () => {
+  let state = fixture(200) // 40 words a day, 5 days
+  const learnDay = (day: number, at: Date) => {
+    state = selectStudyUnit(state, 'personal', day)
+    let draft = currentStudyDraft(state, 'learn', at)!
+    for (let page = 0; page < draft.groups.length; page++) {
+      state = applyStudyAction(state, draft, { type: 'page', page }, at)
+      draft = state.learning.drafts.learn!
+      state = applyStudyAction(state, draft, { type: 'submit', token: draft.tokens[page] }, at)
+      draft = state.learning.drafts.learn!
+    }
+  }
+  const reviewAll = (at: Date) => {
+    let draft = currentStudyDraft(state, 'review', at)!
+    for (let page = 0; page < draft.groups.length; page++) {
+      state = applyStudyAction(state, draft, { type: 'page', page }, at)
+      draft = state.learning.drafts.review!
+      state = applyStudyAction(state, draft, { type: 'submit', token: draft.tokens[page] }, at)
+      draft = state.learning.drafts.review!
+    }
+  }
+  learnDay(0, now)
+  assert.equal(reviewQueue(state, now).length, 0, 'the first day has nothing to review')
+  assert.equal(dayPlan(state, now).finished, true)
+  assert.throws(() => checkIn(selectStudyUnit(state, 'personal', 1), now), /先完成/)
+  state = checkIn(state, now)
+  assert.deepEqual(state.checkins.map(item => [item.date, item.newCount, item.reviewCount]), [['2026-09-30', 40, 0]])
+
+  const tomorrow = new Date(+now + 86400000)
+  const stillDayOne = dayPlan(state, tomorrow)
+  assert.deepEqual([stillDayOne.day, stillDayOne.finished, stillDayOne.idle, stillDayOne.canCheckIn, stillDayOne.nextDay], [0, true, true, false, 1],
+    'a day finished yesterday offers the next day instead of an empty check-in')
+  assert.throws(() => checkIn(state, tomorrow), /进入下一天/)
+  learnDay(1, tomorrow)
+  const dayOneReview = reviewQueue(state, tomorrow).map(word => word.id)
+  assert.deepEqual(dayOneReview, state.books[0].wordIds.slice(0, 40), 'day 2 reviews day 1')
+  assert.equal(dayPlan(state, tomorrow).finished, false)
+  const draft = currentStudyDraft(state, 'review', tomorrow)!
+  assert.equal(draft.bookId, 'personal'); assert.equal(draft.day, 1)
+  reviewAll(tomorrow)
+  assert.equal(reviewQueue(state, tomorrow).length, 0, 'each word is reviewed once for its day')
+  assert.ok(state.reviews.filter(review => review.forDay === 'personal:1').length === 40)
+  state = checkIn(state, tomorrow)
+  assert.equal(state.checkins.at(-1)!.reviewCount, 40)
+  assert.equal(checkInStreak(state, tomorrow), 2)
+
+  const later = new Date(+tomorrow + 86400000)
+  learnDay(2, later)
+  // Day 3 reviews day 2 and day 1 (offsets 1 and 2).
+  assert.equal(reviewQueue(state, later).length, 80)
+  state = selectStudyUnit(state, 'personal', 1)
+  assert.equal(reviewQueue(state, later).length, 0, 'going back to a reviewed day shows it as done')
+  assert.equal(checkInStreak(restore(state), new Date(+later + 86400000 * 2)), 0)
 })

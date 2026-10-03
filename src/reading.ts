@@ -2,7 +2,7 @@ import { CapacitorHttp } from '@capacitor/core'
 import { z } from 'zod'
 import { isAndroidApp } from './platform'
 import type { Store } from './model'
-import { extractReadingParagraphs } from './reading-text'
+import { englishWordCount, extractReadingParagraphs } from './reading-text'
 import { cloudBase } from './cloud'
 export { englishWordCount } from './reading-text'
 
@@ -19,8 +19,11 @@ const libraryImagePath = new RegExp(`^${cloudBase.replace(/[.*+?^${}()|[\]\\]/g,
 export const readingLevels = ['A2', 'B1', 'B2', 'C1', 'C2'] as const
 export type ReadingCefr = typeof readingLevels[number]
 export const cefrNames: Record<ReadingCefr, string> = { A2: '入门', B1: '初级', B2: '中级', C1: '高级', C2: '精通' }
-/** Where a reader session stays: the difficulty (and optionally the topic) picked on the way in. '*' = every topic. */
-export type ReadingScope = { cefr: ReadingCefr; topic?: string }
+export const readingLengths = ['short', 'medium', 'long'] as const
+export type ReadingLength = typeof readingLengths[number]
+export const readingLengthNames: Record<ReadingLength, string> = { short: '短篇', medium: '中篇', long: '长篇' }
+/** Where a reader session stays: the difficulty, topic and length picked on the way in. Unset or '*' = any. */
+export type ReadingScope = { cefr?: ReadingCefr; topic?: string; length?: ReadingLength }
 export const readingArticleSchema = z.object({
   id: z.string().regex(/^(lib-)?(en|simple)-[a-z0-9-]+$/), title: z.string().min(1).max(200),
   wikiTitle: z.string().min(1).max(200), lang: z.enum(['simple', 'en']),
@@ -55,8 +58,18 @@ export function readingLevel(store: Pick<Store, 'readingPreferences' | 'activeBo
 }
 /** Bundled articles carry no AI grade; they count as B1 (基础) or B2 (进阶) so they sit on the shelf. */
 export const articleCefr = (article: Pick<ReadingArticle, 'cefr' | 'level'>): ReadingCefr => article.cefr ?? (article.level === 'easy' ? 'B1' : 'B2')
+export const articleWords = (article: Pick<ReadingArticle, 'paragraphs' | 'stats'>) => article.stats?.words || englishWordCount(article.paragraphs.join(' '))
+/** 短篇 up to about two minutes of reading, 长篇 over about four. */
+export const articleLength = (article: Pick<ReadingArticle, 'paragraphs' | 'stats'>): ReadingLength => {
+  const words = articleWords(article)
+  return words <= 250 ? 'short' : words <= 500 ? 'medium' : 'long'
+}
 export const inScope = (article: ReadingArticle, scope: ReadingScope) =>
-  articleCefr(article) === scope.cefr && (!scope.topic || scope.topic === '*' || article.topic === scope.topic)
+  (!scope.cefr || articleCefr(article) === scope.cefr) && (!scope.topic || scope.topic === '*' || article.topic === scope.topic)
+  && (!scope.length || articleLength(article) === scope.length)
+/** Short label for a reader session's set, e.g. "B1 · 科技 · 短篇". */
+export const scopeLabel = (scope: ReadingScope) =>
+  [scope.cefr, scope.topic && scope.topic !== '*' ? scope.topic : '', scope.length ? readingLengthNames[scope.length] : ''].filter(Boolean).join(' · ') || '全部文章'
 export function dailyReadingIndex(length: number, date: Date): number {
   if (!length) return 0
   const day = Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000)

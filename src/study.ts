@@ -1,4 +1,4 @@
-import { bookDays, dayKey, hydrate, markWord, reviewWord, wordsForDay, type Store, type Word } from './model'
+import { bookDays, dayKey, hydrate, listsForStudyDay, markWord, reviewWord, wordsForDay, type CheckIn, type Store, type Word, type WordBook } from './model'
 import { studyDraftSchema, type StudyDraft, type StudyKind, type StudyView } from './study-state'
 
 export type StudyAction =
@@ -13,7 +13,24 @@ export type StudyAction =
 
 export const hasLearned = (word: Word) => !!word.learned || word.card.reps > 0
 export const draftComplete = (draft: StudyDraft) => draft.completed.length === draft.groups.length
+/** 艾宾浩斯 runs on study days: day N reviews the words of days N-1, N-2, N-4, N-7, N-15 and N-30, once each.
+ * FSRS keeps its per-word due dates across every book. */
+export const usesDaySchedule = (store: Pick<Store, 'reviewMethod'>) => store.reviewMethod === 'ebbinghaus'
+export const dayReviewKey = (bookId: string, day: number) => `${bookId}:${day}`
+export function reviewedForDay(store: Store, key: string) {
+  return new Set(store.reviews.filter(review => review.forDay === key).map(review => review.wordId))
+}
+/** Words that day `day` brings back. `pendingOnly` drops those already reviewed for that day. */
+export function dayReviewWords(store: Store, book: WordBook, day = book.currentDay, pendingOnly = true, byId = new Map(store.words.map(word => [word.id, word]))) {
+  const done = pendingOnly ? reviewedForDay(store, dayReviewKey(book.id, day)) : new Set<string>()
+  return listsForStudyDay(bookDays(book), day).filter(block => block.role === 'recall').flatMap(block => block.ids)
+    .map(id => byId.get(id)).filter((word): word is Word => !!word && !word.known && hasLearned(word) && !done.has(word.id))
+}
 export function reviewQueue(store: Store, now = new Date()) {
+  if (usesDaySchedule(store)) {
+    const book = store.books.find(item => item.id === store.activeBookId)
+    return book ? dayReviewWords(store, book) : []
+  }
   return store.words.filter(word => !word.known && hasLearned(word) && +new Date(word.card.due) <= +now)
     .sort((a, b) => +new Date(a.card.due) - +new Date(b.card.due) || a.id.localeCompare(b.id))
 }
@@ -44,16 +61,17 @@ export function createStudyDraft(store: Store, kind: StudyKind, now = new Date()
   const words = (kind === 'review' ? reviewQueue(store, now) : newWords(store)).slice(0, 100)
   if (!words.length) return null
   const groups = Array.from({ length: Math.ceil(words.length / 20) }, (_, index) => words.slice(index * 20, index * 20 + 20).map(word => word.id))
+  const ownDay = kind === 'learn' || usesDaySchedule(store)
   return {
-    id: crypto.randomUUID(), kind, bookId: kind === 'learn' ? book!.id : '', title: kind === 'learn' ? book!.title : '全部词书',
-    day: kind === 'learn' ? book!.currentDay : 0, createdAt: now.toISOString(), page: 0,
+    id: crypto.randomUUID(), kind, bookId: ownDay ? book!.id : '', title: ownDay ? book!.title : '全部词书',
+    day: ownDay ? book!.currentDay : 0, createdAt: now.toISOString(), page: 0,
     groups, tokens: groups.map(() => crypto.randomUUID()), completed: [], words: words.map(snapshot), forgotten: {},
   }
 }
 export function currentStudyDraft(store: Store, kind: StudyKind, now = new Date()): StudyDraft | null {
   const saved = store.learning.drafts[kind]
   const book = store.books.find(item => item.id === store.activeBookId)
-  if (saved && (kind === 'review' || (saved.bookId === book?.id && saved.day === book.currentDay))) return saved
+  if (saved && ((kind === 'review' && !usesDaySchedule(store)) || (saved.bookId === book?.id && saved.day === book.currentDay))) return saved
   if (kind === 'learn') {
     const parked = store.learning.parked.find(draft => draft.bookId === book?.id && draft.day === book.currentDay)
     if (parked) return parked
@@ -95,7 +113,8 @@ export function studyWordStatus(store: Store, draft: StudyDraft, wordId: string,
   if (word.known) return '熟词，提交时跳过'
   if (old && (old.word !== word.word || old.meaning !== word.meaning || old.schedule !== scheduleSnapshot(word))) return '内容或计划有变化，请重新检查本组'
   if (draft.kind === 'learn' && hasLearned(word)) return '已经学过，提交时跳过'
-  if (draft.kind === 'review' && +new Date(word.card.due) > +now) return '尚未到期，提交时跳过'
+  if (draft.kind === 'review' && draft.bookId && reviewedForDay(store, dayReviewKey(draft.bookId, draft.day)).has(wordId)) return '这一天已复习，提交时跳过'
+  if (draft.kind === 'review' && !draft.bookId && +new Date(word.card.due) > +now) return '尚未到期，提交时跳过'
   return ''
 }
 
@@ -108,7 +127,9 @@ export function applyStudyAction(store: Store, proposed: StudyDraft, action: Stu
     if ((active && (active.bookId !== book.id || active.day !== book.currentDay)) || store.learning.parked.some(draft => draft.bookId === book.id && draft.day === book.currentDay)) store = selectStudyUnit(store, book.id, book.currentDay)
   }
   const existing = store.learning.drafts[proposed.kind]
-  if (existing && existing.id !== proposed.id && !draftComplete(existing)) throw new Error('另有未完成的学习草稿，请继续或结束原任务。')
+  // A day-schedule review left on another day (or from the old cross-book queue) no longer applies; the new day replaces it.
+  const outdated = proposed.kind === 'review' && !!existing && usesDaySchedule(store) && (existing.bookId !== proposed.bookId || existing.day !== proposed.day)
+  if (existing && existing.id !== proposed.id && !draftComplete(existing) && !outdated) throw new Error('另有未完成的学习草稿，请继续或结束原任务。')
   let draft = existing?.id === proposed.id ? existing : studyDraftSchema.parse(proposed)
   let next = putDraft(store, draft)
   const ids = draft.groups[draft.page]
@@ -145,17 +166,19 @@ export function applyStudyAction(store: Store, proposed: StudyDraft, action: Stu
 
   const reviewIds: string[] = [], changes: NonNullable<Store['learning']['undo']>['changes'] = []
   const completions: NonNullable<Store['learning']['undo']>['completions'] = []
+  const forDay = draft.kind === 'review' && draft.bookId ? dayReviewKey(draft.bookId, draft.day) : undefined
+  const doneForDay = forDay ? reviewedForDay(next, forDay) : new Set<string>()
   for (const id of ids) {
     const word = next.words.find(item => item.id === id)
     if (!word || word.known) continue
     const old = draft.words.find(item => item.id === id)!
     if (old.word !== word.word || old.meaning !== word.meaning || old.schedule !== scheduleSnapshot(word)) throw new Error('词条或复习状态已改变，请重新检查本组后提交。')
-    if ((draft.kind === 'learn' && hasLearned(word)) || (draft.kind === 'review' && +new Date(word.card.due) > +now)) continue
+    if ((draft.kind === 'learn' && hasLearned(word)) || (draft.kind === 'review' && (forDay ? doneForDay.has(id) : +new Date(word.card.due) > +now))) continue
     const before = scheduleSnapshot(word), learned = hasLearned(word)
     next = reviewWord(next, id, draft.forgotten[id] ? 1 : 3, now)
     next = { ...next, words: next.words.map(item => item.id === id ? { ...item, learned: true, firstLearnedAt: learned ? item.firstLearnedAt ?? null : now.toISOString() } : item) }
     const review = next.reviews[next.reviews.length - 1]
-    next = { ...next, reviews: [...next.reviews.slice(0, -1), { ...review, kind: draft.kind, submissionId: action.token }] }
+    next = { ...next, reviews: [...next.reviews.slice(0, -1), { ...review, kind: draft.kind, submissionId: action.token, ...(forDay ? { forDay } : {}) }] }
     reviewIds.push(review.id)
     changes.push({ id, before, after: scheduleSnapshot(next.words.find(item => item.id === id)!) })
     if (draft.kind === 'learn') next = { ...next, books: next.books.map(book => {
@@ -194,6 +217,41 @@ export function undoStudySubmission(store: Store): Store {
   const tokens = [...draft.tokens]; tokens[undo.page] = crypto.randomUUID()
   const selected = draft.kind === 'learn' ? selectStudyUnit(next, draft.bookId, draft.day) : next
   return putDraft({ ...selected, learning: { ...selected.learning, method: 'list' } }, { ...draft, tokens, page: undo.page, completed: draft.completed.filter(page => page !== undo.page) })
+}
+/** What the current study day asks for, and whether today can be checked in.
+ * Check-in opens only once that day's new words are learned and its reviews are done. */
+export function dayPlan(store: Store, now = new Date()) {
+  const book = store.books.find(item => item.id === store.activeBookId)
+  const byId = new Map(store.words.map(word => [word.id, word]))
+  const day = book ? Math.min(book.currentDay, Math.max(0, bookDays(book).length - 1)) : 0
+  const fresh = book ? wordsForDay(store, book, day).filter(word => !word.known) : []
+  const newLeft = fresh.filter(word => !hasLearned(word)).length
+  const reviewTotal = book && usesDaySchedule(store) ? dayReviewWords(store, book, day, false, byId).length : 0
+  const reviewLeft = reviewQueue(store, now).length
+  const today = dayKey(now), checkin = store.checkins.find(item => item.date === today) || null
+  const stats = learningStatistics(store, now)
+  const finished = !!book && newLeft === 0 && reviewLeft === 0
+  // A day finished on an earlier date leaves nothing to record today; move on to the next day instead.
+  const idle = finished && stats.newToday === 0 && stats.reviewedToday === 0
+  return { book, day, newTotal: fresh.length, newLeft, reviewTotal, reviewLeft, finished, idle, canCheckIn: finished && !idle,
+    nextDay: book && day + 1 < bookDays(book).length ? day + 1 : null,
+    checkin, newToday: stats.newToday, reviewedToday: stats.reviewedToday }
+}
+export function checkIn(store: Store, now = new Date()): Store {
+  const plan = dayPlan(store, now)
+  if (!plan.book || !plan.finished) throw new Error('先完成当天的新词和复习，再打卡')
+  if (plan.idle) throw new Error('今天还没有新学或复习，进入下一天学完后再打卡')
+  const entry: CheckIn = { date: dayKey(now), bookId: plan.book.id, day: plan.day, newCount: plan.newToday, reviewCount: plan.reviewedToday, at: now.toISOString() }
+  return { ...store, checkins: [...store.checkins.filter(item => item.date !== entry.date), entry].sort((a, b) => a.date.localeCompare(b.date)) }
+}
+/** Consecutive checked-in dates ending today, or yesterday when today is not checked in yet. */
+export function checkInStreak(store: Pick<Store, 'checkins'>, now = new Date()) {
+  const dates = new Set(store.checkins.map(item => item.date))
+  const cursor = new Date(now)
+  if (!dates.has(dayKey(cursor))) cursor.setDate(cursor.getDate() - 1)
+  let streak = 0
+  while (dates.has(dayKey(cursor))) { streak++; cursor.setDate(cursor.getDate() - 1) }
+  return streak
 }
 export function learningStatistics(store: Store, now = new Date()) {
   const today = dayKey(now), reviews = store.reviews.filter(review => dayKey(review.at) === today)

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { BookOpen, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, RefreshCw, Settings2, Sparkles, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
+import { BookOpen, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, RefreshCw, Settings2, Smile, Sparkles, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
 import type { Appearance, PageFont, TextSize } from '../model'
 import { installedRelease, loadCloudAccount } from '../cloud'
 import UpdatePage from './UpdatePage'
 import { pageFontAttrs, type Store } from '../model'
 import { prepareAvatar } from '../profile'
+import AvatarPicker from './AvatarPicker'
 import DailyWordCount, { validDailyCount } from './DailyWordCount'
 import { Segmented, SelectButton, SettingRow } from './Controls'
 
@@ -34,6 +35,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
   const [profile, setProfile] = useState(store.profile)
   const [profileError, setProfileError] = useState('')
   const [avatarBusy, setAvatarBusy] = useState(false)
+  const [cartoonOpen, setCartoonOpen] = useState(false)
   const [hasCloud, setHasCloud] = useState(() => !!loadCloudAccount())
   const [cloudBusy, setCloudBusy] = useState(false)
   const [cloudNote, setCloudNote] = useState('')
@@ -102,6 +104,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
     }}>
       <div className="profile-avatar-editor"><span className="profile-avatar large">{profile.avatar ? <img src={profile.avatar} alt="个人头像" /> : <UserRound size={42} />}</span>
         <button type="button" className="icon-button" disabled={avatarBusy || saving} title="更换头像" aria-label="更换头像" onClick={() => avatarInput.current?.click()}>{avatarBusy ? <LoaderCircle size={19} className="spin" /> : <Camera size={19} />}</button>
+        <button type="button" className="icon-button" disabled={avatarBusy || saving} title="卡通头像" aria-label="选择卡通头像" onClick={() => setCartoonOpen(true)}><Smile size={19} /></button>
         {profile.avatar && <button type="button" className="icon-button" disabled={avatarBusy || saving} aria-label="移除头像" title="移除头像" onClick={() => setProfile({ ...profile, avatar: '' })}><Trash2 size={17} /></button>}
       </div>
       <input hidden ref={avatarInput} type="file" accept="image/png,image/jpeg,image/webp" onChange={async event => {
@@ -119,6 +122,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
       {profileError && <p className="error-banner" role="alert">{profileError}</p>}
       <button className="primary" disabled={saving || avatarBusy || !profile.nickname.trim()}><Check size={17} />保存资料</button>
     </form>}
+    {section === 'profile' && <AvatarPicker open={cartoonOpen} onClose={() => setCartoonOpen(false)} onPick={avatar => { avatarRequest.current++; setAvatarBusy(false); setProfileError(''); setProfile(current => ({ ...current, avatar })) }} />}
     {section === 'profile' && <section className="settings-section account-section" aria-label="云端账号">
       <h2>云端账号 <span className={hasCloud ? 'configured-label' : 'muted'}>{hasCloud ? '已连接' : '未登录'}</span></h2>
       <p className="field-note">不需要手机号或邮箱。开通后会给你一个 8 位恢复码，换手机时用它登录同一份记录。</p>
@@ -147,10 +151,14 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
           onChange={accent => void onPreferences({ pronunciation: { ...store.pronunciation, accent } })} />
       </SettingRow>
       <SettingRow label="朗读速度">
-        <SelectButton label="朗读速度" value={String(store.pronunciation.rate)} disabled={saving} options={[...new Set([.75, .85, 1, 1.15, store.pronunciation.rate])].sort((a, b) => a - b).map(rate => ({ value: String(rate), label: `x` }))}
+        <SelectButton label="朗读速度" value={String(store.pronunciation.rate)} disabled={saving} options={[...new Set([.75, .85, 1, 1.15, store.pronunciation.rate])].sort((a, b) => a - b).map(rate => ({ value: String(rate), label: `${rate}x` }))}
           onChange={rate => void onPreferences({ pronunciation: { ...store.pronunciation, rate: Number(rate) } })} />
       </SettingRow>
-      <button className="text-button" onClick={() => onSpeak('A little practice every day makes a difference.')}><Volume2 size={17} />试听发音</button>
+      <div className="button-row voice-try">
+        <button className="text-button" onClick={() => onSpeak('perspective')}><Volume2 size={17} />试听单词</button>
+        <button className="text-button" onClick={() => onSpeak('A little practice every day makes a difference.')}><Volume2 size={17} />试听句子</button>
+      </div>
+      <p className="field-note">单词和词组使用有道词典真人录音（需联网），离线或查不到时改用系统英语语音；句子和文章使用系统英语语音。</p>
       <SettingRow label="文章难度">
         <SelectButton label="文章难度" value={store.readingPreferences.level} disabled={saving} options={[{ value: 'auto', label: '跟随目标词书' }, { value: 'easy', label: '基础选读' }, { value: 'standard', label: '进阶选读' }]}
           onChange={level => void onPreferences({ readingPreferences: { ...store.readingPreferences, level: level as Store['readingPreferences']['level'] } })} />
@@ -161,7 +169,6 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
           onChange={textSize => void onPreferences({ readingPreferences: { ...store.readingPreferences, textSize } })} />
       </SettingRow>
       <p className="reading-type-sample" data-size={store.readingPreferences.textSize} lang="en">Small steps, taken every day, lead to lasting change.</p>
-      <p className="field-note">短文朗读使用系统英语语音。</p>
     </section>}
     {section === 'ai' && <section className="settings-section">
       <div className="section-heading"><h2>生成服务</h2><span className={ai.configured ? 'configured-label' : 'muted'}>{ai.configured ? '已配置' : '未配置'}</span></div>

@@ -7,7 +7,7 @@ import { ProfileIcon, ReadIcon, StudyIcon } from './icons'
 import { dayKey, needsSetup, validateStore, type Store, type Word } from './model'
 import Onboarding from './components/Onboarding'
 import StudyList from './StudyList'
-import { currentStudyDraft, studyView } from './study'
+import { checkIn, currentStudyDraft, studyView } from './study'
 import { isAndroidApp, phone } from './platform'
 import WordDetails from './components/WordDetails'
 import BookShelf, { type ShelfView } from './components/BookShelf'
@@ -77,6 +77,13 @@ export default function App() {
     const url = URL.createObjectURL(new Blob([JSON.stringify(value)], { type: 'application/json' }))
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
+  async function doCheckIn() {
+    try {
+      const saved = await commit(checkIn(storeRef.current, new Date()))
+      if (saved) toast.notify('打卡成功，已计入统计')
+      return saved
+    } catch (error) { toast.notify((error as Error).message); return false }
+  }
   const downloadBackup = () => exportState(storeRef.current, `拾词备份-${today}.json`)
 
   if (!data.ready) return <div className="loading-page"><img className="boot-logo" src="/logo.png" alt="Wordflow 拾词" />{data.loadError ? <><p role="alert">{data.loadError}</p><button className="primary" onClick={() => location.reload()}>重新加载</button></> : <LoaderCircle className="spin" />}</div>
@@ -117,16 +124,16 @@ export default function App() {
               onLearning={learning => commit({ ...storeRef.current, learning })}
               onLayout={studyLayout => { void commit({ ...storeRef.current, studyLayout }) }}
               contextServices={{ busy: ai.busy || saving, generatingKey: ai.contextKey, configured: ai.config.configured, live: ai.live, error: ai.error, onGenerate: ai.generateContextStory, onSettings: openAISettings }} onStop={speech.stop}
-              onBooks={() => go({ name: 'books' })} onImport={() => setImportOpen(true)} onSpeak={speech.speak} />}
+              onBooks={() => go({ name: 'books' })} onImport={() => setImportOpen(true)} onSpeak={speech.speak} onCheckIn={doCheckIn} />}
             {screen.name === 'books' && <BookShelf store={store} catalog={words.catalog} busy={words.bookBusy || saving} error={words.catalogError} onRetry={words.refreshCatalog}
               view={shelfView ?? (store.books.length ? 'mine' : 'catalog')} onView={setShelfView}
               onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onActivate={study.activateBook} onInstall={words.installCatalogBook} onWord={openWord} />}
             {screen.name === 'frequency' && <ExamFrequencyView initialExam={words.catalog.find(book => book.id === store.activeBookId)?.exam || (store.activeBookId === 'ecdict-ky' ? 'ky1' : 'cet4')} />}
             {screen.name === 'library' && <LibraryPage store={store} onWord={openWord} onBooks={() => go({ name: 'books' })} />}
-            {screen.name === 'stats' && <StatsPage store={store} now={data.clock} onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onBooks={() => go({ name: 'books' })} />}
+            {screen.name === 'stats' && <StatsPage store={store} now={data.clock} saving={saving} onCheckIn={doCheckIn} onStudy={goStudy} onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onBooks={() => go({ name: 'books' })} />}
             {(screen.name === 'story' || screen.name === 'article' || screen.name === 'stories' || screen.name === 'shelf' || screen.name === 'picks') && <ReadingPage store={store} now={data.clock} view={screen.name === 'story' ? 'hub' : screen.name === 'picks' ? 'picks' : screen.name === 'article' ? 'daily' : screen.name === 'shelf' ? 'shelf' : 'story'}
               onOpen={(view, id, scope) => go(view === 'daily' ? { name: 'article', id, scope } : view === 'picks' ? { name: 'picks' } : { name: 'stories' })} onShelf={(cefr, topic) => go({ name: 'shelf', cefr, topic })}
-              articleId={screen.name === 'article' ? screen.id : undefined} scope={screen.name === 'article' ? screen.scope : screen.name === 'shelf' ? { cefr: screen.cefr, topic: screen.topic } : undefined} onAddWord={row => words.importRows([row], '阅读收藏', true)} saving={saving} aiConfigured={ai.config.configured} onAssist={ai.assistArticle} onAISettings={openAISettings}
+              articleId={screen.name === 'article' ? screen.id : undefined} scope={screen.name === 'article' ? screen.scope : screen.name === 'shelf' ? { cefr: screen.cefr, topic: screen.topic } : undefined} onAddWord={row => words.importRows([row], '阅读收藏', true)} saving={saving}
               onStudy={async () => { const current = storeRef.current; const mode = studyView(current); const draft = currentStudyDraft(current, mode === 'review' ? 'review' : 'learn'); if (!draft || await study.changeStudy(draft, { type: 'method', method: 'context' })) goStudy() }}
               onRead={id => {
                 const current = storeRef.current

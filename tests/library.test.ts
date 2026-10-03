@@ -81,6 +81,21 @@ test('sync stores valid articles, skips malformed ones and removes what the serv
   assert.deepEqual(cachedLibrary().map(item => item.id), ['lib-simple-a'])
 })
 
+test('an old cache stays readable but the next sync downloads every article again', async () => {
+  memory.clear()
+  const { syncLibrary, cachedLibrary, libraryIsStale } = await import('../src/library')
+  await syncLibrary((async () => page([payload('lib-simple-a')], ['lib-simple-a'], 7)) as unknown as typeof fetch)
+  memory.set('wordflow.library.meta.v1', memory.get('wordflow.library.meta.v2')!)
+  memory.delete('wordflow.library.meta.v2')
+  assert.ok(libraryIsStale())
+  const urls: string[] = []
+  const result = await syncLibrary((async (url: string) => { urls.push(url); return page([payload('lib-simple-a', { translations: ['新译文。'] })], ['lib-simple-a'], 7) }) as unknown as typeof fetch)
+  assert.match(urls[0], /since=0/)
+  assert.deepEqual(result, { added: 0, removed: 0, skipped: 0, total: 1 })
+  assert.deepEqual(cachedLibrary()[0].translations, ['新译文。'])
+  assert.equal(memory.has('wordflow.library.meta.v1'), false)
+})
+
 test('a failed sync keeps the cache and reports a readable error', async () => {
   memory.clear()
   const { syncLibrary, cachedLibrary } = await import('../src/library')

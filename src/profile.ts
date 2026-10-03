@@ -21,3 +21,31 @@ export async function prepareAvatar(file: File): Promise<string> {
     throw new Error(error instanceof Error && error.message.startsWith('图片内容') ? error.message : '头像处理失败，请换一张图片')
   } finally { URL.revokeObjectURL(url) }
 }
+
+export type AvatarStyle = { id: string; name: string; creator: string; source: string; license: string }
+export type AvatarLibrary = { styles: AvatarStyle[]; avatars: { id: string; style: string; svg: string }[] }
+let avatarLibrary: Promise<AvatarLibrary> | undefined
+/** The bundled CC0 cartoon avatars (scripts/build-avatars.mjs). */
+export function loadAvatarLibrary(): Promise<AvatarLibrary> {
+  avatarLibrary ??= fetch('/avatars/library.json').then(async response => {
+    if (!response.ok) throw new Error('头像库加载失败')
+    const data = await response.json() as AvatarLibrary
+    if (!Array.isArray(data.avatars) || !data.avatars.length) throw new Error('头像库为空')
+    return data
+  }).catch(error => { avatarLibrary = undefined; throw error })
+  return avatarLibrary
+}
+export const svgDataUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+/** Profiles store a PNG data URL, which every app version accepts; the SVG itself is not saved. */
+export async function avatarFromSvg(svg: string): Promise<string> {
+  const image = new Image()
+  image.src = svgDataUrl(svg)
+  try { await image.decode() } catch { throw new Error('头像处理失败，请换一个') }
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = 256
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('头像处理暂不可用')
+  context.drawImage(image, 0, 0, 256, 256)
+  const png = canvas.toDataURL('image/png')
+  return png.length <= 200000 ? png : canvas.toDataURL('image/jpeg', .9)
+}

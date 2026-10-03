@@ -225,6 +225,16 @@ class PipelineTests(unittest.TestCase):
         store.set_status(self.db, "lib-simple-bridge", "hidden")
         self.assertEqual(store.published_page(self.db, first["cursor"], 10)["ids"], [])
 
+    def test_a_changed_translation_alone_makes_clients_fetch_the_article_again(self):
+        record = {"id": "lib-simple-tide", "lang": "simple", "title": "Tide", "status": "published", "revision": "1", "retrieved_at": store.utc_now(),
+                  "checked_at": store.utc_now(), "content_hash": "same", "body": {"id": "lib-simple-tide", "translations": ["旧"]}}
+        store.save_article(self.db, record)
+        cursor = store.published_page(self.db, 0, 10)["cursor"]
+        store.save_article(self.db, record)
+        self.assertEqual(store.published_page(self.db, cursor, 10)["articles"], [])
+        store.save_article(self.db, {**record, "body": {"id": "lib-simple-tide", "translations": ["新"]}})
+        self.assertEqual(store.published_page(self.db, cursor, 10)["articles"], [{"id": "lib-simple-tide", "translations": ["新"]}])
+
 
 class ApiTests(unittest.TestCase):
     @classmethod

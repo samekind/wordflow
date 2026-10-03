@@ -3,7 +3,9 @@ import { cloudBase } from './cloud'
 import { readingArticleSchema, type ReadingArticle } from './reading'
 
 /** The online reading library: articles curated on the server, cached here so they stay readable offline. */
-const metaKey = 'wordflow.library.meta.v1'
+const metaKey = 'wordflow.library.meta.v2'
+/** v1 caches could keep copies made before the server re-sent articles whose translations changed. */
+const legacyMetaKey = 'wordflow.library.meta.v1'
 const articleKey = (id: string) => `wordflow.library.a.${id}.v1`
 const staleAfter = 6 * 3600 * 1000
 const idPattern = /^lib-(en|simple)-[a-z0-9-]{1,80}$/
@@ -20,6 +22,9 @@ function readMeta(): Meta {
   try {
     const parsed = metaSchema.safeParse(JSON.parse(localStorage.getItem(metaKey) || 'null'))
     if (parsed.success) return parsed.data
+    // Keep the old copies readable offline, but download everything again on the next sync.
+    const legacy = metaSchema.safeParse(JSON.parse(localStorage.getItem(legacyMetaKey) || 'null'))
+    if (legacy.success) return { cursor: 0, ids: legacy.data.ids, syncedAt: 0 }
   } catch { /* A damaged cache is rebuilt by the next sync. */ }
   return { cursor: 0, ids: [], syncedAt: 0 }
 }
@@ -90,7 +95,7 @@ export async function syncLibrary(fetcher: typeof fetch = fetch): Promise<Librar
   }
   memo = null
   const next: Meta = { cursor, ids: [...held].filter(id => keep.has(id)), syncedAt: Date.now() }
-  try { localStorage.setItem(metaKey, JSON.stringify(next)) } catch { throw new Error('本机存储空间不足，无法缓存选读库') }
+  try { localStorage.setItem(metaKey, JSON.stringify(next)); localStorage.removeItem(legacyMetaKey) } catch { throw new Error('本机存储空间不足，无法缓存选读库') }
   return { added, removed, skipped, total: next.ids.length }
 }
 

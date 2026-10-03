@@ -1,7 +1,7 @@
 {
   "name": "wordflow",
   "private": true,
-  "version": "0.3.3",
+  "version": "0.3.4",
   "type": "module",
   "scripts": {
     "dev": "node --env-file-if-exists=.env server/index.mjs",
@@ -10,6 +10,7 @@
     "test": "tsx --test tests/*.test.ts",
     "build:exam-frequency": "python scripts/build-exam-frequency.py --publish",
     "build:reading": "node scripts/build-reading.mjs",
+    "build:avatars": "node scripts/build-avatars.mjs",
     "export:library-wordlist": "node scripts/export-library-wordlist.mjs",
     "test:exam-frequency": "python tests/exam_frequency_test.py",
     "test:cloud": "python tests/cloud_test.py",
@@ -34,6 +35,8 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2",
+    "@dicebear/collection": "^9.4.2",
+    "@dicebear/core": "^9.4.3",
     "@playwright/test": "^1.55.0",
     "@types/node": "^24.0.0",
     "@types/papaparse": "^5.3.16",

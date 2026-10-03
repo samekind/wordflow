@@ -4,8 +4,8 @@ import { useReducedMotion } from 'motion/react'
 import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clock3, Ellipsis, Eye, EyeOff, Minus, Plus, RotateCcw, Volume2 } from 'lucide-react'
 import { PreviewIcon, RecallIcon } from './icons'
 import { coreGloss } from './gloss'
-import { bookDays, dayKey, ebbNextLabel, intervalLabel, markLevel, memoryIntervals, wordsForDay, pageFontAttrs, type Store, type WordBook } from './model'
-import { currentStudyDraft, draftComplete, hasLearned, learningStatistics, newWords, reviewQueue, studyView, studyWordStatus, type StudyAction } from './study'
+import { bookDays, dayKey, ebbNextLabel, intervalLabel, listReviewOffsets, markLevel, memoryIntervals, wordsForDay, pageFontAttrs, type Store, type WordBook } from './model'
+import { currentStudyDraft, dayPlan, dayReviewKey, draftComplete, hasLearned, learningStatistics, newWords, reviewQueue, studyView, studyWordStatus, usesDaySchedule, type StudyAction } from './study'
 import type { LearningState, StudyDraft, StudyKind } from './study-state'
 import ChoiceSheet from './components/ChoiceSheet'
 import Sheet from './components/Sheet'
@@ -32,6 +32,7 @@ type Props = {
   onUndo: () => void; onBooks: () => void; onImport: () => void;
   onLayout: (layout: Store['studyLayout']) => void;
   onSpeak: (text: string) => void; onStop: () => void;
+  onCheckIn: () => Promise<boolean>;
   contextServices: ContextServices;
 }
 /** ⋯ menu for everything that is not the current word list. */
@@ -51,7 +52,22 @@ function StudyMenu({ children }: { children: (close: () => void) => ReactNode })
   </div>
 }
 
-export default function StudyList({ start, store, now, saving, canUndo, onMark, onKnown, onStudy, onRestart, onLearning, onDay, onOpenWord, onUndo, onBooks, onImport, onLayout, onSpeak, onStop, contextServices }: Props) {
+/** Shown once the day is done: check in to record it, or the record already made today. */
+export function CheckInBar({ plan, saving, onCheckIn, onNextDay }: { plan: ReturnType<typeof dayPlan>; saving: boolean; onCheckIn: () => Promise<boolean>; onNextDay: (day: number) => void }) {
+  const stale = !!plan.checkin && (plan.checkin.newCount !== plan.newToday || plan.checkin.reviewCount !== plan.reviewedToday)
+  if (!plan.checkin && plan.idle) return <div className="checkin-bar">
+    <span className="checkin-text"><strong>第 {plan.day + 1} 天已经学完</strong><small>今天还没有新学或复习，{plan.nextDay !== null ? '进入下一天学完后即可打卡' : '这本词书的每一天都已学完'}</small></span>
+    {plan.nextDay !== null && <button className="primary checkin-button" disabled={saving} onClick={() => onNextDay(plan.nextDay!)}>进入第 {plan.nextDay + 1} 天<ChevronRight size={16} /></button>}
+  </div>
+  return <div className="checkin-bar" data-done={!!plan.checkin}>
+    <span className="checkin-text">{plan.checkin
+      ? <><strong><CheckCheck size={16} />今日已打卡</strong><small>新学 {plan.checkin.newCount} 词 · 复习 {plan.checkin.reviewCount} 词</small></>
+      : <><strong>当天任务完成</strong><small>今天新学 {plan.newToday} 词 · 复习 {plan.reviewedToday} 词，打卡后计入统计</small></>}</span>
+    {(!plan.checkin || (stale && plan.canCheckIn)) && <button className="primary checkin-button" disabled={saving || !plan.canCheckIn} onClick={() => void onCheckIn()}>
+      <Check size={16} />{plan.checkin ? '更新打卡' : '打卡'}</button>}
+  </div>
+}
+export default function StudyList({ start, store, now, saving, canUndo, onMark, onKnown, onStudy, onRestart, onLearning, onDay, onOpenWord, onUndo, onBooks, onImport, onLayout, onSpeak, onStop, onCheckIn, contextServices }: Props) {
   const reduced = useReducedMotion()
   const [daysOpen, setDaysOpen] = useState(false), [showMeanings, setShowMeanings] = useState(false), [planOpen, setPlanOpen] = useState(false)
   const [replaceKind, setReplaceKind] = useState<StudyKind | null>(null)
@@ -87,12 +103,31 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
   const nextDue = scheduled.filter(word => +new Date(word.card.due) > now).sort((a, b) => +new Date(a.card.due) - +new Date(b.card.due))[0]
   const currentKey = `${mode}:${draft?.bookId || book?.id}:${draft?.day ?? day}:${currentPage}`
   const moreFresh = mode === 'learn' && fresh.length > 0
-  const continueLabel = remainingPage >= 0 ? '继续下一组' : mode === 'review' ? queue.length ? '继续到期复习' : '学习新词' : moreFresh ? '继续当天新词' : book && day + 1 < days.length ? '后一天' : '查看到期复习'
+  // 按天复习: the review list belongs to the selected day, so the day header and both tabs stay visible.
+  const dayMode = usesDaySchedule(store) && !!book, plan = dayPlan(store, moment)
+  const reviewDays = listReviewOffsets.map(offset => day - offset).filter(value => value >= 0).map(value => value + 1)
+  const continueLabel = remainingPage >= 0 ? '继续下一组' : mode === 'review' ? queue.length ? '继续复习' : '学习新词' : moreFresh ? '继续当天新词' : book && day + 1 < days.length ? '后一天' : '查看复习'
   const savedDraft = draft && store.learning.drafts[draft.kind]?.id === draft.id, practiceDone = mode === 'practice' && !!practice?.completedAt
   const number = (id: string) => {
     const source = mode === 'review' ? draft?.groups.flat() : store.books.find(item => item.id === (draft?.bookId || book?.id))?.wordIds
     return String((source?.indexOf(id) ?? -1) + 1).padStart(2, '0')
   }
+  const dayOptions = useMemo(() => {
+    if (!daysOpen || !book) return []
+    const learnedIds = new Set(store.words.filter(word => !word.known && hasLearned(word)).map(word => word.id))
+    const reviewed = new Map<string, Set<string>>()
+    for (const review of store.reviews) if (review.forDay) { let set = reviewed.get(review.forDay); if (!set) reviewed.set(review.forDay, set = new Set()); set.add(review.wordId) }
+    return days.map((ids, index) => {
+      const task = [store.learning.drafts.learn, ...store.learning.parked].find(item => item && item.bookId === book.id && item.day === index)
+      const learned = ids.filter(id => learnedIds.has(id)).length
+      const recall = dayMode ? listReviewOffsets.map(offset => index - offset).filter(value => value >= 0).flatMap(value => days[value]).filter(id => learnedIds.has(id)) : []
+      const done = reviewed.get(dayReviewKey(book.id, index))
+      const reviewLeft = recall.filter(id => !done?.has(id)).length
+      const status = task && !draftComplete(task) ? `待继续 · 已完成 ${task.completed.length} / ${task.groups.length} 组` : learned >= ids.length ? '新词已学完' : learned ? `新词已学 ${learned}` : '未开始'
+      return { value: String(index), label: `第 ${index + 1} 天`, count: ids.length,
+        detail: dayMode ? `新学 ${ids.length} · 复习 ${recall.length}${recall.length ? reviewLeft ? `（剩 ${reviewLeft}）` : '（已完成）' : ''} · ${status}` : status }
+    })
+  }, [daysOpen, book, days, store.words, store.reviews, store.learning, dayMode])
   function scrollToEnglish() { document.getElementById('app-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }
   function cancelPress() { clearTimeout(timer.current) }
   useEffect(() => cancelPress, [])
@@ -147,7 +182,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
   }
   // First run: no wordbook yet, so 学习 walks through choosing one instead of an empty page.
   if (!store.books.length && start) return <section className="study-list-view font-scope" aria-label="列表背词" {...pageFontAttrs(store.appearance.study)}><div className="english-page"><StartPlan store={store} {...start} onImport={onImport} /></div></section>
-  const showTasks = mode === 'review' || queue.length > 0
+  const showTasks = dayMode || mode === 'review' || queue.length > 0
   return <section className={`study-list-view font-scope layout-${store.studyLayout}`} aria-label="列表背词" {...pageFontAttrs(store.appearance.study)}>
     <div className="english-page">
       {/* One slim row: which day (the book is chosen in 我的 → 词书管理), group dots, and ⋯. */}
@@ -155,11 +190,11 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
         <h1 className="sr-only">学习</h1>
         <div className="study-card-top">
           <div className="study-day-stepper" data-review={mode === 'review'}>
-            {mode !== 'review' && <button className="icon-button" aria-label="前一天" disabled={!book || !day || saving} onClick={() => void chooseDay(day - 1)}><ChevronLeft size={17} /></button>}
-            {mode === 'review'
+            {(mode !== 'review' || dayMode) && <button className="icon-button" aria-label="前一天" disabled={!book || !day || saving} onClick={() => void chooseDay(day - 1)}><ChevronLeft size={17} /></button>}
+            {mode === 'review' && !dayMode
               ? <span className="study-day-button is-static"><span className="day-title">到期复习</span><span className="current-book-label">全部词书</span></span>
               : <button className="study-day-button" aria-label="选择学习的天" disabled={!book || saving} onClick={() => setDaysOpen(true)}><span className="day-title">第 {day + 1} 天</span><ChevronDown size={13} /></button>}
-            {mode !== 'review' && <button className="icon-button" aria-label="后一天" disabled={!book || day >= days.length - 1 || saving} onClick={() => void chooseDay(day + 1)}><ChevronRight size={17} /></button>}
+            {(mode !== 'review' || dayMode) && <button className="icon-button" aria-label="后一天" disabled={!book || day >= days.length - 1 || saving} onClick={() => void chooseDay(day + 1)}><ChevronRight size={17} /></button>}
           </div>
           {!!rows.length && groups.length > 0 && <div className="study-task-progress" aria-label="本次任务进度">
             <span className="group-dots" aria-hidden="true">{groups.map((_, index) => <i key={index} data-done={!!draft?.completed.includes(index)} data-current={index === currentPage} />)}</span>
@@ -183,8 +218,8 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
           onChange={view => switchMode(view === 'review' ? 'review' : 'learn')}
           options={[
             // In practice mode the 新词 tab shows as selected and tapping it returns to learning.
-            { value: mode === 'practice' ? 'practice' as const : 'learn' as const, ariaLabel: '新词', title: `今天待学 ${fresh.length} 词`, label: <>新词 <span>{fresh.length}</span></> },
-            { value: 'review' as const, ariaLabel: '到期复习', title: `全部词书到期 ${queue.length} 词`, label: <>到期复习 <span>{queue.length}</span></> },
+            { value: mode === 'practice' ? 'practice' as const : 'learn' as const, ariaLabel: dayMode ? '当天新学' : '新词', title: `今天待学 ${fresh.length} 词`, label: <>{dayMode ? '当天新学' : '新词'} <span>{fresh.length}</span></> },
+            { value: 'review' as const, ariaLabel: dayMode ? '需要复习' : '到期复习', title: dayMode ? `复习第 ${reviewDays.join('、') || '—'} 天学过的词，还剩 ${queue.length} 词` : `全部词书到期 ${queue.length} 词`, label: <>{dayMode ? '需要复习' : '到期复习'} <span>{queue.length}</span></> },
           ]} />}
         {!!rows.length && <Segmented label="学习方式" className="study-stage-switch"
           value={contextMode ? 'context' : preview ? 'preview' : 'test'} disabled={saving || contextServices.busy} onChange={chooseStage}
@@ -192,8 +227,10 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
             { value: 'preview' as const, ariaLabel: '快速记忆', label: <><PreviewIcon size={15} />快速记忆</> },
             { value: 'test' as const, ariaLabel: '自己自查', label: <><RecallIcon size={15} />自己自查</> },
           ]} />}
+        {dayMode && <p className="day-plan-note" aria-label="当天计划">第 {day + 1} 天 · 新学 {plan.newTotal} 词{plan.reviewTotal ? ` · 复习 ${plan.reviewTotal} 词（第 ${reviewDays.join('、')} 天学过的词）` : reviewDays.length ? ' · 前几天还没有学过的词，暂无复习' : ' · 第一天没有复习'}</p>}
+        {book && (plan.finished || plan.checkin) && <CheckInBar plan={plan} saving={saving} onCheckIn={onCheckIn} onNextDay={value => void chooseDay(value)} />}
       </header>
-      {!rows.length ? <div className="study-empty"><BookOpen size={30} /><h2>{mode === 'review' ? '暂无到期复习' : !book ? '从一本词书开始' : '今天暂无新词'}</h2><p>{mode === 'review' ? nextDue ? `下次复习在 ${intervalLabel(nextDue.card.due, moment)}后` : '完成新词自测后，这里会按计划安排复习。' : !book ? '选词书 → 看词或读短文 → 自测提交。每组最多 20 词，中途退出会保留进度。' : '今天的词已学过或已标熟，可以回看，或继续下一天。'}</p><div className="button-row">{mode === 'review' && <button className="primary" disabled={saving} onClick={() => switchMode('learn')}>学习新词</button>}{book && day + 1 < days.length && mode !== 'review' && <button className="primary" onClick={() => void chooseDay(day + 1)}>进入下一天</button>}{!book && <><button className="primary" onClick={onBooks}>选择词书</button><button className="secondary" onClick={onImport}>导入词表</button></>}</div></div> : <>
+      {!rows.length ? <div className="study-empty"><BookOpen size={30} /><h2>{mode === 'review' ? dayMode ? '这一天的复习已完成' : '暂无到期复习' : !book ? '从一本词书开始' : '今天暂无新词'}</h2><p>{mode === 'review' && dayMode ? reviewDays.length ? `第 ${day + 1} 天复习第 ${reviewDays.join('、')} 天学过的词，每个词复习一次。` : '第一天只学新词，从第二天开始复习前面学过的词。' : mode === 'review' ? nextDue ? `下次复习在 ${intervalLabel(nextDue.card.due, moment)}后` : '完成新词自测后，这里会按计划安排复习。' : !book ? '选词书 → 看词或读短文 → 自测提交。每组最多 20 词，中途退出会保留进度。' : '今天的词已学过或已标熟，可以回看，或继续下一天。'}</p><div className="button-row">{mode === 'review' && fresh.length > 0 && <button className="primary" disabled={saving} onClick={() => switchMode('learn')}>学习当天新词</button>}{mode === 'review' && !dayMode && !fresh.length && <button className="primary" disabled={saving} onClick={() => switchMode('learn')}>学习新词</button>}{mode !== 'review' && dayMode && queue.length > 0 && <button className="primary" disabled={saving} onClick={() => switchMode('review')}>去复习 · {queue.length} 词</button>}{book && day + 1 < days.length && mode !== 'review' && <button className="primary" onClick={() => void chooseDay(day + 1)}>进入下一天</button>}{!book && <><button className="primary" onClick={onBooks}>选择词书</button><button className="secondary" onClick={onImport}>导入词表</button></>}</div></div> : <>
         {contextMode && draft ? <ContextReader store={store} draft={draft} now={now} services={contextServices} onWord={onOpenWord} onSpeak={onSpeak} onStop={onStop} onCheck={() => { onStop(); void onStudy(draft, { type: 'self-test' }) }} /> : <><ol className="english-grid" aria-label="编号英文词表" key={currentKey}>
           {rows.map(row => <li className="english-entry" key={row.id} data-word-id={row.id} data-number={number(row.id)} data-mark-count={markLevel(row.markCount)} data-mark-level={markLevel(row.markCount)} data-forgotten={row.forgotten} data-next={store.reviewMethod === 'ebbinghaus' && byId.has(row.id) ? ebbNextLabel(byId.get(row.id)!, row.forgotten) : ''}>
             <SwipeRow disabled={saving || row.missing || (!preview && completed)}
@@ -224,17 +261,13 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
         <div className="study-pagination"><button className="icon-button" aria-label="上一组" disabled={saving || !currentPage} onClick={() => move(currentPage - 1)}><ChevronLeft size={19} /></button>{groups.length > 1 ? <GlassSlider name="词组" min={1} max={groups.length} value={currentPage + 1} label={page => `${page}`} thumbWidth={42} onCommit={page => { if (!saving) move(page - 1) }} /> : <span className="page-static" aria-label={`第 ${currentPage + 1} 组，共 ${groups.length} 组`}>{currentPage + 1} / {groups.length}</span>}<button className="icon-button" disabled={saving || currentPage >= groups.length - 1} onClick={() => move(currentPage + 1)} aria-label="下一组"><ChevronRight size={19} /></button></div>
       </>}
     </div>
-    <ChoiceSheet title="学习的天" open={daysOpen} onClose={() => setDaysOpen(false)} value={String(day)} options={days.map((ids, index) => {
-      const task = [store.learning.drafts.learn, ...store.learning.parked].find(item => item && item.bookId === book?.id && item.day === index)
-      const learned = ids.filter(id => { const word = byId.get(id); return word && hasLearned(word) }).length
-      return { value: String(index), label: `第 ${index + 1} 天`, count: ids.length, detail: task && !draftComplete(task) ? `待继续 · 已完成 ${task.completed.length} / ${task.groups.length} 组` : `已学 ${learned} 词` }
-    })} onSelect={value => { void chooseDay(Number(value)) }} />
+    <ChoiceSheet title="学习的天" open={daysOpen} onClose={() => setDaysOpen(false)} value={String(day)} options={dayOptions} onSelect={value => { void chooseDay(Number(value)) }} />
     <IonAlert isOpen={replaceKind !== null} cssClass="app-alert" animated={!reduced} header="结束原学习草稿？" message="已提交的学习记录和难词标记保留，未提交的本轮结果将结束。随后按当前选择重新选词。" onDidDismiss={() => setReplaceKind(null)} buttons={[{ text: '继续原任务', role: 'cancel' }, { text: '结束并重新选词', role: 'destructive', handler: () => { if (replaceKind) void onRestart(replaceKind) } }]} />
-    <Sheet title="复习计划" open={planOpen} onClose={() => setPlanOpen(false)} tall><div className="memory-plan"><div className="memory-plan-heading"><h3>{store.reviewMethod === 'ebbinghaus' ? '艾宾浩斯式间隔复习' : 'FSRS 自适应复习'}</h3><span>全部已学单词 · 跨词书去重</span></div><div className="memory-totals"><div><strong>{queue.length}</strong><span>到期待复习</span></div><div><strong>{scheduled.length}</strong><span>已加入计划</span></div></div>
+    <Sheet title="复习计划" open={planOpen} onClose={() => setPlanOpen(false)} tall><div className="memory-plan"><div className="memory-plan-heading"><h3>{dayMode ? '艾宾浩斯 · 按天复习' : store.reviewMethod === 'ebbinghaus' ? '艾宾浩斯式间隔复习' : 'FSRS 自适应复习'}</h3><span>{dayMode ? `${book?.title} · 第 ${day + 1} 天` : '全部已学单词 · 跨词书去重'}</span></div><div className="memory-totals"><div><strong>{queue.length}</strong><span>{dayMode ? '这一天还要复习' : '到期待复习'}</span></div><div><strong>{dayMode ? plan.reviewTotal : scheduled.length}</strong><span>{dayMode ? '这一天共复习' : '已加入计划'}</span></div></div>
       {reviewDraft && <div className="review-task-summary" aria-label="复习任务进度"><strong>{pendingReviewGroups.length ? `本次已完成 ${reviewDraft.completed.length} / ${reviewDraft.groups.length} 组` : '本次复习已完成'}</strong><span>{pendingReviewGroups.length ? `剩余 ${pendingReviewGroups.length} 组，继续原来的词表和答案。` : queue.length ? `还有 ${queue.length} 词到期，可以开始下一次复习。` : '当前到期任务已处理完，可以学习新词。'}</span>{pendingReviewGroups.length > 0 && laterReviews > 0 && <span>另有 {laterReviews} 词到期，完成本次后继续。</span>}</div>}
-      <button className="primary review-continue" disabled={saving} onClick={() => void continueReview()}><RotateCcw size={17} />{pendingReviewGroups.length ? `继续本次复习 · 剩余 ${pendingReviewGroups.length} 组` : queue.length ? `开始到期复习 · ${queue.length} 词` : '学习新词'}</button>
-      <table className="memory-table" aria-label={store.reviewMethod === 'ebbinghaus' ? '间隔复习时间表' : 'FSRS 复习规则'}><thead><tr><th scope="col">完成阶段</th><th scope="col">下次复习间隔</th></tr></thead><tbody>{store.reviewMethod === 'ebbinghaus' ? <>{memoryIntervals.map((step, index) => <tr key={step.minutes}><th scope="row">{index === 0 ? '首次学习' : `第 ${index} 次复习`}</th><td>{step.label}{index === memoryIntervals.length - 1 ? '，之后每 30 天' : ''}</td></tr>)}<tr><th scope="row">忘记 / 需重学</th><td>5 分钟，重新开始</td></tr></> : <><tr><th scope="row">忘记 / 需重学</th><td>逐词计算重学时间</td></tr><tr><th scope="row">记住</th><td>根据记忆状态逐词调整</td></tr></>}</tbody></table>
-      <p className="field-note">间隔从正式提交计算，提前自由练习不推进阶段。固定间隔为应用预设，非个人实测遗忘曲线。</p><div className="review-forecast">{Array.from({ length: 7 }, (_, index) => { const date = new Date(now); date.setDate(date.getDate() + index); return <div key={index}><span>{index === 0 ? '今天' : `${date.getMonth() + 1}/${date.getDate()}`}</span><strong>{scheduled.filter(word => dayKey(word.card.due) === dayKey(date)).length}</strong></div> })}</div><p className="next-review">{nextDue ? `下次复习 · ${intervalLabel(nextDue.card.due, moment)}后` : '暂无后续复习'}</p>
+      <button className="primary review-continue" disabled={saving} onClick={() => void continueReview()}><RotateCcw size={17} />{pendingReviewGroups.length ? `继续本次复习 · 剩余 ${pendingReviewGroups.length} 组` : queue.length ? `${dayMode ? '开始复习' : '开始到期复习'} · ${queue.length} 词` : '学习新词'}</button>
+      {dayMode ? <table className="memory-table" aria-label="按天复习时间表"><thead><tr><th scope="col">学完那天之后</th><th scope="col">回来复习</th></tr></thead><tbody>{listReviewOffsets.map(offset => <tr key={offset}><th scope="row">第 {offset} 天</th><td>{day + 1 - offset >= 1 ? `第 ${day + 1} 天复习第 ${day + 1 - offset} 天的词` : '—'}</td></tr>)}</tbody></table> : <table className="memory-table" aria-label={store.reviewMethod === 'ebbinghaus' ? '间隔复习时间表' : 'FSRS 复习规则'}><thead><tr><th scope="col">完成阶段</th><th scope="col">下次复习间隔</th></tr></thead><tbody>{store.reviewMethod === 'ebbinghaus' ? <>{memoryIntervals.map((step, index) => <tr key={step.minutes}><th scope="row">{index === 0 ? '首次学习' : `第 ${index} 次复习`}</th><td>{step.label}{index === memoryIntervals.length - 1 ? '，之后每 30 天' : ''}</td></tr>)}<tr><th scope="row">忘记 / 需重学</th><td>5 分钟，重新开始</td></tr></> : <><tr><th scope="row">忘记 / 需重学</th><td>逐词计算重学时间</td></tr><tr><th scope="row">记住</th><td>根据记忆状态逐词调整</td></tr></>}</tbody></table>}
+      {dayMode ? <p className="field-note">每个学习天先学当天的新词，再复习第 N-{listReviewOffsets.join('、N-')} 天学过的词，每个词每天复习一次。两项都完成后可以打卡。</p> : <><p className="field-note">间隔从正式提交计算，提前自由练习不推进阶段。固定间隔为应用预设，非个人实测遗忘曲线。</p><div className="review-forecast">{Array.from({ length: 7 }, (_, index) => { const date = new Date(now); date.setDate(date.getDate() + index); return <div key={index}><span>{index === 0 ? '今天' : `${date.getMonth() + 1}/${date.getDate()}`}</span><strong>{scheduled.filter(word => dayKey(word.card.due) === dayKey(date)).length}</strong></div> })}</div><p className="next-review">{nextDue ? `下次复习 · ${intervalLabel(nextDue.card.due, moment)}后` : '暂无后续复习'}</p></>}
     </div></Sheet>
   </section>
 }

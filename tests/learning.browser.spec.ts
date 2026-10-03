@@ -11,6 +11,8 @@ async function studyMenu(page: Page) {
 
 
 const fixture = (count = 40) => importToPersonal({ ...emptyStore(), goal: 40 }, starterRows.slice(0, count), '学习回归').store
+/** Due-date review across books is FSRS behaviour; 艾宾浩斯 reviews by study day. */
+const fsrsFixture = (count = 40): Store => ({ ...fixture(count), reviewMethod: 'fsrs' })
 /** Saves run in the background now; wait until the page has nothing in flight, then read the device copy. */
 async function settled(page: Page) {
   if (page.url().startsWith('http')) await page.waitForFunction(() => document.documentElement.dataset.saving !== 'true', null, { timeout: 15000 })
@@ -131,9 +133,10 @@ test('all main pages share clear navigation and return to the same study group',
 
 test('review progress separates the current task from later due words and resumes the first unfinished group', async ({ page }) => {
   const started = new Date()
-  let initial = fixture(61)
+  let initial = fsrsFixture(61)
+  // FSRS short-term steps: a new word rated Good comes back after 10 minutes, a forgotten one after 1.
   for (const word of initial.words.slice(0, 40)) initial = reviewWord(initial, word.id, 3, new Date(+started - 30 * 60000))
-  initial = reviewWord(initial, initial.words[40].id, 3, new Date(+started - 17 * 60000))
+  initial = reviewWord(initial, initial.words[40].id, 3, new Date(+started - 5 * 60000))
   initial.learning.view = 'review'
   await seed(page, initial)
   await page.clock.install({ time: started })
@@ -182,13 +185,13 @@ test('review progress separates the current task from later due words and resume
 })
 
 test('empty review explains the next due time and provides a working new-word action', async ({ page }) => {
-  let initial = fixture(20)
+  let initial = fsrsFixture(20)
   initial = reviewWord(initial, initial.words[0].id, 3, new Date())
   initial.learning.view = 'review'
   await seed(page, initial); await page.goto('/')
   await expect(page.getByRole('heading', { name: '暂无到期复习' })).toBeVisible()
   await expect(page.locator('.study-empty')).toContainText('下次复习在')
-  await page.getByRole('button', { name: '学习新词', exact: true }).click()
+  await page.getByRole('button', { name: '学习当天新词', exact: true }).click()
   await expect(page.locator('.english-entry')).toHaveCount(19)
   expect((await state(page)).reviews).toHaveLength(1)
 })
@@ -217,7 +220,7 @@ test('unit selection and unfinished word groups stay aligned across switches and
 })
 
 for (const kind of ['learn', 'review'] as const) test(`context ${kind} uses the exact saved group and returns to its self-test before grading`, async ({ page }) => {
-  let initial = fixture(61)
+  let initial = kind === 'review' ? fsrsFixture(61) : fixture(61)
   if (kind === 'review') {
     initial = installBook(initial, 'second', '第二词书', '合成测试', starterRows.slice(20, 61), 20)
     for (const word of initial.words.slice(0, 40)) initial = reviewWord(initial, word.id, 3, new Date(Date.now() - 30 * 60000))
@@ -310,7 +313,7 @@ test('fixed groups recover after reload; submission and undo survive reload with
 })
 
 test('global due review can pause a new-word draft; practice leaves scheduling unchanged', async ({ page }) => {
-  let initial = fixture(40)
+  let initial = fsrsFixture(40)
   initial = installBook(initial, 'second', '第二词书', '合成测试', starterRows.slice(20, 50), 20)
   initial = reviewWord(initial, initial.words[0].id, 3, new Date(Date.now() - 30 * 60000))
   initial = reviewWord(initial, initial.words[25].id, 3, new Date(Date.now() - 30 * 60000))
@@ -337,6 +340,72 @@ test('global due review can pause a new-word draft; practice leaves scheduling u
   expect(after.reviews).toEqual(before.reviews)
   await page.reload()
   await expect(page.getByRole('button', { name: '练习完成', exact: true })).toBeDisabled()
+})
+
+test('a day finished on an earlier date offers the next day instead of an empty check-in', async ({ page }) => {
+  let initial = importToPersonal({ ...emptyStore(), goal: 20 }, starterRows.slice(0, 60), '按天复习').store
+  const yesterday = new Date(Date.now() - 26 * 3600000)
+  for (const id of initial.books[0].wordIds.slice(0, 20)) initial = reviewWord(initial, id, 3, yesterday)
+  await seed(page, initial)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await expect(page.locator('.day-title')).toHaveText('第 1 天')
+  await expect(page.getByRole('button', { name: '打卡', exact: true })).toHaveCount(0)
+  await expect(page.locator('.checkin-bar')).toContainText('第 1 天已经学完')
+  await page.getByRole('navigation', { name: '主导航' }).getByRole('tab', { name: '统计', exact: true }).click()
+  await expect(page.getByRole('button', { name: /^第 1 天已经学完，进入第 2 天继续/ })).toBeVisible()
+  await page.getByRole('navigation', { name: '主导航' }).getByRole('tab', { name: '学习', exact: true }).click()
+  await page.getByRole('button', { name: '进入第 2 天', exact: true }).click()
+  await expect(page.locator('.day-title')).toHaveText('第 2 天')
+  await expect(page.getByRole('button', { name: '需要复习', exact: true })).toHaveText('需要复习 20')
+  expect((await state(page)).checkins).toHaveLength(0)
+})
+
+test('艾宾浩斯 day 2 shows its new words and day-1 review; finishing both unlocks a check-in that counts in stats', async ({ page }) => {
+  let initial = importToPersonal({ ...emptyStore(), goal: 20 }, starterRows.slice(0, 60), '按天复习').store
+  const yesterday = new Date(Date.now() - 26 * 3600000)
+  for (const id of initial.books[0].wordIds.slice(0, 20)) initial = reviewWord(initial, id, 3, yesterday)
+  initial.books[0].currentDay = 1
+  await seed(page, initial)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  const nav = page.getByRole('navigation', { name: '主导航' })
+  await expect(page.locator('.day-title')).toHaveText('第 2 天')
+  await expect(page.getByRole('button', { name: '当天新学', exact: true })).toHaveText('当天新学 20')
+  await expect(page.getByRole('button', { name: '需要复习', exact: true })).toHaveText('需要复习 20')
+  await expect(page.getByLabel('当天计划')).toHaveText('第 2 天 · 新学 20 词 · 复习 20 词（第 1 天学过的词）')
+  await page.screenshot({ path: 'test-results/day-plan-390.png', animations: 'disabled' })
+  await nav.getByRole('tab', { name: '统计', exact: true }).click()
+  await expect(page.getByRole('button', { name: /^还差 新学 20 词、复习 20 词/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^打卡/ })).toHaveCount(0)
+  await nav.getByRole('tab', { name: '学习', exact: true }).click()
+  await page.getByRole('button', { name: '需要复习', exact: true }).click()
+  await expect(page.locator('.english-entry')).toHaveCount(20)
+  expect(await page.locator('.english-entry').evaluateAll(rows => rows.map(row => row.getAttribute('data-word-id')))).toEqual(initial.books[0].wordIds.slice(0, 20))
+  await submit(page).click()
+  await expect.poll(async () => (await state(page)).reviews.filter(r => r.forDay === 'personal:1')).toHaveLength(20)
+  await expect(page.getByRole('button', { name: '需要复习', exact: true })).toHaveText('需要复习 0')
+  await page.getByRole('button', { name: '当天新学', exact: true }).click()
+  await expect(page.locator('.english-entry').first()).toHaveAttribute('data-word-id', initial.books[0].wordIds[20])
+  await submit(page).click()
+  await expect.poll(async () => (await state(page)).reviews.filter(r => r.kind === 'learn')).toHaveLength(20)
+  await nav.getByRole('tab', { name: '统计', exact: true }).click()
+  await page.getByRole('button', { name: '打卡 · 今天新学 20 词、复习 20 词', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: '今日已打卡' })).toHaveText('今日已打卡 · 新学 20 词 · 复习 20 词')
+  await page.reload()
+  if (await nav.getByRole('tab', { name: '统计', exact: true }).getAttribute('aria-selected') !== 'true') await nav.getByRole('tab', { name: '统计', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: '今日已打卡' })).toBeVisible()
+  const saved = await state(page)
+  expect(saved.checkins).toHaveLength(1)
+  expect(saved.checkins[0]).toMatchObject({ bookId: 'personal', day: 1, newCount: 20, reviewCount: 20 })
+  await expect(page.getByLabel('打卡记录').locator('.stats-figures > div').first()).toContainText('1连续打卡')
+  await expect(page.getByLabel('最近 28 天打卡').locator('[data-today=true]')).toHaveAttribute('data-done', 'true')
+  await expect(page.getByRole('listitem', { name: '今天 新学 20 复习 20', exact: true })).toBeVisible()
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: `test-results/stats-checkin-${width}.png`, animations: 'disabled' })
+  }
 })
 
 test('failed submission keeps a pending copy and retry saves the same receipt exactly once', async ({ page }) => {

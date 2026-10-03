@@ -18,7 +18,10 @@ export type Word = {
   memoryStage?: number;
   learned?: boolean; firstLearnedAt?: string | null; markRevision?: number;
 }
-export type Review = { id: string; wordId: string; rating: number; at: string; kind?: 'learn' | 'review'; submissionId?: string }
+/** `forDay` ("bookId:day") marks a review done for that study day's fixed list (按天复习). */
+export type Review = { id: string; wordId: string; rating: number; at: string; kind?: 'learn' | 'review'; submissionId?: string; forDay?: string }
+/** One per calendar date, written only when the user checks in after finishing the day; stats and streaks read these. */
+export type CheckIn = { date: string; bookId: string; day: number; newCount: number; reviewCount: number; at: string }
 export type Lesson = { wordId: string; mnemonic: string; example: string; translation: string; question: string; answer: string; explanation: string }
 export type WordBook = {
   id: string; title: string; source: string; wordIds: string[];
@@ -63,6 +66,7 @@ export type Store = {
   studyLayout: 'preview' | 'test'; reviewMethod: 'ebbinghaus' | 'fsrs';
   profile: Profile; readingPreferences: ReadingPreferences; appearance: Appearance; aiPreferences: AIPreferences; readArticleIds: string[];
   learning: LearningState;
+  checkins: CheckIn[];
   /** Set once the first-run setup has been completed; stores from before it existed are treated as set up by `needsSetup`. */
   onboarded?: true;
 }
@@ -72,7 +76,7 @@ export const emptyStore = (): Store => ({
   books: [], activeBookId: '', stories: [], contextStories: [], pronunciation: { accent: 'us', rate: 0.85 },
   studyLayout: 'test', reviewMethod: 'ebbinghaus',
   profile: { nickname: '学习者', avatar: '', goal: '' },
-  learning: emptyLearning(),
+  learning: emptyLearning(), checkins: [],
   readingPreferences: { textSize: 'standard', level: 'auto' }, appearance: { ...defaultAppearance }, aiPreferences: { autoStory: false }, readArticleIds: [],
 })
 /** First run: nothing chosen yet. Anyone who already has words or a book skips the welcome setup. */
@@ -135,7 +139,11 @@ const contextStorySchema = storyContentSchema.extend({
 })
 type ParsedWord = z.infer<typeof wordSchema>
 const reviewSchema = z.object({ id: z.string(), wordId: z.string(), rating: z.number().int().min(1).max(4), at: dateSchema,
-  kind: z.enum(['learn', 'review']).optional(), submissionId: z.string().max(200).optional() })
+  kind: z.enum(['learn', 'review']).optional(), submissionId: z.string().max(200).optional(), forDay: z.string().max(300).optional() })
+const checkInSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), bookId: z.string().max(200), day: z.number().int().min(0).max(30000),
+  newCount: z.number().int().min(0).max(100000), reviewCount: z.number().int().min(0).max(100000), at: z.string().datetime(),
+})
 /** Words and reviews that already came out of validateStore. Saving after a small change would otherwise re-parse
  * every word (tens of milliseconds per thousand on a phone) on each tap; unchanged objects keep their identity. */
 const checkedWords = new WeakSet<object>(), checkedReviews = new WeakSet<object>()
@@ -179,7 +187,9 @@ export function validateStore(input: unknown): Store {
     readArticleIds: z.array(z.string().min(1).max(200)).max(2000).default([]),
     onboarded: z.literal(true).optional(),
     learning: z.unknown().optional(),
+    checkins: z.array(checkInSchema).max(20000).default([]),
   }).parse(input)
+  if (new Set(data.checkins.map(item => item.date)).size !== data.checkins.length) throw new Error('打卡记录重复')
   const parsedWords = parseEach<ParsedWord>(data.words, wordSchema, checkedWords, 'words')
   const parsedReviews = parseEach(data.reviews, reviewSchema, checkedReviews, 'reviews')
   if (new Set(parsedWords.map(w => w.id)).size !== parsedWords.length ||

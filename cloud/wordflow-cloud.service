@@ -9,6 +9,8 @@ WorkingDirectory=/srv/wordflow
 Environment=WORDFLOW_CLOUD_DIR=/srv/wordflow
 Environment=WORDFLOW_BIND=172.29.0.1
 Environment=WORDFLOW_PORT=8120
+# The built-in reading AI uses the library pipeline's key (root-only file, read before dropping privileges).
+EnvironmentFile=-/etc/wordflow/library.env
 ExecStart=/usr/bin/python3 /srv/wordflow/wordflow_cloud.py
 Restart=on-failure
 RestartSec=3

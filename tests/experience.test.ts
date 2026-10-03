@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { completeBookGroup, emptyStore, importToPersonal, markLevel, markWord, needsSetup, validateStore } from '../src/model'
+import { type Store, completeBookGroup, emptyStore, importToPersonal, markLevel, markWord, needsSetup, validateStore } from '../src/model'
 import { applyStudyAction, createStudyDraft } from '../src/study'
 import { dailyReadingIndex, readingArticleSchema, readingLevel } from '../src/reading'
 import { readingTranslations } from '../src/reading-translations'
@@ -11,7 +11,8 @@ const now = new Date('2026-09-23T12:00:00Z')
 const fixture = () => importToPersonal(emptyStore(), [{ word: 'library', meaning: '图书馆', phonetic: '', example: '' }], 'test').store
 
 test('six marks saturate without changing cards, and forgetting again still updates the next check', () => {
-  let state = fixture()
+  // Due dates drive review under FSRS; 艾宾浩斯 now follows study days (see study.test.ts).
+  let state: Store = { ...fixture(), reviewMethod: 'fsrs' }
   const id = state.words[0].id
   const card = state.words[0].card
   for (let i = 0; i < 12; i++) state = markWord(state, id, 1, now)
@@ -29,7 +30,7 @@ test('six marks saturate without changing cards, and forgetting again still upda
   assert.equal(checked.reviews.length, 2)
   assert.equal(checked.reviews.at(-1)?.rating, 1)
   assert.equal(checked.words[0].memoryStage, 0)
-  assert.equal(+new Date(checked.words[0].card.due) - +new Date(checked.words[0].card.last_review!), 5 * 60000)
+  assert.equal(checked.words[0].failures, learned.words[0].failures + 1)
 })
 
 test('older large mark values and study history survive loading while the visible level is bounded', () => {

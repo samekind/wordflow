@@ -55,9 +55,11 @@ def next_seq(db):
 
 def save_article(db, record):
     """Insert or replace one article. `record` carries the columns plus `body` (dict)."""
-    old = db.execute("SELECT status, content_hash FROM articles WHERE id = ?", (record["id"],)).fetchone()
+    old = db.execute("SELECT status, content_hash, body FROM articles WHERE id = ?", (record["id"],)).fetchone()
     body = json.dumps(record["body"], ensure_ascii=False, separators=(",", ":"))
-    changed = old is None or old["status"] != record["status"] or old["content_hash"] != record["content_hash"]
+    # The body also carries the AI-written translation, level and summary: when only those change,
+    # clients still need the new copy.
+    changed = old is None or old["status"] != record["status"] or old["content_hash"] != record["content_hash"] or old["body"] != body
     seq = next_seq(db) if changed else db.execute("SELECT seq FROM articles WHERE id = ?", (record["id"],)).fetchone()[0]
     db.execute(
         "INSERT INTO articles (id, lang, title, status, seq, revision, retrieved_at, checked_at, content_hash, body, review, image_file, image_type) "

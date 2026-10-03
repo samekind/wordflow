@@ -88,7 +88,11 @@ test.beforeEach(async ({ page }) => {
     ;(window as any).__speech = []
     ;(window as any).__recordings = []
     speechSynthesis.speak = utterance => { (window as any).__speech.push({ text: utterance.text, lang: utterance.lang, rate: utterance.rate }) }
-    HTMLMediaElement.prototype.play = function () { (window as any).__recordings.push(this.src); return Promise.resolve() }
+    HTMLMediaElement.prototype.play = function () {
+      (window as any).__recordings.push(this.src); (window as any).__recordingRate = this.playbackRate
+      setTimeout(() => this.dispatchEvent(new Event('ended')), 10)
+      return Promise.resolve()
+    }
   })
 })
 test.afterEach(async ({ page, context }, info) => {
@@ -223,7 +227,7 @@ test('daily English works offline, records reading separately, handles lookup an
   await expect(page.getByRole('dialog', { name: '阅读查词' })).toBeVisible()
   await expect(page.locator('.reading-word .word-action-meaning')).toContainText('图书馆')
   await page.getByRole('button', { name: '朗读阅读单词', exact: true }).click()
-  expect((await page.evaluate(() => (window as any).__speech)).at(-1).text).toBe('library')
+  await expect.poll(() => page.evaluate(() => (window as any).__recordings.at(-1))).toBe('https://dict.youdao.com/dictvoice?audio=library&type=2')
   await closeSheet(page)
   await page.getByRole('button', { name: '完成阅读', exact: true }).click()
   await expect(page.getByRole('button', { name: '已读', exact: true })).toBeDisabled()
@@ -318,7 +322,7 @@ test('custom daily volumes persist, preserve old plans and marks keep a neutral 
   await (await studyMenu(page)).getByRole('button', { name: '复习计划', exact: true }).click()
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 844 })
-    await expect(page.locator('.memory-table tbody tr')).toHaveCount(8)
+    await expect(page.locator('.memory-table tbody tr')).toHaveCount(6)
     expect(await page.locator('.memory-table').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
     await expect(page.locator('ion-modal .sheet-heading')).toBeInViewport()
     await page.screenshot({ path: `test-results/memory-table-${width}.png` })
@@ -333,17 +337,18 @@ test('custom daily volumes persist, preserve old plans and marks keep a neutral 
 })
 
 test('card layouts persist and spaced reviews support due completion and undo', async ({ page }) => {
-  let initial = importToPersonal(emptyStore(), starterRows.slice(0, 40), '卡片测试').store
-  const reviewedId = initial.words[0].id
-  initial = studied(reviewWord(initial, reviewedId, 3, new Date(Date.now() - 21 * 60000)))
+  let initial = studied(importToPersonal(emptyStore(), starterRows.slice(0, 40), '卡片测试').store)
+  const reviewedId = initial.books[0].wordIds[0]
+  initial = reviewWord(initial, reviewedId, 3, new Date(Date.now() - 21 * 60000))
   const reviewed = initial.words.find(word => word.id === reviewedId)!
   await seed(page, initial)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   await expect(page.getByRole('button', { name: '自己自查', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.locator('.day-title')).toHaveText('到期复习')
-  await expect(page.locator('.english-entry')).toHaveCount(1)
-  await page.getByRole('button', { name: '新词', exact: true }).click()
+  // 艾宾浩斯 follows study days: day 1 has nothing to review yet.
+  await expect(page.locator('.day-title')).toHaveText('第 1 天')
+  await expect(page.getByRole('button', { name: '需要复习', exact: true })).toHaveText('需要复习 0')
+  await expect(page.getByLabel('当天计划')).toHaveText(/第 1 天 · 新学 \d+ 词 · 第一天没有复习/)
   await (await studyMenu(page)).getByRole('button', { name: /^回看当天/ }).click()
   await expect(page.locator('.english-entry')).toHaveCount(20)
   await expect(page.locator('.card-meaning')).toHaveCount(0)
@@ -356,7 +361,8 @@ test('card layouts persist and spaced reviews support due completion and undo', 
   await expect(page.locator('.english-entry').nth(1)).toHaveAttribute('data-next', '20 分钟')
   expect((await state(page)).reviews).toHaveLength(1)
   await (await studyMenu(page)).getByRole('button', { name: '朗读本组', exact: true }).click()
-  expect((await page.evaluate(() => (window as any).__speech)).at(-1).text).toContain(listed(initial, 0).word)
+  await expect.poll(() => page.evaluate(() => (window as any).__recordings.length)).toBeGreaterThan(1)
+  expect(await page.evaluate(() => (window as any).__recordings[0])).toContain(`audio=${encodeURIComponent(listed(initial, 0).word)}&`)
   await page.locator('.english-entry').nth(1).locator('.english-line').click()
   await expect(page.locator('.english-entry').nth(1)).toHaveAttribute('data-mark-count', '1')
   await expect(page.locator('.english-entry').nth(1)).toHaveAttribute('data-next', '20 分钟')
@@ -389,9 +395,9 @@ test('card layouts persist and spaced reviews support due completion and undo', 
   }
   await page.setViewportSize({ width: 390, height: 844 })
   await (await studyMenu(page)).getByRole('button', { name: '复习计划', exact: true }).click()
-  await expect(page.locator('.memory-table tbody tr')).toHaveCount(8)
+  await expect(page.locator('.memory-table tbody tr')).toHaveCount(6)
   await page.screenshot({ path: 'test-results/memory-plan-390.png', animations: 'disabled' })
-  await page.getByRole('button', { name: '开始到期复习 · 1 词', exact: true }).click()
+  await page.getByRole('button', { name: '开始复习 · 1 词', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.locator('.english-entry')).toHaveCount(1)
   await page.getByRole('button', { name: '自己自查', exact: true }).click()
@@ -443,10 +449,13 @@ test('legacy migration, independent pronunciation and marks, known words, day po
   await expect(page.getByLabel('标记等级', { exact: true }).locator('.mark-dots')).toHaveAttribute('data-level', '2')
   await page.getByRole('button', { name: '美', exact: true }).click()
   await page.getByRole('button', { name: '英', exact: true }).click()
-  const speech = await page.evaluate(() => (window as any).__speech)
-  expect(speech[0].lang).toBe('en-US')
-  expect(speech[0].rate).toBeCloseTo(.85)
-  expect(speech.at(-1).lang).toBe('en-GB')
+  // Words play human recordings: type=2 is US, type=1 is UK.
+  await expect.poll(() => page.evaluate(() => (window as any).__recordings.length)).toBe(2)
+  const recordings = await page.evaluate(() => (window as any).__recordings as string[])
+  expect(recordings[0]).toBe(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(firstWord.word)}&type=2`)
+  expect(recordings[1]).toBe(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(firstWord.word)}&type=1`)
+  expect(await page.evaluate(() => (window as any).__recordingRate)).toBeCloseTo(.85)
+  expect(await page.evaluate(() => (window as any).__speech)).toEqual([])
   await expect(page.getByLabel('标记等级', { exact: true }).locator('.mark-dots')).toHaveAttribute('data-level', '2')
   await page.getByRole('switch', { name: '熟词', exact: true }).click()
   await expect.poll(async () => (await state(page)).words.find(w => w.id === id)?.known).toBe(true)
@@ -821,7 +830,7 @@ test('a large difficulty is chosen in steps: difficulty, topic, then a short pag
   await page.getByRole('button', { name: /显示更多（还有 2 篇）/ }).click()
   await expect(page.locator('.reading-shelf .reading-list-item')).toHaveCount(17)
   await page.locator('.reading-shelf .reading-list-item').first().click()
-  await expect(page.locator('.article-picker-title')).toContainText('C1 · 第 1 / 17 篇')
+  await expect(page.locator('.article-picker-title')).toContainText('C1 · 科学 · 第 1 / 17 篇')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.getByRole('button', { name: '返回', exact: true }).click()
   await page.getByRole('button', { name: '返回', exact: true }).click()
@@ -887,6 +896,106 @@ test('online reading library syncs, recommends, filters by level, reads with tra
   await nav(page, '选读')
   await expect(page.locator('.level-tile[data-level="B1"]')).toContainText('12 篇 · 已读 1')
   await expect(page.getByText('在线选读库 3 篇')).toBeVisible()
+})
+
+test('the magazine contents filter by level, topic and length, and built-in AI translates, summarizes, explains and answers', async ({ page }) => {
+  await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 40), '外刊').store))
+  const articles = [
+    libraryArticle('lib-simple-fixture-a', { cefr: 'A2', topic: '科技', translations: undefined }),
+    libraryArticle('lib-simple-fixture-b'),
+    libraryArticle('lib-en-fixture-l', { lang: 'en', level: 'standard', cefr: 'C1', topic: '科技', source: 'Wikipedia', sourceUrl: 'https://en.wikipedia.org/wiki/Fixture', stats: { words: 800, avgSentence: 20, rareRatio: 0.06, grade: 12, rare: [] } }),
+  ]
+  await page.route(libraryUrl, route => route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: { version: 1, cursor: 3, more: false, ids: articles.map(a => a.id), articles } }))
+  const asked: { mode: string; title: string; paragraphs: string[]; focus?: string; question?: string }[] = []
+  await page.route('**/v1/ai/reading', async route => {
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST' }
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    const body = route.request().postDataJSON(); asked.push(body)
+    const json = body.mode === 'translate' ? { answer: '', items: [], paragraphs: ['AI 第一段。', 'AI 第二段。'], model: 'fixture' }
+      : body.mode === 'vocabulary' ? { answer: '合成词汇说明', items: [{ word: 'fixture', meaning: '固定装置', example: 'A fixture.' }] }
+      : { answer: body.mode === 'summary' ? '合成导读：这是一篇样例。' : body.mode === 'explain' ? '合成解析：第一段讲了一个小想法。' : `合成回答：${body.question}`, items: [] }
+    await route.fulfill({ headers: cors, json })
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await nav(page, '选读')
+  await expect(page.locator('.magazine-masthead')).toContainText('每日外刊')
+  await page.screenshot({ path: 'test-results/magazine-hub-390.png', animations: 'disabled' })
+  const catalog = page.getByRole('region', { name: '文章筛选' })
+  await catalog.getByRole('button', { name: '难度 A2', exact: true }).click()
+  await expect(catalog.locator('.magazine-card')).toHaveCount(1)
+  await expect(catalog.getByRole('status')).toHaveText('找到 1 篇')
+  await catalog.getByRole('button', { name: '篇幅 长篇', exact: true }).click()
+  await expect(catalog.locator('.magazine-card')).toHaveCount(0)
+  await expect(catalog.getByRole('status')).toContainText('没有符合条件的文章')
+  await catalog.getByRole('button', { name: '全部难度', exact: true }).click()
+  await catalog.getByRole('button', { name: '主题 科技', exact: true }).click()
+  await expect(catalog.getByRole('button', { name: '目录 Fixture L', exact: true })).toBeVisible()
+  await expect(catalog.getByRole('button', { name: '目录 Fixture A', exact: true })).toHaveCount(0)
+  for (const width of [320, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: `test-results/magazine-filter-${width}.png`, animations: 'disabled' })
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await catalog.getByRole('button', { name: '目录 Fixture L', exact: true }).click()
+  await expect(page.locator('.daily-english')).toHaveAttribute('data-article-id', 'lib-en-fixture-l')
+  await expect(page.locator('.article-picker-title')).toContainText(/科技 · 长篇 · 第 \d+ \/ \d+ 篇/)
+  await page.getByRole('button', { name: '返回', exact: true }).click()
+  await expect(catalog.getByRole('button', { name: '主题 科技', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await catalog.getByRole('button', { name: '全部篇幅', exact: true }).click()
+  await catalog.getByRole('button', { name: '难度 A2', exact: true }).click()
+  await catalog.getByRole('button', { name: '目录 Fixture A', exact: true }).click()
+  await expect(page.locator('.daily-english')).toHaveAttribute('data-article-id', 'lib-simple-fixture-a')
+  await expect(page.getByRole('button', { name: '显示译文', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'AI 翻译全文', exact: true }).click()
+  await expect(page.locator('.article-translation')).toHaveText(['AI 第一段。', 'AI 第二段。'])
+  await expect(page.getByRole('button', { name: '隐藏译文', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByText('译文由内置 AI 生成，仅供参考')).toBeVisible()
+  expect(asked[0]).toMatchObject({ mode: 'translate', title: 'Fixture A', paragraphs: articles[0].paragraphs })
+  const assist = page.getByRole('region', { name: 'AI 助读' })
+  await assist.getByRole('button', { name: '导读', exact: true }).click()
+  await expect(assist.locator('.article-assist-output')).toContainText('合成导读：这是一篇样例。')
+  await assist.getByRole('button', { name: '重点词汇', exact: true }).click()
+  await expect(assist.locator('.assist-item')).toContainText(['fixture固定装置A fixture.'])
+  await page.getByRole('button', { name: 'AI 解析第 1 段', exact: true }).click()
+  await expect(page.locator('.paragraph-explain')).toContainText('合成解析：第一段讲了一个小想法。')
+  expect(asked.at(-1)).toMatchObject({ mode: 'explain', focus: articles[0].paragraphs[0] })
+  await assist.getByLabel('向 AI 提问').fill('作者想说什么？')
+  await assist.getByRole('button', { name: '提问', exact: true }).click()
+  await expect(assist.locator('.article-assist-output')).toContainText('问：作者想说什么？')
+  await expect(assist.locator('.article-assist-output')).toContainText('合成回答：作者想说什么？')
+  await page.screenshot({ path: 'test-results/magazine-reader-390.png', fullPage: true, animations: 'disabled' })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  // The AI translation is kept on the device: reopening needs no new request.
+  const requests = asked.length
+  await page.getByRole('button', { name: '返回', exact: true }).click()
+  await catalog.getByRole('button', { name: '目录 Fixture A', exact: true }).click()
+  await page.getByRole('button', { name: '显示译文', exact: true }).click()
+  await expect(page.locator('.article-translation').first()).toHaveText('AI 第一段。')
+  expect(asked).toHaveLength(requests)
+})
+
+test('a CC0 cartoon avatar is saved as a PNG profile picture', async ({ page }) => {
+  await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 20), '头像').store))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await nav(page, '我的')
+  await page.getByRole('button', { name: '编辑个人资料' }).click()
+  await page.getByRole('button', { name: '选择卡通头像', exact: true }).click()
+  const sheet = page.locator('.avatar-picker')
+  await expect(sheet.locator('.avatar-choice')).toHaveCount(36)
+  await expect(sheet.getByRole('region', { name: 'Lorelei' }).locator('.avatar-choice img').first()).toHaveJSProperty('complete', true)
+  await expect(sheet).toContainText('CC0 1.0')
+  await page.screenshot({ path: 'test-results/avatar-picker-390.png', animations: 'disabled' })
+  await sheet.getByRole('button', { name: '卡通头像 lorelei-1', exact: true }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.locator('.profile-avatar-editor img')).toHaveAttribute('src', /^data:image\/png;base64,/)
+  await page.getByRole('button', { name: '保存资料' }).click()
+  await expect.poll(async () => (await state(page)).profile.avatar).toMatch(/^data:image\/png;base64,/)
+  const avatar = (await state(page)).profile.avatar
+  expect(avatar.length).toBeLessThan(200000)
+  expect(await page.locator('.profile-summary .profile-avatar img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(256)
 })
 
 test('articles the server takes down disappear after the next sync', async ({ page }) => {

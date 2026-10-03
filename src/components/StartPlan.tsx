@@ -61,7 +61,7 @@ export default function StartPlan({ store, catalog, busy, error, onRetry, onInst
 
     {step === 2 && book && summary && <>
       <h1 className="start-title">未来两周的安排</h1>
-      <p className="start-lead">每天学当天的词，20 个一组；学过的那一天在第 1、2、4、7、15 天后回来复习。最多的一天约 {peak} 词。</p>
+      <p className="start-lead">每天学当天的词，20 个一组；学过的那一天在第 1、2、4、7、15、30 天后回来复习，学完当天的新词和复习就可以打卡。最多的一天约 {peak} 词。</p>
       <table className="start-schedule" aria-label="未来两周学习安排">
         <thead><tr><th scope="col">日期</th><th scope="col">新学</th><th scope="col">复习（第几天的词）</th><th scope="col">合计</th></tr></thead>
         <tbody>{schedule.map(day => {

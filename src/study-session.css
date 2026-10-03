@@ -124,6 +124,29 @@ i.is-review{background:var(--success)}
 .stats-mark-track{height:8px;border-radius:4px;background:var(--surface-inset);overflow:hidden}
 .stats-mark-track i{display:block;height:100%;background:var(--warning)}
 .stats-links{margin-top:2px}
+.stats-card>h2 small{margin-left:6px;font-size:var(--fs-caption);font-weight:var(--fw-regular);color:var(--text-faint)}
+.stats-today-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+.stats-today-head h2{margin:0;font-size:var(--fs-title);font-weight:var(--fw-bold);color:var(--text-primary)}
+.stats-today-head span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fs-small);color:var(--text-muted)}
+.stats-task-rows{display:flex;flex-direction:column;gap:10px}
+.stats-task{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:10px;font-size:var(--fs-small);color:var(--text-secondary)}
+.stats-task b{font-weight:var(--fw-semibold);font-variant-numeric:tabular-nums;color:var(--text-primary)}
+.stats-task progress{height:8px}
+.stats-task progress.is-review{accent-color:var(--success)}
+.stats-checkin-button{width:100%;margin-top:14px;justify-content:center}
+.stats-checkin{display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0 0;padding:11px 12px;border-radius:var(--radius-md);font-size:var(--fs-small);font-weight:var(--fw-semibold);color:var(--success);background:var(--surface-inset)}
+.stats-bar[data-empty=true] .stats-bar-track{opacity:.45}
+.checkin-calendar{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:5px;margin-top:4px}
+.checkin-calendar span{aspect-ratio:1;border-radius:4px;background:var(--surface-inset)}
+.checkin-calendar span[data-done=true]{background:var(--success)}
+.checkin-calendar span[data-today=true]{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.day-plan-note{margin:8px 2px 0;font-size:var(--fs-small);line-height:1.5;color:var(--text-muted)}
+.checkin-bar{display:flex;align-items:center;gap:12px;margin-top:10px;padding:10px 12px;border-radius:var(--radius-md);background:var(--surface-inset)}
+.checkin-text{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
+.checkin-text strong{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-body);font-weight:var(--fw-semibold);color:var(--text-primary)}
+.checkin-bar[data-done=true] .checkin-text strong{color:var(--success)}
+.checkin-text small{font-size:var(--fs-caption);color:var(--text-muted)}
+.checkin-button{flex-shrink:0;min-height:40px;padding:0 16px}
 .account-section{border-top:1px solid var(--line);margin-top:22px;padding-top:18px}
 .account-section h2{display:flex;align-items:center;gap:8px}
 
