@@ -77,6 +77,22 @@ class CloudTests(unittest.TestCase):
         self.assertEqual(sorted(results).count(200), 1, results)
         self.assertEqual(self.call("GET", "/v1/state/meta", token=token)[1]["revision"], 2)
 
+    def test_sentence_speech_is_app_only_and_validates_its_input(self):
+        def fetch(query, origin):
+            headers = {"Origin": origin} if origin else {}
+            request = urllib.request.Request("http://127.0.0.1:%d/v1/tts?%s" % (self.port, query), headers=headers)
+            try:
+                with urllib.request.urlopen(request, timeout=10) as response:
+                    return response.status
+            except urllib.error.HTTPError as error:
+                return error.code
+        self.assertEqual(fetch("accent=us&text=Hello+there.", None), 403)
+        self.assertEqual(fetch("accent=us&text=Hello+there.", "https://example.com"), 403)
+        self.assertEqual(fetch("accent=xx&text=Hello+there.", "http://localhost"), 400)
+        self.assertEqual(fetch("accent=us&text=12345", "http://localhost"), 400)
+        self.assertEqual(fetch("accent=us&text=" + "a" * 201, "http://localhost"), 400)
+        self.assertEqual(fetch("accent=us&text=", "http://localhost"), 400)
+
     def test_recovery_is_throttled_per_client(self):
         _, account = self.call("POST", "/v1/accounts", {})
         code = account["recoveryCode"]

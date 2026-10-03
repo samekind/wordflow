@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from 'react'
-import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, EyeOff, Globe, Languages, LoaderCircle, Plus, RefreshCw, Send, Sparkles, Square, Volume2 } from 'lucide-react'
+import { BookA, BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, EyeOff, Languages, LoaderCircle, RefreshCw, Send, Sparkles, Square, Volume2 } from 'lucide-react'
 import { DailyIcon, EssayIcon } from '../icons'
 import { dayKey, normalize, pageFontAttrs, wordsForDay, type ImportRow, type Store } from '../model'
 import { articleCefr, cachedArticle, cefrNames, dailyReadingIndex, englishWordCount, inScope, readingLengthNames, readingLengths, readingLevel, readingLevels, refreshReadingArticle, scopeLabel, type ReadingArticle, type ReadingCefr, type ReadingLength, type ReadingScope } from '../reading'
@@ -7,11 +7,8 @@ import { fitLabels, recommendArticles } from '../library-fit'
 import { useReadingArticles } from '../app/useReadingLibrary'
 import { askReadingAI, cachedAITranslation, saveAITranslation, type ReadingAIMode, type ReadingAIResult } from '../reading-ai'
 import { articleTranslations } from '../reading-translations'
-import { lookupLocalWord } from '../wordbooks'
-import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dictionary'
-import { coreGloss } from '../gloss'
 import ChoiceSheet from './ChoiceSheet'
-import Sheet from './Sheet'
+import { LookupDock, LookupProvider, PeekWord, ReadableText, articleGlosses } from './ReadableText'
 
 type Props = {
   store: Store; now: number;
@@ -226,18 +223,6 @@ function plainCredit(value: string) {
   template.innerHTML = value
   return template.content.textContent?.trim() || 'Wikimedia Commons'
 }
-function ReadableParagraph({ text, targets, onWord }: { text: string; targets: Set<string>; onWord: (word: string) => void }) {
-  const parts: ReactNode[] = []
-  let previous = 0
-  for (const match of text.matchAll(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g)) {
-    parts.push(text.slice(previous, match.index))
-    const word = match[0]
-    parts.push(<button className="reading-token" data-target={targets.has(normalize(word))} key={match.index} aria-label={`查词 ${word}`} onClick={() => onWord(word)}>{word}</button>)
-    previous = match.index + word.length
-  }
-  parts.push(text.slice(previous))
-  return <p lang="en">{parts}</p>
-}
 type AIState = { mode: ReadingAIMode; paragraph?: number; question?: string; result?: ReadingAIResult; error?: string; busy: boolean }
 function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, onAddWord, onSpeak, onStop }: Props) {
   const { articles: catalog, loadError, reload } = useReadingArticles(false)
@@ -246,7 +231,8 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
   const [updated, setUpdated] = useState<ReadingArticle | null>(null)
   const [refreshError, setRefreshError] = useState('')
   const [refreshing, setRefreshing] = useState(false)
-  const [selectedWord, setSelectedWord] = useState('')
+  const [annotate, setAnnotate] = useState(() => localStorage.getItem('wordflow.reading.annotate') === '1')
+  const [glosses, setGlosses] = useState<ReadonlyMap<string, string>>(new Map())
   const [translated, setTranslated] = useState(false)
   const [aiTranslation, setAITranslation] = useState<string[] | undefined>()
   const [ai, setAI] = useState<AIState | null>(null)
@@ -291,11 +277,18 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
     }
     return [...found].map(([id, text]) => ({ id, text }))
   }, [article, book, knownWords, store.words])
-  function selectWord(word: string) {
-    onStop()
-    const id = knownWords.get(normalize(word))
-    if (id) onWord(id)
-    else setSelectedWord(word.toLowerCase())
+  const learning = useMemo(() => new Set(store.words.filter(word => !word.known).map(word => normalize(word.word))), [store.words])
+  useEffect(() => {
+    setGlosses(new Map())
+    if (!annotate || !article) return
+    const signal = { cancelled: false }
+    void articleGlosses(article.paragraphs, learning, signal, found => setGlosses(found))
+    return () => { signal.cancelled = true }
+  }, [annotate, article?.id, article?.paragraphs.length])
+  function toggleAnnotate() {
+    const next = !annotate
+    setAnnotate(next)
+    try { localStorage.setItem('wordflow.reading.annotate', next ? '1' : '0') } catch { /* The choice just is not remembered. */ }
   }
   async function refresh() {
     if (!base || refreshing) return
@@ -333,7 +326,8 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
   const highlights = new Set([...knownSet, ...targets])
   const busy = !!ai?.busy || Object.values(explained).some(item => item.busy)
   const translating = ai?.mode === 'translate' && ai.busy
-  return <div className="daily-english" data-article-id={article.id}>
+  return <LookupProvider title={article.title} known={knownWords} glosses={glosses} annotate={annotate} onSpeak={onSpeak} onStop={onStop} onAdd={onAddWord} onOpenWord={onWord}>
+  <div className="daily-english" data-article-id={article.id}>
     <div className="daily-article-toolbar">
       <div className="article-picker">
         <button className="icon-button" aria-label="上一篇文章" title="上一篇文章" onClick={() => move(offset - 1)}><ChevronLeft size={18} /></button>
@@ -352,6 +346,7 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
         {translations
           ? <button className="reader-pill" aria-label={translated ? '隐藏译文' : '显示译文'} aria-pressed={translated} onClick={() => setTranslated(value => !value)}>{translated ? <EyeOff size={16} /> : <Languages size={16} />}{translated ? '收起译文' : '中文译文'}</button>
           : <button className="reader-pill" aria-label="AI 翻译全文" disabled={busy} onClick={() => void runAI('translate')}>{translating ? <LoaderCircle size={16} className="spin" /> : <Sparkles size={16} />}{translating ? '正在翻译…' : 'AI 翻译全文'}</button>}
+        <button className="reader-pill" aria-label="词义标注" aria-pressed={annotate} onClick={toggleAnnotate}><BookA size={16} />{annotate ? '标注中' : '词义标注'}</button>
         <div className="small-tools">
           <button className="icon-button" aria-label="朗读英语文章" title="朗读文章" onClick={() => onSpeak(article.paragraphs.join('\n'))}><Volume2 size={20} /></button>
           <button className="icon-button" aria-label="停止英语文章朗读" title="停止朗读" onClick={onStop}><Square size={16} /></button>
@@ -363,7 +358,7 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
       <div className="article-paragraphs">{article.paragraphs.map((paragraph, i) => {
         const note = explained[i]
         return <div className="article-block" key={`${article.id}:${i}`}>
-          <ReadableParagraph text={paragraph} targets={highlights} onWord={selectWord} />
+          <p lang="en"><ReadableText text={paragraph} keyPrefix={`${i}`} highlight={highlights} /></p>
           {translated && translations && <p className="article-translation">{translations[i]}</p>}
           <button className="paragraph-ai" aria-label={`AI 解析第 ${i + 1} 段`} disabled={busy} onClick={() => void runAI('explain', { paragraph: i })}>{note?.busy ? <LoaderCircle size={13} className="spin" /> : <Sparkles size={13} />}解析</button>
           {note && !note.busy && <div className="paragraph-explain" role="note">{note.error ? <p className="error-banner" role="alert">{note.error}</p> : <p>{note.result?.answer}</p>}<button className="text-button" onClick={() => setExplained(value => { const next = { ...value }; delete next[i]; return next })}>收起</button></div>}
@@ -387,7 +382,7 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
           {ai.mode === 'ask' && ai.question && <p className="assist-question">问：{ai.question}</p>}
           <p>{ai.result?.answer}</p>
           {!!ai.result?.items.length && <div className="assist-items">{ai.result.items.map(item => <div className="assist-item" key={item.word}>
-            <button className="text-button" lang="en" onClick={() => selectWord(item.word.split(/\s+/)[0])}>{item.word}</button><span>{item.meaning}</span>{item.example && <em lang="en">{item.example}</em>}</div>)}</div>}
+            <PeekWord word={item.word.split(/\s+/)[0]} sentence={item.example || item.word} label={item.word} /><span>{item.meaning}</span>{item.example && <em lang="en">{item.example}</em>}</div>)}</div>}
           <small>内置 AI 生成，仅供参考</small>
         </>}
       </div>}
@@ -409,55 +404,7 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
     <ChoiceSheet title="英语选读" open={pickerOpen} onClose={() => setPickerOpen(false)} value={article.id}
       options={choices.map((choice, i) => ({ value: choice.id, label: `${choice.title}${!scope && i === todayIndex ? ' · 今日' : ''}`, count: englishWordCount(choice.paragraphs.join(' ')) }))}
       onSelect={id => move(choices.findIndex(choice => choice.id === id) - todayIndex)} />
-    <ReadingWord word={selectedWord} onClose={() => { onStop(); setSelectedWord('') }} onSpeak={onSpeak} onStop={onStop} onAdd={onAddWord} />
+    <LookupDock />
   </div>
-}
-function ReadingWord({ word, onClose, onSpeak, onStop, onAdd }: { word: string; onClose: () => void; onSpeak: (text: string) => void; onStop: () => void; onAdd: (row: ImportRow) => Promise<boolean> }) {
-  const [local, setLocal] = useState<ImportRow | undefined>()
-  const [entries, setEntries] = useState<DictionaryEntry[]>([])
-  const [loading, setLoading] = useState(false)
-  const [onlineBusy, setOnlineBusy] = useState(false)
-  const [adding, setAdding] = useState(false)
-  const [error, setError] = useState('')
-  const sequence = useRef(0)
-  useEffect(() => {
-    const request = ++sequence.current
-    setLocal(undefined); setEntries([]); setError(''); setOnlineBusy(false)
-    if (!word) { setLoading(false); return }
-    setLoading(true)
-    lookupLocalWord(word).then(result => { if (request === sequence.current) setLocal(result) }).catch(() => {
-      if (request === sequence.current) setError('本地释义暂不可用')
-    }).finally(() => { if (request === sequence.current) setLoading(false) })
-    return () => { sequence.current++ }
-  }, [word])
-  async function online() {
-    const request = ++sequence.current
-    setOnlineBusy(true); setError('')
-    try { const data = await lookupDictionary(word); if (request === sequence.current) setEntries(data) }
-    catch (error) { if (request === sequence.current) setError((error as Error).message) }
-    finally { if (request === sequence.current) setOnlineBusy(false) }
-  }
-  return <Sheet title="阅读查词" open={!!word} onClose={onClose}>
-    {word && <div className="reading-word">
-      <div className="word-action-title"><h3 lang="en">{word}</h3><button className="icon-button" aria-label="朗读阅读单词" title="朗读单词" onClick={() => { onStop(); onSpeak(local?.word || word) }}><Volume2 size={20} /></button></div>
-      {loading ? <LoaderCircle size={20} className="spin" /> : local ? <>
-        {local.word.toLowerCase() !== word && <p className="source-note">原形：{local.word}</p>}
-        <p className="muted">{local.phonetic}</p><p className="word-action-meaning">{coreGloss(local.meaning)}</p><p className="source-note">ECDICT 本地释义</p>
-        <button className="secondary" disabled={adding} onClick={async () => {
-          setAdding(true)
-          try { if (await onAdd({ word: local.word, meaning: local.meaning, phonetic: local.phonetic, example: '', definition: local.definition, exchange: local.exchange, source: local.source })) onClose() }
-          finally { setAdding(false) }
-        }}><Plus size={16} />加入我的词本</button>
-      </> : <p className="field-note">本地词库未收录</p>}
-      <button className="text-button" disabled={loading || onlineBusy} onClick={online}>{onlineBusy ? <LoaderCircle size={16} className="spin" /> : <Globe size={16} />}在线词典</button>
-      {error && <p className="error-banner" role="alert">{error}</p>}
-      {entries.map((entry, i) => <div className="dictionary-entry" key={i}>
-        {entry.meanings.slice(0, 3).map((meaning, j) => <div className="dictionary-meaning" key={j}><span>{meaning.partOfSpeech}</span><ol>{meaning.definitions.slice(0, 3).map((definition, k) => <li key={k}>{definition.definition}</li>)}</ol></div>)}
-        <div className="dictionary-attribution"><span>Free Dictionary API</span>
-          {entry.sourceUrls.filter(url => safeExternalUrl(url)).map(url => <a key={url} href={url} target="_blank" rel="noopener noreferrer">词条来源</a>)}
-          {safeExternalUrl(entry.license?.url) && <a href={safeExternalUrl(entry.license?.url)} target="_blank" rel="noopener noreferrer">{entry.license?.name || '许可'}</a>}
-        </div>
-      </div>)}
-    </div>}
-  </Sheet>
+  </LookupProvider>
 }

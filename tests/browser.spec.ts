@@ -83,7 +83,11 @@ function libraryArticle(id: string, over: Record<string, unknown> = {}) {
     retrievedAt: '2026-10-01T00:00:00.000Z', revision: '1', stats: { words: 200, avgSentence: 12, rareRatio: 0.03, grade: 7, rare: [['fixtureword', 6]] }, ...over,
   }
 }
+const cors = { 'access-control-allow-origin': '*' }
 test.beforeEach(async ({ page }) => {
+  // Cloud speech and Youdao meanings are unreachable unless a test opts in, so reading falls back to the system voice.
+  await page.route('**/v1/tts**', route => route.fulfill({ status: 503, headers: cors, json: { error: 'offline' } }))
+  await page.route('https://dict.youdao.com/suggest**', route => route.fulfill({ headers: cors, json: { data: { entries: [] } } }))
   await page.route(libraryUrl, route => route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: emptyLibrary }))
   await page.addInitScript(() => {
     ;(window as any).__speech = []
@@ -229,7 +233,8 @@ test('daily English works offline, records reading separately, handles lookup an
   await expect(page.locator('.reading-word .word-action-meaning')).toContainText('图书馆')
   await page.getByRole('button', { name: '朗读阅读单词', exact: true }).click()
   await expect.poll(() => page.evaluate(() => (window as any).__recordings.at(-1))).toBe('https://dict.youdao.com/dictvoice?audio=library&type=2')
-  await closeSheet(page)
+  await page.getByRole('button', { name: '关闭查词', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: '阅读查词' })).toHaveCount(0)
   await page.getByRole('button', { name: '完成阅读', exact: true }).click()
   await expect(page.getByRole('button', { name: '已读', exact: true })).toBeDisabled()
   expect((await state(page)).readArticleIds).toEqual(['simple-library'])
@@ -703,8 +708,11 @@ test('daily story uses planned words, preserves concurrent marks, caches by day 
     await page.getByRole('button', { name: '显示译文', exact: true }).click()
     await expect(page.locator('.story-translation')).toBeVisible()
     await page.getByRole('button', { name: '朗读短文', exact: true }).click()
-    expect((await page.evaluate(() => (window as any).__speech)).at(-1).text).toContain('Today we remember')
+    await expect.poll(async () => (await page.evaluate(() => (window as any).__speech)).at(-1)?.text).toContain('Today we remember')
     await closeToast(page)
+    await page.getByRole('button', { name: '查词 Today', exact: true }).first().click()
+    await expect(page.getByRole('dialog', { name: '阅读查词' })).toBeVisible()
+    await page.getByRole('button', { name: '关闭查词', exact: true }).click()
     await page.screenshot({ path: 'test-results/daily-story-fixture-390.png', animations: 'disabled' })
     await page.getByRole('button', { name: `查看 ${dayWords[0].word}`, exact: true }).click()
     await expect(page.getByRole('dialog', { name: '单词详情' })).toBeVisible()
@@ -1095,4 +1103,77 @@ test('swiping a word slides the whole card, and 熟词 asks first, then fades th
   await page.getByRole('button', { name: '撤销', exact: true }).click()
   await expect.poll(async () => (await state(page)).words.find(w => w.id === id)?.known).toBe(false)
   await expect(page.locator(`.english-entry[data-word-id="${id}"]`)).toHaveCount(1)
+})
+
+test('tapping any word shows its meaning, glosses can be prepared inline, and articles are read with the cloud voice', async ({ page }) => {
+  await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 40), '点词').store))
+  const sentence = 'The zymurgy article explains a small idea in clear words for every reader.'
+  const article = libraryArticle('lib-simple-fixture-a', { cefr: 'A2', paragraphs: [sentence, 'A second paragraph keeps the translation count honest and easy to check.'] })
+  await page.route(libraryUrl, route => route.fulfill({ headers: cors, json: { version: 1, cursor: 1, more: false, ids: [article.id], articles: [article] } }))
+  await page.route('https://dict.youdao.com/suggest**', route => {
+    const word = new URL(route.request().url()).searchParams.get('q')
+    route.fulfill({ headers: cors, json: { data: { entries: word === 'zymurgy' ? [{ entry: 'zymurgy', explain: 'n. 酿造学' }] : [] } } })
+  })
+  const asked: { mode: string; title: string; paragraphs: string[] }[] = []
+  await page.route('**/v1/ai/reading', async route => {
+    const headers = { ...cors, 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST' }
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
+    asked.push(route.request().postDataJSON())
+    await route.fulfill({ headers, json: { answer: '', items: [], paragraphs: ['这篇酿造学文章用清楚的话解释了一个小想法。'] } })
+  })
+  const clips: string[] = []
+  await page.route('**/v1/tts**', route => {
+    clips.push(decodeURIComponent(new URL(route.request().url()).searchParams.get('text') || ''))
+    route.fulfill({ headers: { ...cors, 'content-type': 'audio/mpeg' }, body: Buffer.from('ID3-fixture-audio') })
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await nav(page, '选读')
+  const catalog = page.getByRole('region', { name: '文章筛选' })
+  await catalog.getByRole('button', { name: '难度 A2', exact: true }).click()
+  await catalog.getByRole('button', { name: '目录 Fixture A', exact: true }).click()
+  await expect(page.locator('.daily-english')).toHaveAttribute('data-article-id', 'lib-simple-fixture-a')
+
+  // A word the exam dictionary does not know still gets a meaning, from the online service.
+  await page.getByRole('button', { name: '查词 zymurgy', exact: true }).first().click()
+  const card = page.getByRole('dialog', { name: '阅读查词' })
+  await expect(card.locator('.word-action-meaning')).toHaveText('n. 酿造学')
+  await expect(card).toContainText('有道词典')
+  await page.screenshot({ path: 'test-results/word-peek-390.png', animations: 'disabled' })
+  for (const width of [320, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    const box = (await card.boundingBox())!
+    expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(width)
+    await page.screenshot({ path: `test-results/word-peek-${width}.png`, animations: 'disabled' })
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await card.getByRole('button', { name: '翻译本句', exact: true }).click()
+  await expect(card.locator('.word-peek-extra')).toContainText('这篇酿造学文章用清楚的话解释了一个小想法。')
+  expect(asked[0]).toMatchObject({ mode: 'translate', title: 'Fixture A', paragraphs: [sentence] })
+  await page.getByRole('button', { name: '查词 article', exact: true }).first().click()
+  await expect(card.locator('h3')).toHaveText('article')
+  await expect(card.locator('.word-peek-extra')).toHaveCount(0)
+  await card.getByRole('button', { name: '关闭查词', exact: true }).click()
+  await expect(card).toHaveCount(0)
+
+  // Meanings are prepared ahead: hard words get a small gloss above them, basic words stay clean.
+  await expect(page.locator('.reading-token rt')).toHaveCount(0)
+  await page.getByRole('button', { name: '词义标注', exact: true }).click()
+  await expect(page.locator('.reading-token[data-glossed] rt').first()).toBeVisible()
+  await expect(page.locator('.reading-token[data-glossed]').filter({ hasText: 'zymurgy' }).locator('rt')).toHaveText('酿造学')
+  await expect(page.locator('.reading-token[data-glossed]').filter({ hasText: /^article/ })).toHaveCount(0)
+  await page.screenshot({ path: 'test-results/word-gloss-390.png', animations: 'disabled' })
+  await page.reload()
+  await nav(page, '选读')
+  await catalog.getByRole('button', { name: '难度 A2', exact: true }).click()
+  await catalog.getByRole('button', { name: '目录 Fixture A', exact: true }).click()
+  await expect(page.getByRole('button', { name: '词义标注', exact: true })).toHaveAttribute('aria-pressed', 'true')
+
+  // Sentences and articles use the cloud voice, one clip per sentence group, played from local blobs.
+  await page.getByRole('button', { name: '朗读英语文章', exact: true }).click()
+  await expect.poll(() => clips.length).toBeGreaterThan(0)
+  expect(clips[0]).toContain('The zymurgy article explains')
+  await expect.poll(() => page.evaluate(() => (window as any).__recordings.at(-1) as string)).toMatch(/^blob:/)
+  expect(await page.evaluate(() => (window as any).__speech)).toEqual([])
 })

@@ -105,3 +105,29 @@
 .book-shelf .shelf-toolbar{margin:0}
 @media(max-width:429px){.study-card .study-card-top{gap:6px}.study-card .study-card-top .study-day-stepper .icon-button{width:28px}.study-card .plan-button{width:36px;height:36px}}
 @media(max-width:359px){.study-card .study-card-top{gap:4px}.study-card .study-card-top .study-day-stepper{font-size:var(--fs-small)}.study-card .study-card-top .study-stage-switch button,.study-card .study-card-top .study-stage-switch button[aria-pressed=false]{padding:0 7px}.study-card .plan-button{width:34px;height:34px}}
+
+/* ==================== 点词查义卡片 · 词义标注 ==================== */
+.word-peek-dock{position:sticky;bottom:calc(88px + var(--ion-safe-area-bottom,0px));height:0;z-index:25;pointer-events:none}
+.word-peek{position:absolute;left:0;right:0;bottom:0;pointer-events:auto;display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow:auto;padding:12px 14px 14px;border-radius:var(--radius-lg);background:var(--surface-solid,var(--glass-card-fill));border:1px solid var(--glass-edge);box-shadow:0 14px 36px rgba(20,32,60,.22);animation:peek-in .18s ease-out}
+@keyframes peek-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.word-peek{animation:none}}
+.word-peek-head{display:flex;align-items:center;gap:8px}
+.word-peek-head h3{margin:0;font-size:var(--fs-title,20px);font-weight:var(--fw-semibold);color:var(--text-primary);overflow-wrap:anywhere}
+.word-peek-phonetic{flex:1;min-width:0;font-size:var(--fs-caption);color:var(--text-muted)}
+.word-peek-head h3+.icon-button{margin-left:auto}
+.word-peek-phonetic+.icon-button{margin-left:0}
+.word-peek-head .icon-button{width:34px;height:34px;flex:none}
+.word-peek .word-action-meaning{margin:0;font-size:var(--fs-body-l);line-height:1.6;color:var(--text-primary)}
+.word-peek .source-note,.word-peek .field-note,.word-peek-wait{margin:0;font-size:var(--fs-caption);color:var(--text-muted)}
+.word-peek-wait{display:flex;align-items:center;gap:6px}
+.word-peek-actions{display:flex;flex-wrap:wrap;gap:8px}
+.word-peek-actions .reader-pill{min-height:34px;padding:0 12px;font-size:var(--fs-small)}
+.word-peek-extra{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:var(--radius-md);background:var(--surface-inset)}
+.word-peek-extra p{margin:0;line-height:1.7;color:var(--text-primary)}
+.word-peek-extra small{color:var(--text-muted)}
+.word-peek-sentence{font-size:var(--fs-caption);color:var(--text-muted)!important}
+.reading-token[data-selected]{background:var(--accent-soft,#e6f0ff);border-radius:4px;color:var(--accent)}
+.reading-token ruby{ruby-position:over;ruby-align:center}
+.reading-token rt{font-size:.66em;line-height:1;color:var(--accent);font-weight:var(--fw-regular);letter-spacing:0;white-space:nowrap}
+.article-paragraphs:has(.reading-token[data-glossed]) p[lang=en]{line-height:2.3}
+.reader-tools{flex-wrap:wrap}

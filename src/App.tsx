@@ -140,7 +140,7 @@ export default function App() {
                 return commit({ ...current, readArticleIds: [...current.readArticleIds, id].slice(-2000) })
               }} onWord={openWord} onSpeak={speech.speak} onStop={speech.stop}>
               <DailyReader store={store} busy={ai.busy || saving} live={ai.live} error={ai.error} onGenerate={ai.generateStory}
-                onWord={openWord} onSpeak={speech.speak} onStop={speech.stop} onBooks={() => go({ name: 'books' })} />
+                onWord={openWord} onSpeak={speech.speak} onStop={speech.stop} onBooks={() => go({ name: 'books' })} onAddWord={row => words.importRows([row], '阅读收藏', true)} />
             </ReadingPage>}
             {(screen.name === 'settings' || screen.name === 'section') && <SettingsPage store={store} ai={ai.config} saving={saving} aiBusy={ai.busy} error={ai.error} onSaveAI={ai.saveConfig} onRemoveAI={ai.removeConfig}
               section={screen.name === 'section' ? screen.section : 'home'} onSection={section => { if (section === 'home') back(); else go({ name: 'section', section }) }}

@@ -1,28 +1,13 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, Check, CheckCheck, ChevronLeft, ChevronRight, Eye, EyeOff, LoaderCircle, RefreshCw, Sparkles, Square, Volume2 } from 'lucide-react'
 import { coreGloss } from '../gloss'
-import { bookDays, storyCoverage, storyIsCurrent, storyKey, wordPattern, wordsForDay, type Store, type Word } from '../model'
+import { bookDays, normalize, storyCoverage, storyIsCurrent, storyKey, wordsForDay, type ImportRow, type Store, type Word } from '../model'
 import { previewStoryDraft } from '../story-draft'
 import GlassSlider from './GlassSlider'
 import MarkDots from './MarkDots'
 import Sheet from './Sheet'
+import { LookupDock, LookupProvider, ReadableText } from './ReadableText'
 
-export function Highlighted({ text, words, onWord }: { text: string; words: Word[]; onWord: (id: string) => void }) {
-  const byWord = new Map(words.map(w => [w.word.toLowerCase(), w]))
-  if (!words.length) return <>{text}</>
-  const pattern = new RegExp(`(^|[^a-z])(${words.map(w => wordPattern(w.word)).sort((a, b) => b.length - a.length).join('|')})(?=$|[^a-z])`, 'gi')
-  const nodes: ReactNode[] = []
-  let previous = 0
-  for (const match of text.matchAll(pattern)) {
-    const start = match.index! + match[1].length
-    nodes.push(text.slice(previous, start))
-    const word = byWord.get(match[2].toLowerCase())!
-    nodes.push(<button className="target-word" key={start} onClick={() => onWord(word.id)} aria-label={`查看 ${word.word}`}>{match[2]}</button>)
-    previous = start + match[2].length
-  }
-  nodes.push(text.slice(previous))
-  return <>{nodes}</>
-}
 export function StoryProgress({ words, live }: { words: Word[]; live: string }) {
   const draft = previewStoryDraft(live)
   const steps = ['词表已交给模型', draft.title ? `标题：${draft.title}` : '模型正在拟定标题', draft.paragraphs.length ? `已完成 ${draft.paragraphs.length} 段` : '模型正在写英文', draft.paragraphs.some(item => item.translation) ? '译文正在跟上' : '模型接着写译文']
@@ -41,8 +26,9 @@ type Props = {
   onGenerate: (bookId: string, day: number, part: number, words: Word[]) => void;
   onWord: (id: string) => void;
   onSpeak: (text: string) => void; onStop: () => void; onBooks: () => void;
+  onAddWord?: (row: ImportRow) => Promise<boolean>;
 }
-export default function DailyReader({ store, busy, live = '', error, onGenerate, onWord, onSpeak, onStop, onBooks }: Props) {
+export default function DailyReader({ store, busy, live = '', error, onGenerate, onWord, onSpeak, onStop, onBooks, onAddWord }: Props) {
   const book = store.books.find(b => b.id === store.activeBookId)
   const days = book ? bookDays(book) : []
   const [selectedDay, setSelectedDay] = useState(book?.currentDay || 0)
@@ -64,6 +50,8 @@ export default function DailyReader({ store, busy, live = '', error, onGenerate,
   const selectedWords = words.filter(word => selected.has(word.id))
   const story = candidate && selectedWords.length > 0 && storyIsCurrent(candidate, selectedWords) ? candidate : undefined
   const coverage = story ? storyCoverage(story, selectedWords) : []
+  const known = useMemo(() => new Map(store.words.map(word => [normalize(word.word), word.id])), [store.words])
+  const targetIds = useMemo(() => new Map(selectedWords.map(word => [normalize(word.word), word.id])), [selectedWords])
   const missing = selectedWords.filter(w => !coverage.includes(w.id))
   if (!book || !words.length) return <div className="empty"><BookOpen size={30} /><h2>先选择一本词书</h2><button className="primary" onClick={onBooks}>选择词书<ChevronRight size={17} /></button></div>
   const needle = query.trim().toLowerCase()
@@ -104,14 +92,14 @@ export default function DailyReader({ store, busy, live = '', error, onGenerate,
     </div></div>
     <article className="story-article"><h2>{story.title}</h2>
       {story.paragraphs.map((paragraph, index) => <div className="story-paragraph" key={index}>
-        <p lang="en"><Highlighted text={paragraph.english} words={selectedWords} onWord={onWord} /></p>
+        <p lang="en"><ReadableText text={paragraph.english} keyPrefix={`${index}`} targets={targetIds} onTarget={onWord} /></p>
         {translated && <p className="story-translation">{paragraph.translation}</p>}
       </div>)}
     </article>
     {missing.length > 0 && <div className="missing-words"><span>尚未覆盖</span>{missing.map(w => <button onClick={() => onWord(w.id)} key={w.id}>{w.word}</button>)}</div>}
     <p className="source-note story-source">AI 生成内容 · 请核对</p>
   </> : null
-  return <div className="daily-reader">
+  return <LookupProvider title={story?.title || '短文'} known={known} onSpeak={onSpeak} onStop={onStop} onAdd={onAddWord} onOpenWord={onWord}><div className="daily-reader">
     <p className="reader-book-label">选词来源 · {book.title}</p>
     {totalParts > 1 && <div className="part-tabs" aria-label="短文分篇">{Array.from({ length: totalParts }, (_, index) =>
       <button key={index} aria-pressed={currentPart === index} onClick={() => { setPart(index); setTranslated(false); onStop() }}>短文 {index + 1}</button>)}</div>}
@@ -125,5 +113,6 @@ export default function DailyReader({ store, busy, live = '', error, onGenerate,
       <button className="primary" onClick={() => setPickerOpen(true)}>选择单词</button>
     </section></div>)}
     {picker}
-  </div>
+    <LookupDock />
+  </div></LookupProvider>
 }

@@ -2,16 +2,38 @@ import { useRef } from 'react'
 import type { Store } from '../model'
 import { isAndroidApp, phone } from '../platform'
 import { lookupDictionary, safeExternalUrl } from '../dictionary'
+import { cloudBase } from '../cloud'
+import { speechClips } from '../speech-clips'
 
 /** Words and short phrases (up to five words, no sentence punctuation) have human recordings. */
 export const recordable = (text: string) => /^[A-Za-z][A-Za-z' -]{0,59}$/.test(text.trim()) && text.trim().split(/\s+/).length <= 5
 /** Youdao's dictionary recordings: real speakers, reachable from mainland China, type 1 = UK, 2 = US. */
 export const recordingUrl = (word: string, accent: 'us' | 'uk') => `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word.trim())}&type=${accent === 'uk' ? 1 : 2}`
 
-/** Human recordings for words (Youdao, then the dictionary's own audio); system text-to-speech for sentences or when offline. */
+/** Human recordings for words (Youdao, then the dictionary's own audio); sentences use the cloud voice; system text-to-speech when offline. */
 export function useSpeech(storeRef: { current: Store }, notify: (message: string) => void) {
   const sequence = useRef(0)
   const recording = useRef<HTMLAudioElement | null>(null)
+  const clips = useRef(new Map<string, Promise<string>>())
+
+  /** Fetches (and keeps) one sentence of cloud speech as a local blob so the next one can load while this one plays. */
+  function clip(text: string, accent: 'us' | 'uk') {
+    const key = `${accent}|${text}`
+    let found = clips.current.get(key)
+    if (!found) {
+      found = fetch(`${cloudBase}/v1/tts?accent=${accent}&text=${encodeURIComponent(text)}`, { credentials: 'omit', signal: AbortSignal.timeout(20000) })
+        .then(async response => { if (!response.ok) throw new Error('tts'); return URL.createObjectURL(await response.blob()) })
+      found.catch(() => clips.current.delete(key))
+      clips.current.set(key, found)
+      if (clips.current.size > 40) {
+        const oldest = clips.current.keys().next().value!
+        const stale = clips.current.get(oldest)!
+        clips.current.delete(oldest)
+        void stale.then(url => URL.revokeObjectURL(url), () => {})
+      }
+    }
+    return found
+  }
 
   function stop() {
     sequence.current++; recording.current?.pause(); recording.current = null
@@ -63,7 +85,7 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
     const rate = storeRef.current.pronunciation.rate
     // "朗读本组" sends words joined by ". ": play each recording in turn.
     const parts = text.split(/\.\s+/).map(part => part.trim().replace(/\.$/, '')).filter(Boolean)
-    if (!parts.length || !parts.every(recordable)) { speakSystem(text, accent, rate, request); return }
+    if (!parts.length || !parts.every(recordable)) { speakProse(text, accent, rate, request); return }
     void (async () => {
       for (let index = 0; index < parts.length; index++) {
         if (request !== sequence.current) return
@@ -71,7 +93,29 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
           await play(recordingUrl(parts[index], accent), request, rate)
         } catch {
           if (request !== sequence.current) return
-          speakSystem(parts.slice(index).join('. '), accent, rate, request)
+          speakProse(parts.slice(index).join('. '), accent, rate, request)
+          return
+        }
+      }
+    })()
+  }
+
+  /** Sentences and articles: cloud voice clip by clip, then the system voice from the failed clip on. */
+  function speakProse(text: string, accent: 'us' | 'uk', rate: number, request: number) {
+    const pieces = speechClips(text)
+    if (!pieces.length) { speakSystem(text, accent, rate, request); return }
+    void (async () => {
+      let next = clip(pieces[0], accent)
+      for (let index = 0; index < pieces.length; index++) {
+        if (request !== sequence.current) return
+        try {
+          const url = await next
+          if (request !== sequence.current) return
+          if (index + 1 < pieces.length) { next = clip(pieces[index + 1], accent); next.catch(() => {}) }
+          await play(url, request, rate)
+        } catch {
+          if (request !== sequence.current) return
+          speakSystem(pieces.slice(index).join(' '), accent, rate, request)
           return
         }
       }

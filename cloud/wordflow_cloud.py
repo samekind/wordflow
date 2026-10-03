@@ -288,6 +288,56 @@ def snapshot_meta(account_id):
     return {"revision": row["revision"], "savedAt": row["saved_at"]}
 
 
+# ---------- sentence read-aloud ----------
+# Youdao has real recordings for words only; sentences go through this proxy to a neural-ish TTS voice and are
+# cached on disk, so a sentence is synthesized once for everybody. Only the app's own origins may call it.
+TTS_DIR = ROOT / "tts-cache"
+TTS_VOICES = {"us": "en-US", "uk": "en-GB"}
+TTS_MAX_CHARS = 200
+TTS_CACHE_BYTES = 400 * 1024 * 1024
+TTS_WINDOW = 10 * 60
+TTS_LIMIT = 200
+TTS_HITS = {}
+TTS_LOCK = threading.Lock()
+TTS_PARALLEL = threading.BoundedSemaphore(3)
+TTS_WRITES = [0]
+
+
+def tts_over_limit(ip, now):
+    with TTS_LOCK:
+        recent = [t for t in TTS_HITS.get(ip, []) if now - t < TTS_WINDOW]
+        over = len(recent) >= TTS_LIMIT
+        if not over:
+            recent.append(now)
+        TTS_HITS[ip] = recent
+        if len(TTS_HITS) > 10000:
+            TTS_HITS.clear()
+        return over
+
+
+def tts_prune():
+    files = sorted(TTS_DIR.glob("*.mp3"), key=lambda item: item.stat().st_mtime)
+    total = sum(item.stat().st_size for item in files)
+    for item in files:
+        if total <= TTS_CACHE_BYTES * 0.8:
+            break
+        total -= item.stat().st_size
+        item.unlink()
+
+
+def tts_fetch(text, accent):
+    query = urllib.parse.urlencode({"ie": "UTF-8", "client": "tw-ob", "tl": TTS_VOICES[accent], "q": text})
+    request = urllib.request.Request(
+        "https://translate.google.com/translate_tts?" + query,
+        headers={"User-Agent": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36", "Referer": "https://translate.google.com/"},
+    )
+    with urllib.request.urlopen(request, timeout=15) as response:
+        body = response.read(2 * 1024 * 1024)
+        if "audio" not in (response.headers.get("Content-Type") or "") or len(body) < 800:
+            raise ValueError("no audio")
+        return body
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -396,6 +446,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_library()
         if path.startswith("/v1/library/image/"):
             return self.send_library_image(path[len("/v1/library/image/"):])
+        if path == "/v1/tts":
+            return self.send_tts()
         account_id = self.bearer()
         if not account_id:
             return self.send_json(401, {"error": "云端登录已失效，请用恢复码重新打开"})
@@ -474,6 +526,52 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", found[1])
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "public, max-age=86400")
+        self.apply_cors()
+        self.end_headers()
+        self.wfile.write(body)
+
+    def send_tts(self):
+        if self.headers.get("Origin") not in ALLOWED_ORIGINS:
+            return self.send_json(403, {"error": "只能在拾词应用内使用"})
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+        text = re.sub(r"\s+", " ", (query.get("text", [""])[0])).strip()
+        accent = query.get("accent", ["us"])[0]
+        if accent not in TTS_VOICES or not text or len(text) > TTS_MAX_CHARS or not re.search(r"[A-Za-z]", text):
+            return self.send_json(400, {"error": "朗读内容不正确"})
+        name = hashlib.sha256((accent + "\n" + text).encode("utf-8")).hexdigest() + ".mp3"
+        path = TTS_DIR / name
+        body = None
+        if path.is_file():
+            body = path.read_bytes()
+            try:
+                os.utime(str(path), None)
+            except OSError:
+                pass
+        else:
+            if tts_over_limit(self.client_ip(), time.time()):
+                return self.send_json(429, {"error": "朗读请求太频繁，请稍后再试"})
+            if not TTS_PARALLEL.acquire(timeout=20):
+                return self.send_json(503, {"error": "朗读服务正忙，请稍后重试"})
+            try:
+                body = tts_fetch(text, accent)
+            except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+                return self.send_json(502, {"error": "朗读服务暂时不可用"})
+            finally:
+                TTS_PARALLEL.release()
+            try:
+                TTS_DIR.mkdir(parents=True, exist_ok=True)
+                temporary = path.with_suffix(".tmp")
+                temporary.write_bytes(body)
+                os.replace(str(temporary), str(path))
+                TTS_WRITES[0] += 1
+                if TTS_WRITES[0] % 50 == 0:
+                    tts_prune()
+            except OSError:
+                pass
+        self.send_response(200)
+        self.send_header("Content-Type", "audio/mpeg")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "public, max-age=31536000, immutable")
         self.apply_cors()
         self.end_headers()
         self.wfile.write(body)

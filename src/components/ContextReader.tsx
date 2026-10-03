@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, Eye, EyeOff, LoaderCircle, RefreshCw, Sparkles, Square, Volume2 } from 'lucide-react'
-import { storyCoverage, storyIsCurrent, type Store } from '../model'
+import { normalize, storyCoverage, storyIsCurrent, type Store } from '../model'
 import { contextStoryKey, studyGroupWords, studyWordStatus } from '../study'
 import type { StudyDraft } from '../study-state'
-import { Highlighted, StoryProgress } from './DailyReader'
+import { StoryProgress } from './DailyReader'
+import { LookupDock, LookupProvider, ReadableText } from './ReadableText'
 
 export type ContextServices = {
   busy: boolean; generatingKey: string; live: string; error: string;
@@ -16,6 +17,8 @@ export default function ContextReader({ store, draft, now, services, onWord, onS
 }) {
   const key = contextStoryKey(draft), words = studyGroupWords(store, draft)
   const [translated, setTranslated] = useState(false)
+  const known = useMemo(() => new Map(store.words.map(word => [normalize(word.word), word.id])), [store.words])
+  const targetIds = useMemo(() => new Map(words.map(word => [normalize(word.word), word.id])), [words])
   useEffect(() => { setTranslated(false); return onStop }, [key])
   const own = store.contextStories.find(story => story.id === key)
   // Existing saved short stories remain usable when they contain exactly this task's words.
@@ -26,7 +29,7 @@ export default function ContextReader({ store, draft, now, services, onWord, onS
   const completed = draft.completed.includes(draft.page)
   const changed = words.length !== draft.groups[draft.page].length || (!completed && words.some(word => studyWordStatus(store, draft, word.id, new Date(now))))
   const generating = services.generatingKey === key
-  return <section className="context-reader" aria-label="语境记忆" data-task-id={draft.id} data-group={draft.page}>
+  return <LookupProvider title={story?.title || '语境短文'} known={known} onSpeak={onSpeak} onStop={onStop} onOpenWord={onWord}><section className="context-reader" aria-label="语境记忆" data-task-id={draft.id} data-group={draft.page}>
     <p className="context-task-summary">语境记忆 · 本组 {draft.groups[draft.page].length} 词，读完仍自测这组词。</p>
     {services.error && <p className="error-banner" role="alert">{services.error}</p>}
     {changed && <p className="field-note" role="status">这组词已有变化，请返回自测核对。原学习进度保留。</p>}
@@ -43,7 +46,7 @@ export default function ContextReader({ store, draft, now, services, onWord, onS
       </div>
       <article className="story-article"><h2>{story.title}</h2>
         {story.paragraphs.map((paragraph, index) => <div className="story-paragraph" key={index}>
-          <p lang="en"><Highlighted text={paragraph.english} words={words} onWord={onWord} /></p>
+          <p lang="en"><ReadableText text={paragraph.english} keyPrefix={`${index}`} targets={targetIds} onTarget={onWord} /></p>
           {translated && <p className="story-translation">{paragraph.translation}</p>}
         </div>)}
       </article>
@@ -60,5 +63,6 @@ export default function ContextReader({ store, draft, now, services, onWord, onS
       <p>{completed ? '本组已提交，学习结果已保存。' : '阅读和查词不改变复习时间，自测提交后才记录结果。'}</p>
       <button className="primary" disabled={services.busy} onClick={onCheck}><EyeOff size={17} />{completed ? '返回本组词表' : '进入本组遮义自测'}</button>
     </div>
-  </section>
+    <LookupDock />
+  </section></LookupProvider>
 }

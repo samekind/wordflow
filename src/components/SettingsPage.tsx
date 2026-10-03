@@ -158,7 +158,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
         <button className="text-button" onClick={() => onSpeak('perspective')}><Volume2 size={17} />试听单词</button>
         <button className="text-button" onClick={() => onSpeak('A little practice every day makes a difference.')}><Volume2 size={17} />试听句子</button>
       </div>
-      <p className="field-note">单词和词组使用有道词典真人录音（需联网），离线或查不到时改用系统英语语音；句子和文章使用系统英语语音。</p>
+      <p className="field-note">单词和词组使用有道词典真人录音（需联网），离线或查不到时改用系统英语语音；句子和文章使用云端英语语音（需联网），离线时同样改用系统语音。</p>
       <SettingRow label="文章难度">
         <SelectButton label="文章难度" value={store.readingPreferences.level} disabled={saving} options={[{ value: 'auto', label: '跟随目标词书' }, { value: 'easy', label: '基础选读' }, { value: 'standard', label: '进阶选读' }]}
           onChange={level => void onPreferences({ readingPreferences: { ...store.readingPreferences, level: level as Store['readingPreferences']['level'] } })} />
