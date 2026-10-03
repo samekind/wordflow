@@ -119,7 +119,7 @@ export default function App() {
           <div className={`content ${screen.name === 'today' ? 'study-view' : ''}`}>
             {screen.name === 'today' && <StudyList store={store} now={data.clock} saving={saving} canUndo={study.canUndo}
               start={{ catalog: words.catalog, busy: words.bookBusy || saving, error: words.catalogError, onRetry: words.refreshCatalog, onInstall: words.installCatalogBook }}
-              onMark={study.changeMarks} onKnown={id => study.changeKnown(id, true)} onStudy={study.changeStudy} onRestart={study.restartStudy} onDay={study.selectDay} onOpenWord={openWord} onUndo={study.undoLastAction}
+              onMark={study.changeMarks} onKnown={study.changeKnown} onStudy={study.changeStudy} onRestart={study.restartStudy} onDay={study.selectDay} onOpenWord={openWord} onUndo={study.undoLastAction}
               onLearning={learning => commit({ ...storeRef.current, learning })}
               onLayout={studyLayout => { void commit({ ...storeRef.current, studyLayout }) }}
               contextServices={{ busy: ai.busy || saving, generatingKey: ai.contextKey, live: ai.live, error: ai.error, onGenerate: ai.generateContextStory }} onStop={speech.stop}

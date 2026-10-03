@@ -63,7 +63,7 @@
   .english-entry .english-word.long-word{font-size: calc(var(--fs-meta) * var(--word-scale, 1))}
 }
 @media(prefers-reduced-transparency:reduce),(prefers-contrast:more){
-  .study-layout-switch,.study-topbar>.plan-trigger,.english-entry{background:var(--glass-fill);backdrop-filter:none}
+  .study-layout-switch,.study-topbar>.plan-trigger,.english-entry .swipe-layer{background:var(--glass-fill);backdrop-filter:none}
   .card-meaning,.period-bar{color:var(--text-secondary)}
   .period-row button{background:var(--glass-fill)}
 }

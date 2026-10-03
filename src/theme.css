@@ -266,12 +266,12 @@ ion-app{
 .english-entry{
   min-width: 0;
   position: relative;
-  border: 1px solid var(--glass-edge);
   border-radius: var(--radius-sm);
-  background: var(--glass-card-fill);
-  box-shadow: var(--glass-card-shadow);
-  overflow: hidden;
+  transition: opacity .24s ease, transform .24s ease;
 }
+.english-entry .swipe-layer[data-swiped]{ background: linear-gradient(var(--glass-card-fill), var(--glass-card-fill)), var(--surface-solid); }
+.english-entry[data-leaving=true]{ opacity: 0; transform: scale(.94); pointer-events: none; }
+.english-entry[data-known=true]:not([data-leaving=true]) .english-line{ opacity: .5; }
 .english-line{
   display: flex;
   align-items: center;
@@ -387,7 +387,7 @@ ion-app{
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 14px;
 }
-/* Swipe row (components/SwipeRow.tsx): the card slides left over one 56px action. */
+/* Swipe row (components/SwipeRow.tsx): the whole card slides left; rounded actions sit where it was. */
 .swipe-row{
   position: relative;
   width: 100%;
@@ -406,6 +406,8 @@ ion-app{
 }
 .swipe-action{
   flex: 1;
+  margin-left: 6px;
+  border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -422,11 +424,14 @@ ion-app{
 .swipe-layer{
   position: relative;
   height: 100%;
-  background: inherit;
   border-radius: inherit;
 }
 .english-entry .swipe-layer{
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-sm);
   background: var(--glass-card-fill);
+  box-shadow: var(--glass-card-shadow);
+  overflow: hidden;
 }
 .meaning-entry{
   scroll-margin-top: 90px;

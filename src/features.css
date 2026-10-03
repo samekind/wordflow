@@ -119,7 +119,7 @@ progress::-moz-progress-bar{background:#7aabed}
 .glass-slider-rail{display:grid;grid-template-columns:14px minmax(0,1fr) 14px;align-items:center;gap:8px}
 .glass-slider-rail>span{font-size: var(--fs-small);font-weight: var(--fw-semibold);color: var(--text-muted);text-align:center;font-variant-numeric:tabular-nums}
 .glass-slider-track{position:relative;height:32px;border-radius: var(--radius-md);background:var(--surface-inset);box-shadow:inset 0 1px 2px #00000012;overflow:hidden}
-.glass-slider-fill{position:absolute;left:0;top:0;bottom:0;max-width:100%;background:linear-gradient(90deg,#c5dcff,#5b93f5)}
+.glass-slider-fill{position:absolute;left:0;top:0;bottom:0;max-width:100%;border-radius:var(--radius-md);background:linear-gradient(90deg,#c5dcff,#5b93f5)}
 .glass-slider-thumb{position:absolute;z-index:1;top:0;height:32px;min-width:72px;padding:0 8px;display:flex;align-items:center;justify-content:center;gap:4px;border-radius: var(--radius-md);background:var(--glass-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-shadow);backdrop-filter:var(--glass-filter);-webkit-backdrop-filter:var(--glass-filter);transform-origin:center;overflow:hidden}
 .glass-slider-thumb-label{font-size: var(--fs-small);font-weight: var(--fw-bold);color:var(--text-primary);white-space:nowrap}
 .study-pagination .glass-slider{width:100%;min-width:0;margin:0}

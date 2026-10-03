@@ -5,7 +5,7 @@ const START = 12       // horizontal travel before the row follows the finger
 export type SwipeAction = { label: ReactNode; ariaLabel: string; tone: 'neutral' | 'known'; disabled?: boolean; onClick: () => void }
 type Props = {
   children: ReactNode
-  /** Revealed right-to-left behind the row; each is 64px wide. */
+  /** Revealed to the right of the row as it slides left; each takes 60px including a 6px gap. */
   actions: SwipeAction[]
   disabled?: boolean
   /** Told as soon as the gesture becomes a horizontal swipe, so taps / long-press can cancel. */
@@ -16,13 +16,13 @@ type Props = {
 let closeOpen: (() => void) | null = null
 
 /**
- * Left-swipe row with action buttons behind it (减标记 · 熟词). The row follows the finger after
+ * Left-swipe row: the whole card slides left and its action buttons (减标记 · 熟词) wait at the right. The row follows the finger after
  * 12px of horizontal travel; released past half the action width it stays open, otherwise it
  * springs back. Vertical movement keeps the page scrolling (touch-action: pan-y). Transforms are
  * written straight to the element during the drag, so no React render happens per pointer move.
  */
 export default function SwipeRow({ children, actions, disabled, onSwipeStart }: Props) {
-  const width = actions.length * 64
+  const width = actions.length * 60
   const layer = useRef<HTMLDivElement>(null)
   const drag = useRef<{ id: number; x: number; y: number; from: number; dx: number; locked: 'x' | 'y' | null } | null>(null)
   const offset = useRef(0)
@@ -33,6 +33,9 @@ export default function SwipeRow({ children, actions, disabled, onSwipeStart }: 
     if (!el) return
     el.style.transition = animate ? 'transform .22s cubic-bezier(.2,.8,.2,1)' : 'none'
     el.style.transform = dx ? `translate3d(${dx}px,0,0)` : ''
+    // An open row slides over its neighbour in the two-column list instead of under it.
+    el.style.zIndex = dx ? '2' : ''
+    el.toggleAttribute('data-swiped', dx !== 0)
     el.parentElement?.style.setProperty('--reveal', String(Math.min(1, -dx / width)))
   }
   function settle(open: boolean) {
@@ -85,7 +88,8 @@ export default function SwipeRow({ children, actions, disabled, onSwipeStart }: 
     // A swipe must not also count as a tap; a tap on an open row just closes it.
     onClickCapture={event => {
       if ((event.target as HTMLElement).closest('.swipe-actions')) return
-      if (swiped.current || offset.current) { event.stopPropagation(); event.preventDefault(); swiped.current = false; if (offset.current) settle(false) }
+      if (swiped.current) { event.stopPropagation(); event.preventDefault(); swiped.current = false }
+      else if (offset.current) { event.stopPropagation(); event.preventDefault(); settle(false) }
     }}>
     <div className="swipe-actions" style={{ width }}>
       {actions.map(action => <button key={action.ariaLabel} type="button" className={`swipe-action tone-${action.tone}`} aria-label={action.ariaLabel}

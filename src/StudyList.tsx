@@ -23,8 +23,8 @@ type Props = {
   start?: StartProps;
   store: Store; now: number; saving: boolean; canUndo: boolean;
   onMark: (id: string, delta: 1 | -1) => Promise<boolean>;
-  /** Marks the word as 熟词: it leaves study (undo from the toast). */
-  onKnown: (id: string) => Promise<boolean>;
+  /** Sets 熟词: a known word leaves study and is hidden from the list (undo from the toast). */
+  onKnown: (id: string, known: boolean) => Promise<boolean>;
   onStudy: (draft: StudyDraft, action: StudyAction) => Promise<boolean>;
   onRestart: (kind: StudyKind) => Promise<boolean>;
   onLearning: (learning: LearningState) => Promise<boolean>;
@@ -71,6 +71,8 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
   const reduced = useReducedMotion()
   const [daysOpen, setDaysOpen] = useState(false), [showMeanings, setShowMeanings] = useState(false), [planOpen, setPlanOpen] = useState(false)
   const [replaceKind, setReplaceKind] = useState<StudyKind | null>(null)
+  const [knownTarget, setKnownTarget] = useState<{ id: string; word: string } | null>(null), [leaving, setLeaving] = useState<string[]>([]), [showKnown, setShowKnown] = useState(false)
+  const previousRows = useRef<{ id: string; word: string; meaning: string; markCount: number; missing: boolean; known: boolean; status: string; forgotten: boolean }[]>([])
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const press = useRef({ x: 0, y: 0, moved: false, held: false })
   const book = store.books.find(item => item.id === store.activeBookId), days = book ? bookDays(book) : []
@@ -95,8 +97,14 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
   const rows = ids.map(id => {
     const word = byId.get(id), old = draft?.words.find(item => item.id === id)
     return { id, word: word?.word || old?.word || '已删除', meaning: word?.meaning || old?.meaning || '', markCount: word?.markCount || 0,
-      missing: !word, status: draft && !completed ? studyWordStatus(store, draft, id, moment) : '', forgotten: mode === 'practice' ? !!practice?.forgottenIds.includes(id) : !!draft?.forgotten[id] }
+      missing: !word, known: !!word?.known, status: draft && !completed ? studyWordStatus(store, draft, id, moment) : '', forgotten: mode === 'practice' ? !!practice?.forgottenIds.includes(id) : !!draft?.forgotten[id] }
   })
+  // 熟词 leave the list (fading out first); 显示熟词 brings them back, dimmed, to be un-marked.
+  const knownRows = rows.filter(row => row.known), hiddenKnown = knownRows.filter(row => !leaving.includes(row.id)).length
+  const shownRows = rows.filter(row => !row.known || showKnown || leaving.includes(row.id))
+  // The refilled group no longer contains a word that was just marked: keep it in place until its fade ends.
+  previousRows.current.forEach((row, index) => { if (leaving.includes(row.id) && !rows.some(item => item.id === row.id)) shownRows.splice(Math.min(index, shownRows.length), 0, { ...row, known: true }) })
+  useEffect(() => { previousRows.current = shownRows })
   const eligible = rows.filter(row => !row.status && !row.missing), forgotten = eligible.filter(row => row.forgotten).length
   const changed = rows.some(row => row.status.includes('重新检查')), stats = learningStatistics(store, moment)
   const scheduled = store.words.filter(word => hasLearned(word) && !word.known)
@@ -128,6 +136,11 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
         detail: dayMode ? `新学 ${ids.length} · 复习 ${recall.length}${recall.length ? reviewLeft ? `（剩 ${reviewLeft}）` : '（已完成）' : ''} · ${status}` : status }
     })
   }, [daysOpen, book, days, store.words, store.reviews, store.learning, dayMode])
+  async function confirmKnown(target: { id: string; word: string }) {
+    setLeaving(items => [...items, target.id])
+    const done = await onKnown(target.id, true)
+    setTimeout(() => setLeaving(items => items.filter(id => id !== target.id)), done ? 260 : 0)
+  }
   function scrollToEnglish() { document.getElementById('app-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }
   function cancelPress() { clearTimeout(timer.current) }
   useEffect(() => cancelPress, [])
@@ -185,7 +198,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
   const showTasks = dayMode || mode === 'review' || queue.length > 0
   return <section className={`study-list-view font-scope layout-${store.studyLayout}`} aria-label="列表背词" {...pageFontAttrs(store.appearance.study)}>
     <div className="english-page">
-      {/* One slim row: which day (the book is chosen in 我的 → 词书管理), group dots, and ⋯. */}
+      {/* Two slim rows: day · 速记/自查 · ⋯, then 当天新学/需要复习 when both exist. The book is chosen in 我的 → 词书管理. */}
       <header className="study-card">
         <h1 className="sr-only">学习</h1>
         <div className="study-card-top">
@@ -197,10 +210,14 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
             {(mode !== 'review' || dayMode) && <button className="icon-button" aria-label="后一天" disabled={!book || day >= days.length - 1 || saving} onClick={() => void chooseDay(day + 1)}><ChevronRight size={17} /></button>}
           </div>
           {!!rows.length && groups.length > 0 && <div className="study-task-progress" aria-label="本次任务进度">
-            <span className="group-dots" aria-hidden="true">{groups.map((_, index) => <i key={index} data-done={!!draft?.completed.includes(index)} data-current={index === currentPage} />)}</span>
             <span className="sr-only">第 {currentPage + 1} / {groups.length} 组{draft ? ` · 已完成 ${draft.completed.length} / ${groups.length} 组` : ''}{mode === 'review' && pendingReviewGroups.length > 0 && laterReviews > 0 ? ` · 另有 ${laterReviews} 词到期` : ''}</span>
-            <span className="group-count">{currentPage + 1}/{groups.length} 组</span>
           </div>}
+          {!!rows.length && <Segmented label="学习方式" className="study-stage-switch"
+            value={contextMode ? 'context' : preview ? 'preview' : 'test'} disabled={saving || contextServices.busy} onChange={chooseStage}
+            options={[
+              { value: 'preview' as const, ariaLabel: '快速记忆', label: <><PreviewIcon size={15} /><span className="stage-text">速记</span></> },
+              { value: 'test' as const, ariaLabel: '自己自查', label: <><RecallIcon size={15} /><span className="stage-text">自查</span></> },
+            ]} />}
           <StudyMenu>{close => <>
             <button onClick={() => { close(); setPlanOpen(true) }}><Clock3 size={16} />复习计划</button>
             {!!rows.length && <button disabled={saving} onClick={() => { close(); onSpeak(rows.filter(row => !row.missing).map(row => row.word).join('. ')) }}><Volume2 size={16} />朗读本组</button>}
@@ -221,23 +238,19 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
             { value: mode === 'practice' ? 'practice' as const : 'learn' as const, ariaLabel: dayMode ? '当天新学' : '新词', title: `今天待学 ${fresh.length} 词`, label: <>{dayMode ? '当天新学' : '新词'} <span>{fresh.length}</span></> },
             { value: 'review' as const, ariaLabel: dayMode ? '需要复习' : '到期复习', title: dayMode ? `复习第 ${reviewDays.join('、') || '—'} 天学过的词，还剩 ${queue.length} 词` : `全部词书到期 ${queue.length} 词`, label: <>{dayMode ? '需要复习' : '到期复习'} <span>{queue.length}</span></> },
           ]} />}
-        {!!rows.length && <Segmented label="学习方式" className="study-stage-switch"
-          value={contextMode ? 'context' : preview ? 'preview' : 'test'} disabled={saving || contextServices.busy} onChange={chooseStage}
-          options={[
-            { value: 'preview' as const, ariaLabel: '快速记忆', label: <><PreviewIcon size={15} />快速记忆</> },
-            { value: 'test' as const, ariaLabel: '自己自查', label: <><RecallIcon size={15} />自己自查</> },
-          ]} />}
-        {dayMode && <p className="day-plan-note" aria-label="当天计划">第 {day + 1} 天 · 新学 {plan.newTotal} 词{plan.reviewTotal ? ` · 复习 ${plan.reviewTotal} 词（第 ${reviewDays.join('、')} 天学过的词）` : reviewDays.length ? ' · 前几天还没有学过的词，暂无复习' : ' · 第一天没有复习'}</p>}
+        {dayMode && <p className="sr-only" aria-label="当天计划">第 {day + 1} 天 · 新学 {plan.newTotal} 词{plan.reviewTotal ? ` · 复习 ${plan.reviewTotal} 词（第 ${reviewDays.join('、')} 天学过的词）` : reviewDays.length ? ' · 前几天还没有学过的词，暂无复习' : ' · 第一天没有复习'}</p>}
         {book && (plan.finished || plan.checkin) && <CheckInBar plan={plan} saving={saving} onCheckIn={onCheckIn} onNextDay={value => void chooseDay(value)} />}
       </header>
       {!rows.length ? <div className="study-empty"><BookOpen size={30} /><h2>{mode === 'review' ? dayMode ? '这一天的复习已完成' : '暂无到期复习' : !book ? '从一本词书开始' : '今天暂无新词'}</h2><p>{mode === 'review' && dayMode ? reviewDays.length ? `第 ${day + 1} 天复习第 ${reviewDays.join('、')} 天学过的词，每个词复习一次。` : '第一天只学新词，从第二天开始复习前面学过的词。' : mode === 'review' ? nextDue ? `下次复习在 ${intervalLabel(nextDue.card.due, moment)}后` : '完成新词自测后，这里会按计划安排复习。' : !book ? '选词书 → 看词或读短文 → 自测提交。每组最多 20 词，中途退出会保留进度。' : '今天的词已学过或已标熟，可以回看，或继续下一天。'}</p><div className="button-row">{mode === 'review' && fresh.length > 0 && <button className="primary" disabled={saving} onClick={() => switchMode('learn')}>学习当天新词</button>}{mode === 'review' && !dayMode && !fresh.length && <button className="primary" disabled={saving} onClick={() => switchMode('learn')}>学习新词</button>}{mode !== 'review' && dayMode && queue.length > 0 && <button className="primary" disabled={saving} onClick={() => switchMode('review')}>去复习 · {queue.length} 词</button>}{book && day + 1 < days.length && mode !== 'review' && <button className="primary" onClick={() => void chooseDay(day + 1)}>进入下一天</button>}{!book && <><button className="primary" onClick={onBooks}>选择词书</button><button className="secondary" onClick={onImport}>导入词表</button></>}</div></div> : <>
         {contextMode && draft ? <ContextReader store={store} draft={draft} now={now} services={contextServices} onWord={onOpenWord} onSpeak={onSpeak} onStop={onStop} onCheck={() => { onStop(); void onStudy(draft, { type: 'self-test' }) }} /> : <><ol className="english-grid" aria-label="编号英文词表" key={currentKey}>
-          {rows.map(row => <li className="english-entry" key={row.id} data-word-id={row.id} data-number={number(row.id)} data-mark-count={markLevel(row.markCount)} data-mark-level={markLevel(row.markCount)} data-forgotten={row.forgotten} data-next={store.reviewMethod === 'ebbinghaus' && byId.has(row.id) ? ebbNextLabel(byId.get(row.id)!, row.forgotten) : ''}>
+          {shownRows.map(row => <li className="english-entry" key={row.id} data-leaving={leaving.includes(row.id)} data-known={row.known} data-word-id={row.id} data-number={number(row.id)} data-mark-count={markLevel(row.markCount)} data-mark-level={markLevel(row.markCount)} data-forgotten={row.forgotten} data-next={store.reviewMethod === 'ebbinghaus' && byId.has(row.id) ? ebbNextLabel(byId.get(row.id)!, row.forgotten) : ''}>
             <SwipeRow disabled={saving || row.missing || (!preview && completed)}
               onSwipeStart={() => { press.current.moved = true; cancelPress() }}
               actions={[
                 { label: <><Minus size={16} /><span>减标记</span></>, ariaLabel: `第 ${number(row.id)} 词减一个标记`, tone: 'neutral', disabled: row.markCount === 0 && !row.forgotten, onClick: () => void lessMark(row) },
-                { label: <><CheckCheck size={16} /><span>熟词</span></>, ariaLabel: `把 ${row.word} 设为熟词`, tone: 'known', onClick: () => void onKnown(row.id) },
+                row.known
+                  ? { label: <><RotateCcw size={16} /><span>取消熟词</span></>, ariaLabel: `取消 ${row.word} 的熟词`, tone: 'known', onClick: () => void onKnown(row.id, false) }
+                  : { label: <><CheckCheck size={16} /><span>熟词</span></>, ariaLabel: `把 ${row.word} 设为熟词`, tone: 'known', onClick: () => setKnownTarget({ id: row.id, word: row.word }) },
               ]}>
               <button className="english-line" disabled={saving || row.missing} aria-label={`${number(row.id)} ${row.word}，标记 ${markLevel(row.markCount)} / 6${row.forgotten ? '，本轮不熟' : ''}`} title="点按加一个标记，左滑减标记或设为熟词，长按查词"
                 onPointerDown={event => { if (event.button !== 0) return; cancelPress(); press.current = { x: event.clientX, y: event.clientY, moved: false, held: false }; timer.current = setTimeout(() => { press.current.held = true; onOpenWord(row.id) }, 480) }}
@@ -248,6 +261,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
             </SwipeRow>
           </li>)}
         </ol>
+        {knownRows.length > 0 && <p className="known-note" role="status">{showKnown ? `正在显示 ${knownRows.length} 个熟词` : `已隐藏 ${hiddenKnown} 个熟词`}<button className="text-button" onClick={() => setShowKnown(!showKnown)}>{showKnown ? '再次隐藏' : '显示'}</button></p>}
         {!preview && <section className="meaning-section" aria-label="编号中文释义"><div className="meaning-heading"><h2>核对释义</h2><button className="text-button" onClick={() => setShowMeanings(!showMeanings)} aria-label={showMeanings ? '隐藏全部释义' : '显示全部释义'}>{showMeanings ? <EyeOff size={16} /> : <Eye size={16} />}{showMeanings ? '收起释义' : '展开核对'}</button></div>
           {showMeanings && <ol className="meaning-list">{rows.map(row => <li className="meaning-entry" key={row.id} data-word-id={row.id} data-number={number(row.id)}><div className="meaning-row"><span className="word-number">{number(row.id)}</span><span className="chinese-meaning">{coreGloss(row.meaning)}</span><button className="text-button meaning-check" aria-label={`${row.forgotten ? '取消' : '标记'}第 ${number(row.id)} 词不熟`} aria-pressed={row.forgotten} disabled={saving || completed || row.missing} onClick={() => void markEntry(row.id, row.forgotten ? -1 : 1)}>{row.forgotten ? '已标不熟' : '不熟'}</button><button className="study-mark" disabled={row.missing} onClick={() => onOpenWord(row.id)} aria-label={`第 ${number(row.id)} 词详情`}><MarkDots count={row.markCount} /></button></div></li>)}</ol>}
           {showMeanings && <button className="text-button" aria-label="返回英文词表" onClick={scrollToEnglish}>返回词表</button>}
@@ -261,6 +275,10 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
         <div className="study-pagination"><button className="icon-button" aria-label="上一组" disabled={saving || !currentPage} onClick={() => move(currentPage - 1)}><ChevronLeft size={19} /></button>{groups.length > 1 ? <GlassSlider name="词组" min={1} max={groups.length} value={currentPage + 1} label={page => `${page}`} thumbWidth={42} onCommit={page => { if (!saving) move(page - 1) }} /> : <span className="page-static" aria-label={`第 ${currentPage + 1} 组，共 ${groups.length} 组`}>{currentPage + 1} / {groups.length}</span>}<button className="icon-button" disabled={saving || currentPage >= groups.length - 1} onClick={() => move(currentPage + 1)} aria-label="下一组"><ChevronRight size={19} /></button></div>
       </>}
     </div>
+    <IonAlert isOpen={knownTarget !== null} cssClass="app-alert" animated={!reduced} header={`把 ${knownTarget?.word || ''} 设为熟词？`}
+      message="标记后这个词会从列表中隐藏，学习和复习计划不再安排它，本组提交时也会跳过。可以点“撤销上一步”，或在词详情里关掉“熟词”恢复。"
+      onDidDismiss={() => setKnownTarget(null)}
+      buttons={[{ text: '取消', role: 'cancel' }, { text: '设为熟词', handler: () => { if (knownTarget) void confirmKnown(knownTarget) } }]} />
     <ChoiceSheet title="学习的天" open={daysOpen} onClose={() => setDaysOpen(false)} value={String(day)} options={dayOptions} onSelect={value => { void chooseDay(Number(value)) }} />
     <IonAlert isOpen={replaceKind !== null} cssClass="app-alert" animated={!reduced} header="结束原学习草稿？" message="已提交的学习记录和难词标记保留，未提交的本轮结果将结束。随后按当前选择重新选词。" onDidDismiss={() => setReplaceKind(null)} buttons={[{ text: '继续原任务', role: 'cancel' }, { text: '结束并重新选词', role: 'destructive', handler: () => { if (replaceKind) void onRestart(replaceKind) } }]} />
     <Sheet title="复习计划" open={planOpen} onClose={() => setPlanOpen(false)} tall><div className="memory-plan"><div className="memory-plan-heading"><h3>{dayMode ? '艾宾浩斯 · 按天复习' : store.reviewMethod === 'ebbinghaus' ? '艾宾浩斯式间隔复习' : 'FSRS 自适应复习'}</h3><span>{dayMode ? `${book?.title} · 第 ${day + 1} 天` : '全部已学单词 · 跨词书去重'}</span></div><div className="memory-totals"><div><strong>{queue.length}</strong><span>{dayMode ? '这一天还要复习' : '到期待复习'}</span></div><div><strong>{dayMode ? plan.reviewTotal : scheduled.length}</strong><span>{dayMode ? '这一天共复习' : '已加入计划'}</span></div></div>

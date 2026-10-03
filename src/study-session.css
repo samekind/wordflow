@@ -327,3 +327,10 @@ i.is-review{background:var(--success)}
 .onboarding-recap>div{display:flex;gap:12px;padding:12px 14px;border-radius:var(--radius-sm);background:var(--surface-inset)}
 .onboarding-recap dt{flex:none;width:3em;font-size:var(--fs-small);color:var(--text-muted)}
 .onboarding-recap dd{margin:0;min-width:0;font-size:var(--fs-body);color:var(--text-primary);overflow-wrap:anywhere}
+
+/* Header row 1: day · spacer · 速记/自查 · ⋯. Group progress lives in the bottom slider (and a screen-reader label). */
+.study-card .study-card-top .study-stage-switch{display:inline-flex;flex:0 0 auto;width:auto;margin:0}
+.study-card .study-card-top .study-stage-switch button{flex:0 0 auto;min-height:36px;padding:0 11px;gap:4px;font-size:var(--fs-small)}
+.known-note{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 0 0;font-size:var(--fs-caption);color:var(--text-muted)}
+.known-note .text-button{min-height:32px;padding:0 6px;font-size:var(--fs-caption)}
+@media(max-width:359px){.study-card .study-card-top .study-stage-switch .stage-text{display:none}.study-card .study-card-top .study-stage-switch button{padding:0 9px}}

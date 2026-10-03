@@ -460,8 +460,12 @@ test('legacy migration, independent pronunciation and marks, known words, day po
   await page.getByRole('switch', { name: '熟词', exact: true }).click()
   await expect.poll(async () => (await state(page)).words.find(w => w.id === id)?.known).toBe(true)
   await closeSheet(page)
+  await expect(page.locator('.english-entry')).toHaveCount(19)
+  await expect(page.locator('.known-note')).toContainText('已隐藏 1 个熟词')
+  await page.locator('.known-note').getByRole('button', { name: '显示', exact: true }).click()
   await expect(page.locator('.english-entry')).toHaveCount(20)
   await expect(first).toContainText('熟词')
+  await page.locator('.known-note').getByRole('button', { name: '再次隐藏', exact: true }).click()
   await (await studyMenu(page)).getByRole('button', { name: '撤销上一步', exact: true }).click()
   await expect(first).toHaveAttribute('data-word-id', id)
   await expect(page.locator('.english-entry')).toHaveCount(20)
@@ -1058,4 +1062,36 @@ test('word and Chinese text sizes are set separately and persist', async ({ page
   await page.reload()
   await nav(page, '学习')
   await expect.poll(() => size('.english-word')).toBeGreaterThan(word * 1.2)
+})
+
+test('swiping a word slides the whole card, and 熟词 asks first, then fades the word out until undone', async ({ page }) => {
+  await seed(page, importToPersonal({ ...emptyStore(), goal: 40 }, starterRows.slice(0, 70), '滑动').store)
+  await page.goto('/')
+  const rows = page.locator('.english-entry')
+  await expect(rows).toHaveCount(20)
+  const target = rows.nth(1), id = (await target.getAttribute('data-word-id'))!, word = (await target.locator('.english-word').textContent())!
+  const frame = target.locator('.swipe-layer')
+  const before = (await frame.boundingBox())!
+  const box = (await target.boundingBox())!
+  const swipe = async () => {
+    await page.mouse.move(box.x + box.width - 20, box.y + box.height / 2)
+    await page.mouse.down(); await page.mouse.move(box.x + box.width - 110, box.y + box.height / 2, { steps: 8 }); await page.mouse.up()
+  }
+  await swipe()
+  // The bordered frame itself moves; the words are not the only thing sliding.
+  await expect.poll(async () => before.x - (await frame.boundingBox())!.x).toBeGreaterThan(100)
+  await page.getByRole('button', { name: `把 ${word} 设为熟词`, exact: true }).click()
+  const alert = page.locator('ion-alert:not(.overlay-hidden)')
+  await expect(alert).toContainText('设为熟词？')
+  await alert.getByRole('button', { name: '取消' }).click()
+  await expect(rows).toHaveCount(20)
+  expect((await state(page)).words.find(w => w.id === id)?.known).toBe(false)
+  await swipe()
+  await page.getByRole('button', { name: `把 ${word} 设为熟词`, exact: true }).click()
+  await alert.getByRole('button', { name: '设为熟词' }).click()
+  await expect.poll(async () => (await state(page)).words.find(w => w.id === id)?.known).toBe(true)
+  await expect(page.locator(`.english-entry[data-word-id="${id}"]`)).toHaveCount(0)
+  await page.getByRole('button', { name: '撤销', exact: true }).click()
+  await expect.poll(async () => (await state(page)).words.find(w => w.id === id)?.known).toBe(false)
+  await expect(page.locator(`.english-entry[data-word-id="${id}"]`)).toHaveCount(1)
 })

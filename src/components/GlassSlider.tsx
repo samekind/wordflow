@@ -69,7 +69,7 @@ export default function GlassSlider({ min, max, value, name, caption, label, onC
     <div className="glass-slider-rail">
       <span>{min}</span>
       <span className="glass-slider-track">
-        <motion.span className="glass-slider-fill" animate={{ width: `calc((100% - ${thumbWidth}px) * ${ratio} + 22px)` }} transition={dragRatio == null && !reduced ? { type: 'spring', stiffness: 520, damping: 32, mass: .55 } : { duration: 0 }} />
+        <motion.span className="glass-slider-fill" animate={{ width: `calc((100% - ${thumbWidth}px) * ${ratio} + ${thumbWidth * (1 + (stretch - 1) / 2)}px)` }} transition={dragRatio == null && !reduced ? { type: 'spring', stiffness: 520, damping: 32, mass: .55 } : { duration: 0 }} />
         <motion.span className="glass-slider-thumb" style={{ width: thumbWidth }} animate={{ left: `calc((100% - ${thumbWidth}px) * ${ratio})`, scaleX: stretch, scaleY: stretch === 1 ? 1 : .96 }} transition={dragRatio == null && !reduced ? { type: 'spring', stiffness: 520, damping: 32, mass: .55 } : { duration: 0 }}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.span key={label(shown)} className="glass-slider-thumb-label" initial={reduced ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={reduced ? undefined : { opacity: 0, y: -4 }} transition={{ duration: .12 }}>{label(shown)}</motion.span>
