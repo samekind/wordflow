@@ -976,6 +976,32 @@ test('the magazine contents filter by level, topic and length, and built-in AI t
   expect(asked).toHaveLength(requests)
 })
 
+test('word mnemonics come from the built-in AI without any key, and the settings page says so', async ({ page }) => {
+  // A word outside the bundled mnemonics, so the generate button is offered.
+  await seed(page, importToPersonal(emptyStore(), [{ word: 'qzxwvut', meaning: 'n. 合成测试词', phonetic: '', example: '', definition: '', exchange: '', source: '测试' }], '内置联想').store)
+  const asked: { mode: string; words: { id: string; word: string; meaning: string }[] }[] = []
+  await page.route('**/v1/ai/reading', async route => {
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST' }
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    const body = route.request().postDataJSON(); asked.push(body)
+    await route.fulfill({ headers: cors, json: { model: 'fixture', lessons: body.words.map((w: { id: string; word: string }) => ({ wordId: w.id, mnemonic: `联想：${w.word}`, example: `Use ${w.word}.`, translation: '用它。', question: '', answer: '', explanation: '' })) } })
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  const word = listed(await state(page), 0)
+  await holdWord(page, word.word)
+  await page.getByRole('button', { name: '助记', exact: true }).click()
+  await expect(page.getByRole('button', { name: '配置 AI 后可生成联想' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'AI 生成联想', exact: true }).click()
+  await expect(page.locator('.mnemonic-line')).toHaveText(`联想：${word.word}`)
+  expect(asked).toEqual([{ mode: 'lessons', words: [{ id: word.id, word: word.word, meaning: word.meaning }] }])
+  await expect.poll(async () => (await state(page)).lessons.map(l => l.wordId)).toEqual([word.id])
+  await page.locator('ion-modal').getByRole('button', { name: '关闭', exact: true }).click()
+  await settings(page, 'AI 服务')
+  await expect(page.getByText('使用内置 AI', { exact: true })).toBeVisible()
+  await expect(page.getByText('不需要任何设置')).toBeVisible()
+})
+
 test('a CC0 cartoon avatar is saved as a PNG profile picture', async ({ page }) => {
   await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 20), '头像').store))
   await page.setViewportSize({ width: 390, height: 844 })

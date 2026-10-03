@@ -45,9 +45,21 @@ test('all main pages share clear navigation and return to the same study group',
   await page.getByRole('button', { name: '取消第 01 词不熟', exact: true }).click()
   await page.getByRole('button', { name: '隐藏全部释义', exact: true }).click()
   await (await studyMenu(page)).getByRole('button', { name: '读短文', exact: true }).click()
-  await page.getByRole('button', { name: '设置 AI 服务', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'AI 服务', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: '返回', exact: true }).click()
+  // No key was ever entered: the story comes from the built-in AI instead of a setup screen.
+  await expect(page.getByRole('button', { name: '设置 AI 服务', exact: true })).toHaveCount(0)
+  const builtIn: { mode: string; words: { id: string; word: string; meaning: string }[] }[] = []
+  await page.route('**/v1/ai/reading', async route => {
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST' }
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    const body = route.request().postDataJSON(); builtIn.push(body)
+    await route.fulfill({ headers: cors, json: { model: 'built-in-fixture', story: { title: 'Built In', paragraphs: [{ english: `We use ${body.words.map((w: { word: string }) => w.word).join(', ')}.`, translation: '内置 AI 合成短文。' }] } } })
+  })
+  await page.getByRole('button', { name: '生成本组短文', exact: true }).click()
+  await expect(page.locator('.context-reader .story-article h2')).toHaveText('Built In')
+  expect(builtIn).toHaveLength(1)
+  expect(builtIn[0].mode).toBe('story')
+  expect(builtIn[0].words).toHaveLength(20)
+  expect((await state(page)).contextStories[0]).toMatchObject({ taskId: task.id, model: 'built-in-fixture' })
   await expect(page.locator('.context-reader')).toHaveAttribute('data-task-id', task.id)
   await page.getByRole('button', { name: '自己自查', exact: true }).click()
   await expect(page.locator('.english-grid')).toHaveCSS('opacity', '1')

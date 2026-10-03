@@ -3,6 +3,7 @@ import { storyContentSchema, storyIsCurrent, storyKey, type ContextStory, type D
 import { contextStoryKey, studyGroupWords, studyWordStatus, type StudyAction } from '../study'
 import type { StudyDraft } from '../study-state'
 import { api, isAndroidApp, streamStory, type ArticleAssistMode, type ArticleAssistResult } from '../platform'
+import { builtInLessons, builtInStory } from '../reading-ai'
 import type { AIConfig } from '../components/SettingsPage'
 
 type Deps = {
@@ -19,6 +20,8 @@ type Deps = {
 export function useAIServices({ storeRef, pendingSave, commit, notify, changeStudy }: Deps) {
   const lock = useRef(false)
   const [config, setConfig] = useState<AIConfig>({ provider: 'deepseek', model: 'deepseek-flash', configured: false })
+  const configRef = useRef(config)
+  configRef.current = config
   const [busy, setBusy] = useState(false)
   const [live, setLive] = useState('')
   const [contextKey, setContextKey] = useState('')
@@ -31,15 +34,18 @@ export function useAIServices({ storeRef, pendingSave, commit, notify, changeStu
     finally { lock.current = false; setBusy(false); after?.() }
   }
   const settled = async () => { while (pendingSave.current) await pendingSave.current }
-  const requestStory = (ids: string[]) => isAndroidApp
-    ? api('story', { method: 'POST', body: JSON.stringify({ ids }) })
-    : streamStory(ids, setLive)
+  /** Generation uses the user's own key when they saved one; otherwise the built-in AI, which needs no setup. */
+  const ownKey = () => configRef.current.configured
+  const requestStory = (targets: { id: string; word: string; meaning: string }[]) => !ownKey() ? builtInStory(targets)
+    : isAndroidApp ? api('story', { method: 'POST', body: JSON.stringify({ ids: targets.map(word => word.id) }) })
+    : streamStory(targets.map(word => word.id), setLive)
 
   async function generateLessons(ids: string[]) {
     if (!ids.length || lock.current) return
     const source = new Map(storeRef.current.words.filter(w => ids.includes(w.id)).map(w => [w.id, w]))
     await run(async () => {
-      const data = await api('reinforce', { method: 'POST', body: JSON.stringify({ ids }) })
+      const data = ownKey() ? await api('reinforce', { method: 'POST', body: JSON.stringify({ ids }) })
+        : await builtInLessons(ids.flatMap(id => source.get(id) ? [{ id, word: source.get(id)!.word, meaning: source.get(id)!.meaning }] : []))
       await settled()
       const current = storeRef.current
       const received = data.lessons.filter((lesson: { wordId: string }) => current.words.some(w => w.id === lesson.wordId && source.get(w.id)?.meaning === w.meaning && source.get(w.id)?.word === w.word))
@@ -52,7 +58,7 @@ export function useAIServices({ storeRef, pendingSave, commit, notify, changeStu
     setLive('')
     const targets = words.map(({ id, word, meaning }) => ({ id, word, meaning }))
     await run(async () => {
-      const data = await requestStory(targets.map(w => w.id))
+      const data = await requestStory(targets)
       const content = storyContentSchema.parse(data.story)
       await settled()
       const current = storeRef.current, book = current.books.find(b => b.id === bookId)
@@ -72,7 +78,7 @@ export function useAIServices({ storeRef, pendingSave, commit, notify, changeStu
     const key = contextStoryKey(draft), targets = words.map(({ id, word, meaning }) => ({ id, word, meaning }))
     setContextKey(key); setLive('')
     await run(async () => {
-      const data = await requestStory(targets.map(word => word.id))
+      const data = await requestStory(targets)
       const content = storyContentSchema.parse(data.story)
       await settled()
       const current = storeRef.current

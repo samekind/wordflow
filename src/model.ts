@@ -111,7 +111,7 @@ const wordSchema = z.object({
     last_review: dateSchema.optional(),
   }),
 })
-const lessonSchema = z.object({
+export const lessonSchema = z.object({
   wordId: z.string(), mnemonic: boundedText, example: boundedText, translation: boundedText,
   question: boundedText.default(''), answer: boundedText.default(''), explanation: boundedText.default(''),
 })

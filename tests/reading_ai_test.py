@@ -24,6 +24,7 @@ def free_port():
 
 class FakeModel(BaseHTTPRequestHandler):
     calls = []
+    wrong_ids = False
 
     def log_message(self, *args):
         pass
@@ -32,7 +33,15 @@ class FakeModel(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         FakeModel.calls.append({"auth": self.headers.get("Authorization"), "body": body})
         task = json.loads(body["messages"][1]["content"])
-        if "逐段对应" in body["messages"][0]["content"]:
+        system = body["messages"][0]["content"]
+        if "小故事" in system:
+            content = {"title": "A Story", "paragraphs": [{"english": "Stories use %s." % ", ".join(w["word"] for w in task), "translation": "故事。"}]}
+        elif "助记教练" in system:
+            ids = [w["wordId"] for w in task]
+            if FakeModel.wrong_ids:
+                ids = ["other"] * len(ids)
+            content = {"lessons": [{"wordId": i, "mnemonic": "联想", "example": "An example.", "translation": "例句。"} for i in ids]}
+        elif "逐段对应" in system:
             content = {"paragraphs": ["译文 %d" % (i + 1) for i in range(len(task["paragraphs"]))]}
         elif task.get("question"):
             content = {"answer": "合成回答：" + task["question"]}
@@ -118,6 +127,35 @@ class ReadingAITests(unittest.TestCase):
         self.assertEqual(result["items"], [{"word": "resilient", "meaning": "有韧性的", "example": "She is resilient."}])
         status, result = self.call({**self.article, "mode": "ask", "question": "城市怎样了？"})
         self.assertEqual((status, result["answer"]), (200, "合成回答：城市怎样了？"))
+
+    words = [{"id": "w1", "word": "resilient", "meaning": "adj. 有韧性的"}, {"id": "w2", "word": "recover", "meaning": "v. 恢复"}]
+
+    def test_stories_and_lessons_for_words_are_validated_and_never_cached(self):
+        before = len(FakeModel.calls)
+        status, result = self.call({"mode": "story", "words": self.words})
+        self.assertEqual(status, 200, result)
+        self.assertEqual(result["story"]["title"], "A Story")
+        self.assertIn("resilient, recover", result["story"]["paragraphs"][0]["english"])
+        self.assertEqual(self.call({"mode": "story", "words": self.words})[0], 200)
+        self.assertEqual(len(FakeModel.calls), before + 2, "asking again writes another story")
+        self.assertEqual(FakeModel.calls[-1]["body"]["max_tokens"], 4500)
+        status, result = self.call({"mode": "lessons", "words": self.words})
+        self.assertEqual(status, 200, result)
+        self.assertEqual([lesson["wordId"] for lesson in result["lessons"]], ["w1", "w2"])
+        self.assertEqual(result["lessons"][0]["question"], "")
+
+    def test_word_requests_are_bounded_and_mismatched_lessons_are_rejected(self):
+        self.assertEqual(self.call({"mode": "story", "words": []})[0], 400)
+        self.assertEqual(self.call({"mode": "story", "words": self.words * 21})[0], 400, "duplicates and more than 40 words")
+        self.assertEqual(self.call({"mode": "lessons", "words": [{"id": str(i), "word": "w", "meaning": "m"} for i in range(9)]})[0], 400)
+        self.assertEqual(self.call({"mode": "lessons", "words": [{"id": "a", "word": "", "meaning": "m"}]})[0], 400)
+        self.assertEqual(self.call({"mode": "story", "words": "resilient"})[0], 400)
+        self.assertEqual(self.call({"mode": "story", "words": self.words}, origin="https://evil.example")[0], 403)
+        FakeModel.wrong_ids = True
+        try:
+            self.assertEqual(self.call({"mode": "lessons", "words": self.words})[0], 502)
+        finally:
+            FakeModel.wrong_ids = False
 
 
 if __name__ == "__main__":

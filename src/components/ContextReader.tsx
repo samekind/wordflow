@@ -6,8 +6,8 @@ import type { StudyDraft } from '../study-state'
 import { Highlighted, StoryProgress } from './DailyReader'
 
 export type ContextServices = {
-  busy: boolean; generatingKey: string; configured: boolean; live: string; error: string;
-  onGenerate: (draft: StudyDraft) => void; onSettings: () => void;
+  busy: boolean; generatingKey: string; live: string; error: string;
+  onGenerate: (draft: StudyDraft) => void;
 }
 
 export default function ContextReader({ store, draft, now, services, onWord, onSpeak, onStop, onCheck }: {
@@ -38,7 +38,7 @@ export default function ContextReader({ store, draft, now, services, onWord, onS
           <button className="icon-button" aria-label="朗读语境短文" onClick={() => onSpeak(story.paragraphs.map(p => p.english).join('\n'))}><Volume2 size={20} /></button>
           <button className="icon-button" aria-label="停止朗读" onClick={onStop}><Square size={16} /></button>
           <button className="icon-button" aria-label={translated ? '隐藏译文' : '显示译文'} onClick={() => setTranslated(!translated)}>{translated ? <EyeOff size={19} /> : <Eye size={19} />}</button>
-          <button className="icon-button" aria-label="重新生成本组短文" disabled={services.busy || changed} onClick={() => services.configured ? services.onGenerate(draft) : services.onSettings()}><RefreshCw size={18} /></button>
+          <button className="icon-button" aria-label="重新生成本组短文" disabled={services.busy || changed} onClick={() => services.onGenerate(draft)}><RefreshCw size={18} /></button>
         </div>
       </div>
       <article className="story-article"><h2>{story.title}</h2>
@@ -52,8 +52,8 @@ export default function ContextReader({ store, draft, now, services, onWord, onS
     </> : <div className="context-ready">
       <BookOpen size={26} /><h2>在短文中记住本组单词</h2>
       <p>用这 {words.length} 个词生成语境短文，读完后回到同一组词自测。</p>
-      <button className="primary" disabled={services.busy || changed || !words.length} onClick={() => services.configured ? services.onGenerate(draft) : services.onSettings()}>
-        {services.busy ? <LoaderCircle className="spin" size={17} /> : <Sparkles size={17} />}{services.configured ? '生成本组短文' : '设置 AI 服务'}
+      <button className="primary" disabled={services.busy || changed || !words.length} onClick={() => services.onGenerate(draft)}>
+        {services.busy ? <LoaderCircle className="spin" size={17} /> : <Sparkles size={17} />}生成本组短文
       </button>
     </div>)}
     <div className="context-check">

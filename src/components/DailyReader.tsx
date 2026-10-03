@@ -37,12 +37,12 @@ export function StoryProgress({ words, live }: { words: Word[]; live: string }) 
   </section>
 }
 type Props = {
-  store: Store; busy: boolean; live?: string; configured: boolean; error: string;
+  store: Store; busy: boolean; live?: string; error: string;
   onGenerate: (bookId: string, day: number, part: number, words: Word[]) => void;
   onWord: (id: string) => void;
-  onSpeak: (text: string) => void; onStop: () => void; onSettings: () => void; onBooks: () => void;
+  onSpeak: (text: string) => void; onStop: () => void; onBooks: () => void;
 }
-export default function DailyReader({ store, busy, live = '', configured, error, onGenerate, onWord, onSpeak, onStop, onSettings, onBooks }: Props) {
+export default function DailyReader({ store, busy, live = '', error, onGenerate, onWord, onSpeak, onStop, onBooks }: Props) {
   const book = store.books.find(b => b.id === store.activeBookId)
   const days = book ? bookDays(book) : []
   const [selectedDay, setSelectedDay] = useState(book?.currentDay || 0)
@@ -73,8 +73,7 @@ export default function DailyReader({ store, busy, live = '', configured, error,
   }
   function generate() {
     setPickerOpen(false)
-    if (configured) onGenerate(book!.id, day, currentPart, selectedWords)
-    else onSettings()
+    onGenerate(book!.id, day, currentPart, selectedWords)
   }
   const picker = <Sheet title="选择单词" open={pickerOpen} onClose={() => setPickerOpen(false)} tall>
     <div className="picker-bar">
@@ -92,7 +91,7 @@ export default function DailyReader({ store, busy, live = '', configured, error,
       <span className="sheet-word-main"><strong lang="en">{word.word}</strong><small>{coreGloss(word.meaning)}</small></span>
       <MarkDots count={word.markCount} />
     </button>)}{!visibleWords.length && <p className="field-note">这一档没有词，换一个标记或搜索条件。</p>}</div>
-    <div className="picker-foot"><button className="primary wide-button" disabled={busy || !selectedWords.length} onClick={generate}>{busy ? <LoaderCircle className="spin" size={18} /> : <Sparkles size={18} />}{busy ? '正在写短文' : configured ? `生成短文 · ${selectedWords.length} 词` : '前往设置 AI'}</button></div>
+    <div className="picker-foot"><button className="primary wide-button" disabled={busy || !selectedWords.length} onClick={generate}>{busy ? <LoaderCircle className="spin" size={18} /> : <Sparkles size={18} />}{busy ? '正在写短文' : `生成短文 · ${selectedWords.length} 词`}</button></div>
   </Sheet>
   const dayNav = <div className="compact-day"><button className="icon-button" aria-label="短文前一天" title="前一天" disabled={!day || busy} onClick={() => { onStop(); setSelectedDay(day - 1) }}><ChevronLeft size={18} /></button>
     <span>第 {day + 1} 天</span><button className="icon-button" aria-label="短文后一天" title="后一天" disabled={day >= days.length - 1 || busy} onClick={() => { onStop(); setSelectedDay(day + 1) }}><ChevronRight size={18} /></button></div>
@@ -101,7 +100,7 @@ export default function DailyReader({ store, busy, live = '', configured, error,
       <button className="icon-button" aria-label="朗读短文" title="朗读短文" onClick={() => onSpeak(story.paragraphs.map(p => p.english).join('\n'))}><Volume2 size={20} /></button>
       <button className="icon-button" aria-label="停止朗读" title="停止朗读" onClick={onStop}><Square size={16} /></button>
       <button className="icon-button" aria-label={translated ? '隐藏译文' : '显示译文'} title={translated ? '隐藏译文' : '显示译文'} onClick={() => setTranslated(!translated)}>{translated ? <EyeOff size={19} /> : <Eye size={19} />}</button>
-      <button className="icon-button" aria-label="重新生成短文" title="重新生成短文" disabled={busy || !selectedWords.length} onClick={() => configured ? onGenerate(book.id, day, currentPart, selectedWords) : onSettings()}>{busy ? <LoaderCircle className="spin" size={18} /> : <RefreshCw size={18} />}</button>
+      <button className="icon-button" aria-label="重新生成短文" title="重新生成短文" disabled={busy || !selectedWords.length} onClick={() => onGenerate(book.id, day, currentPart, selectedWords)}>{busy ? <LoaderCircle className="spin" size={18} /> : <RefreshCw size={18} />}</button>
     </div></div>
     <article className="story-article"><h2>{story.title}</h2>
       {story.paragraphs.map((paragraph, index) => <div className="story-paragraph" key={index}>

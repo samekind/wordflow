@@ -67,7 +67,6 @@ export default function App() {
   useBeforeUnload(() => data.isSaving() || ai.locked.current || !!data.failedSaveRef.current, speech.stop)
 
   const openWord = (id: string) => { setDetailId(id); ai.clearError() }
-  const openAISettings = () => go({ name: 'section', section: 'ai' })
   async function exportState(value: Store, filename: string) {
     if (isAndroidApp) {
       try { const result = await phone.exportBackup({ content: JSON.stringify(value), filename }); if (!result.cancelled) toast.notify('备份已保存') }
@@ -123,7 +122,7 @@ export default function App() {
               onMark={study.changeMarks} onKnown={id => study.changeKnown(id, true)} onStudy={study.changeStudy} onRestart={study.restartStudy} onDay={study.selectDay} onOpenWord={openWord} onUndo={study.undoLastAction}
               onLearning={learning => commit({ ...storeRef.current, learning })}
               onLayout={studyLayout => { void commit({ ...storeRef.current, studyLayout }) }}
-              contextServices={{ busy: ai.busy || saving, generatingKey: ai.contextKey, configured: ai.config.configured, live: ai.live, error: ai.error, onGenerate: ai.generateContextStory, onSettings: openAISettings }} onStop={speech.stop}
+              contextServices={{ busy: ai.busy || saving, generatingKey: ai.contextKey, live: ai.live, error: ai.error, onGenerate: ai.generateContextStory }} onStop={speech.stop}
               onBooks={() => go({ name: 'books' })} onImport={() => setImportOpen(true)} onSpeak={speech.speak} onCheckIn={doCheckIn} />}
             {screen.name === 'books' && <BookShelf store={store} catalog={words.catalog} busy={words.bookBusy || saving} error={words.catalogError} onRetry={words.refreshCatalog}
               view={shelfView ?? (store.books.length ? 'mine' : 'catalog')} onView={setShelfView}
@@ -140,8 +139,8 @@ export default function App() {
                 if (current.readArticleIds.includes(id)) return Promise.resolve(true)
                 return commit({ ...current, readArticleIds: [...current.readArticleIds, id].slice(-2000) })
               }} onWord={openWord} onSpeak={speech.speak} onStop={speech.stop}>
-              <DailyReader store={store} busy={ai.busy || saving} live={ai.live} configured={ai.config.configured} error={ai.error} onGenerate={ai.generateStory}
-                onWord={openWord} onSpeak={speech.speak} onStop={speech.stop} onSettings={openAISettings} onBooks={() => go({ name: 'books' })} />
+              <DailyReader store={store} busy={ai.busy || saving} live={ai.live} error={ai.error} onGenerate={ai.generateStory}
+                onWord={openWord} onSpeak={speech.speak} onStop={speech.stop} onBooks={() => go({ name: 'books' })} />
             </ReadingPage>}
             {(screen.name === 'settings' || screen.name === 'section') && <SettingsPage store={store} ai={ai.config} saving={saving} aiBusy={ai.busy} error={ai.error} onSaveAI={ai.saveConfig} onRemoveAI={ai.removeConfig}
               section={screen.name === 'section' ? screen.section : 'home'} onSection={section => { if (section === 'home') back(); else go({ name: 'section', section }) }}
@@ -162,10 +161,9 @@ export default function App() {
       </IonTabBar></nav>}
     <IonToast isOpen={!!toast.message} message={toast.message} duration={3500} position="bottom" positionAnchor={setup ? undefined : 'phone-tabs'} cssClass="app-toast" animated={!reduced} onDidDismiss={toast.clear}
       buttons={[...(toast.allowUndo && study.canUndo ? [{ text: '撤销', handler: () => { void study.undoLastAction(); return false } }] : []), { text: '关闭', role: 'cancel' }]} />
-    <WordDetails word={store.words.find(w => w.id === detailId)} lesson={store.lessons.find(l => l.wordId === detailId)} saving={saving} generating={ai.busy} configured={ai.config.configured} error={ai.error}
+    <WordDetails word={store.words.find(w => w.id === detailId)} lesson={store.lessons.find(l => l.wordId === detailId)} saving={saving} generating={ai.busy} error={ai.error}
       onClose={() => setDetailId('')} onMark={study.changeMarks} onKnown={study.changeKnown} onSpeak={speech.speak} onStop={speech.stop}
       onDictionary={word => { void phone.openDictionary({ word }).catch(error => toast.notify(error.message)) }} onGenerate={ai.generateLessons}
-      onConfigure={async () => { await modalController.dismiss(); openAISettings() }}
       onEdit={async word => { const modal = await modalController.getTop(); if (modal && await modal.dismiss()) setEditWord(word) }}
       onSaveMnemonic={words.saveMnemonic} />
     <ImportSheet open={importOpen} store={store} saving={saving} today={today} onClose={() => setImportOpen(false)} onImport={words.importRows} notify={toast.notify} />

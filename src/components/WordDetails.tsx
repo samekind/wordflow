@@ -15,16 +15,16 @@ type DetailTab = 'meaning' | 'memory' | 'dictionary'
 
 type Props = {
   word?: Word; lesson?: Lesson; saving: boolean; generating: boolean;
-  configured: boolean; error: string; onClose: () => void;
+  error: string; onClose: () => void;
   onMark: (id: string, delta: 1 | -1) => Promise<boolean>;
   onKnown: (id: string, known: boolean) => Promise<boolean>;
   onSpeak: (word: string, accent?: 'us' | 'uk') => void; onStop: () => void;
   onDictionary: (word: string) => void;
-  onGenerate: (ids: string[]) => Promise<void>; onConfigure: () => void;
+  onGenerate: (ids: string[]) => Promise<void>;
   onEdit: (word: Word) => void;
   onSaveMnemonic: (id: string, fields: { mnemonic: string; example: string; translation: string }) => Promise<boolean>;
 }
-export default function WordDetails({ word, lesson, saving, generating, configured, error, onClose, onMark, onKnown, onSpeak, onStop, onDictionary, onEdit, onGenerate, onConfigure, onSaveMnemonic }: Props) {
+export default function WordDetails({ word, lesson, saving, generating, error, onClose, onMark, onKnown, onSpeak, onStop, onDictionary, onEdit, onGenerate, onSaveMnemonic }: Props) {
   const [entries, setEntries] = useState<DictionaryEntry[]>([])
   const [lookupError, setLookupError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -120,9 +120,7 @@ export default function WordDetails({ word, lesson, saving, generating, configur
             {mnemonic.example && <p lang="en">{mnemonic.example}</p>}
             {mnemonic.translation && <p>{mnemonic.translation}</p>}
           </div>}
-          {!mnemonic && (configured
-            ? <button className="text-button" disabled={generating || saving} onClick={() => void onGenerate([word.id])}>{generating ? <LoaderCircle className="spin" size={14} /> : <Sparkles size={14} />}{generating ? '正在生成联想' : 'AI 生成联想'}</button>
-            : <button className="text-button" onClick={onConfigure}><Sparkles size={14} />配置 AI 后可生成联想</button>)}
+          {!mnemonic && <button className="text-button" disabled={generating || saving} onClick={() => void onGenerate([word.id])}>{generating ? <LoaderCircle className="spin" size={14} /> : <Sparkles size={14} />}{generating ? '正在生成联想' : 'AI 生成联想'}</button>}
           <button className="text-button" disabled={saving} onClick={() => { setDraftMnemonic(mnemonic?.mnemonic || ''); setDraftExample(mnemonic?.example || ''); setDraftTranslation(mnemonic?.translation || ''); setEditing(true) }}><Pencil size={14} />自己写助记</button>
         </>}
         {editing && <div className="mnemonic-editor">
