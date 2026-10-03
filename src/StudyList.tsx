@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { IonAlert } from '@ionic/react'
 import { useReducedMotion } from 'motion/react'
-import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clock3, Ellipsis, Eye, EyeOff, Minus, Plus, RotateCcw, Volume2 } from 'lucide-react'
+import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, Minus, Plus, RotateCcw, Volume2 } from 'lucide-react'
 import { PreviewIcon, RecallIcon } from './icons'
 import { coreGloss } from './gloss'
 import { bookDays, dayKey, ebbNextLabel, intervalLabel, listReviewOffsets, markLevel, memoryIntervals, wordsForDay, pageFontAttrs, type Store, type WordBook } from './model'
@@ -35,23 +35,6 @@ type Props = {
   onCheckIn: () => Promise<boolean>;
   contextServices: ContextServices;
 }
-/** ⋯ menu for everything that is not the current word list. */
-function StudyMenu({ children }: { children: (close: () => void) => ReactNode }) {
-  const [open, setOpen] = useState(false)
-  const root = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const away = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false) }
-    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
-    document.addEventListener('pointerdown', away); document.addEventListener('keydown', key)
-    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', key) }
-  }, [open])
-  return <div className="study-menu" ref={root}>
-    <button className="icon-button" aria-label="更多操作" aria-expanded={open} aria-haspopup="true" onClick={() => setOpen(!open)}><Ellipsis size={20} /></button>
-    {open && <div className="study-menu-panel" role="group" aria-label="更多操作">{children(() => setOpen(false))}</div>}
-  </div>
-}
-
 /** Shown once the day is done: check in to record it, or the record already made today. */
 export function CheckInBar({ plan, saving, onCheckIn, onNextDay }: { plan: ReturnType<typeof dayPlan>; saving: boolean; onCheckIn: () => Promise<boolean>; onNextDay: (day: number) => void }) {
   const stale = !!plan.checkin && (plan.checkin.newCount !== plan.newToday || plan.checkin.reviewCount !== plan.reviewedToday)
@@ -215,19 +198,11 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
           {!!rows.length && <Segmented label="学习方式" className="study-stage-switch"
             value={contextMode ? 'context' : preview ? 'preview' : 'test'} disabled={saving || contextServices.busy} onChange={chooseStage}
             options={[
-              { value: 'preview' as const, ariaLabel: '快速记忆', label: <><PreviewIcon size={15} /><span className="stage-text">速记</span></> },
-              { value: 'test' as const, ariaLabel: '自己自查', label: <><RecallIcon size={15} /><span className="stage-text">自查</span></> },
+              { value: 'preview' as const, ariaLabel: '快速记忆', title: '快速记忆：看词和释义', label: <><PreviewIcon size={15} /><span className="stage-text">速记</span></> },
+              { value: 'test' as const, ariaLabel: '自己自查', title: '自己自查：先想再核对', label: <><RecallIcon size={15} /><span className="stage-text">自查</span></> },
+              ...(mode !== 'practice' ? [{ value: 'context' as const, ariaLabel: '读短文', title: '读短文：在语境里记词', label: <><BookOpen size={15} /><span className="stage-text">短文</span></> }] : []),
             ]} />}
-          <StudyMenu>{close => <>
-            <button onClick={() => { close(); setPlanOpen(true) }}><Clock3 size={16} />复习计划</button>
-            {!!rows.length && <button disabled={saving} onClick={() => { close(); onSpeak(rows.filter(row => !row.missing).map(row => row.word).join('. ')) }}><Volume2 size={16} />朗读本组</button>}
-            {!!rows.length && mode !== 'practice' && <button aria-pressed={contextMode} disabled={saving || contextServices.busy} onClick={() => { close(); chooseStage('context') }}><BookOpen size={16} />读短文</button>}
-            {book && mode !== 'review' && <button disabled={saving} onClick={() => { close(); switchMode(mode === 'practice' ? 'learn' : 'practice') }}><RotateCcw size={16} />{mode === 'practice' ? '返回当天新词' : '回看当天 · 不改变复习计划'}</button>}
-            <button disabled={!canUndo || saving} onClick={() => { close(); onUndo() }} aria-label="撤销上一步"><RotateCcw size={16} />撤销上一步</button>
-            {savedDraft && !draftComplete(draft) && <button disabled={saving} onClick={() => { close(); restart(draft.kind) }}>重新开始本组</button>}
-            <button onClick={() => { close(); onImport() }}><Plus size={16} />导入词表</button>
-            <p className="study-menu-note" aria-label="今日学习统计">今日新学 {stats.newToday} 词 · 复习 {stats.reviewedToday} 词</p>
-          </>}</StudyMenu>
+          <button className="icon-button plan-button" aria-label="复习计划" title="复习计划" onClick={() => setPlanOpen(true)}><Clock3 size={20} /></button>
         </div>
         {/* New vs due review only matters when something is due. */}
         {showTasks && <Segmented label="学习任务" className="study-task-tabs" disabled={saving}
@@ -284,6 +259,12 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
     <Sheet title="复习计划" open={planOpen} onClose={() => setPlanOpen(false)} tall><div className="memory-plan"><div className="memory-plan-heading"><h3>{dayMode ? '艾宾浩斯 · 按天复习' : store.reviewMethod === 'ebbinghaus' ? '艾宾浩斯式间隔复习' : 'FSRS 自适应复习'}</h3><span>{dayMode ? `${book?.title} · 第 ${day + 1} 天` : '全部已学单词 · 跨词书去重'}</span></div><div className="memory-totals"><div><strong>{queue.length}</strong><span>{dayMode ? '这一天还要复习' : '到期待复习'}</span></div><div><strong>{dayMode ? plan.reviewTotal : scheduled.length}</strong><span>{dayMode ? '这一天共复习' : '已加入计划'}</span></div></div>
       {reviewDraft && <div className="review-task-summary" aria-label="复习任务进度"><strong>{pendingReviewGroups.length ? `本次已完成 ${reviewDraft.completed.length} / ${reviewDraft.groups.length} 组` : '本次复习已完成'}</strong><span>{pendingReviewGroups.length ? `剩余 ${pendingReviewGroups.length} 组，继续原来的词表和答案。` : queue.length ? `还有 ${queue.length} 词到期，可以开始下一次复习。` : '当前到期任务已处理完，可以学习新词。'}</span>{pendingReviewGroups.length > 0 && laterReviews > 0 && <span>另有 {laterReviews} 词到期，完成本次后继续。</span>}</div>}
       <button className="primary review-continue" disabled={saving} onClick={() => void continueReview()}><RotateCcw size={17} />{pendingReviewGroups.length ? `继续本次复习 · 剩余 ${pendingReviewGroups.length} 组` : queue.length ? `${dayMode ? '开始复习' : '开始到期复习'} · ${queue.length} 词` : '学习新词'}</button>
+      <div className="plan-tools" role="group" aria-label="本组操作">
+        {!!rows.length && <button className="secondary" disabled={saving} onClick={() => { setPlanOpen(false); onSpeak(rows.filter(row => !row.missing).map(row => row.word).join('. ')) }}><Volume2 size={16} />朗读本组</button>}
+        {book && mode !== 'review' && <button className="secondary" disabled={saving} onClick={() => { setPlanOpen(false); switchMode(mode === 'practice' ? 'learn' : 'practice') }}><RotateCcw size={16} />{mode === 'practice' ? '返回当天新词' : '回看当天 · 不改变复习计划'}</button>}
+        <button className="secondary" disabled={!canUndo || saving} aria-label="撤销上一步" onClick={() => { setPlanOpen(false); onUndo() }}><RotateCcw size={16} />撤销上一步</button>
+        {savedDraft && !draftComplete(draft) && <button className="secondary" disabled={saving} onClick={() => { setPlanOpen(false); restart(draft.kind) }}>重新开始本组</button>}
+      </div>
       {dayMode ? <table className="memory-table" aria-label="按天复习时间表"><thead><tr><th scope="col">学完那天之后</th><th scope="col">回来复习</th></tr></thead><tbody>{listReviewOffsets.map(offset => <tr key={offset}><th scope="row">第 {offset} 天</th><td>{day + 1 - offset >= 1 ? `第 ${day + 1} 天复习第 ${day + 1 - offset} 天的词` : '—'}</td></tr>)}</tbody></table> : <table className="memory-table" aria-label={store.reviewMethod === 'ebbinghaus' ? '间隔复习时间表' : 'FSRS 复习规则'}><thead><tr><th scope="col">完成阶段</th><th scope="col">下次复习间隔</th></tr></thead><tbody>{store.reviewMethod === 'ebbinghaus' ? <>{memoryIntervals.map((step, index) => <tr key={step.minutes}><th scope="row">{index === 0 ? '首次学习' : `第 ${index} 次复习`}</th><td>{step.label}{index === memoryIntervals.length - 1 ? '，之后每 30 天' : ''}</td></tr>)}<tr><th scope="row">忘记 / 需重学</th><td>5 分钟，重新开始</td></tr></> : <><tr><th scope="row">忘记 / 需重学</th><td>逐词计算重学时间</td></tr><tr><th scope="row">记住</th><td>根据记忆状态逐词调整</td></tr></>}</tbody></table>}
       {dayMode ? <p className="field-note">每个学习天先学当天的新词，再复习第 N-{listReviewOffsets.join('、N-')} 天学过的词，每个词每天复习一次。两项都完成后可以打卡。</p> : <><p className="field-note">间隔从正式提交计算，提前自由练习不推进阶段。固定间隔为应用预设，非个人实测遗忘曲线。</p><div className="review-forecast">{Array.from({ length: 7 }, (_, index) => { const date = new Date(now); date.setDate(date.getDate() + index); return <div key={index}><span>{index === 0 ? '今天' : `${date.getMonth() + 1}/${date.getDate()}`}</span><strong>{scheduled.filter(word => dayKey(word.card.due) === dayKey(date)).length}</strong></div> })}</div><p className="next-review">{nextDue ? `下次复习 · ${intervalLabel(nextDue.card.due, moment)}后` : '暂无后续复习'}</p></>}
     </div></Sheet>

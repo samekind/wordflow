@@ -128,7 +128,8 @@ try {
   await expect.poll(async () => (await nativeState()).state.words.find(w => w.id === id).known).toBe(true)
   await closeSheet()
   await expect(page.locator(`.english-entry[data-word-id="${id}"]`)).toHaveCount(0)
-  await page.getByRole('button', { name: '撤销上一步', exact: true }).click()
+  await page.getByRole('button', { name: '复习计划', exact: true }).click()
+  await page.getByRole('group', { name: '本组操作' }).getByRole('button', { name: '撤销上一步', exact: true }).click()
   await expect(page.locator(`.english-entry[data-word-id="${id}"]`)).toHaveCount(1)
   result.knownAndUndo = true
   await page.getByRole('button', { name: '后一天', exact: true }).click()

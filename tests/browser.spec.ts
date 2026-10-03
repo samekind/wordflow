@@ -6,11 +6,12 @@ import { emptyStore, importToPersonal, importWords, reviewWord, storyKey, valida
 import { starterRows } from '../src/vocabulary'
 import { newWords } from '../src/study'
 
-/** The study page keeps secondary actions behind ⋯; open it (once) and query inside. */
+/** 朗读本组 / 回看当天 / 撤销上一步 / 重新开始本组 sit in the 复习计划 sheet; open it once and query inside. */
 async function studyMenu(page: Page) {
-  const more = page.getByRole('button', { name: '更多操作', exact: true })
-  if (await more.getAttribute('aria-expanded') !== 'true') await more.click()
-  return page.getByRole('group', { name: '更多操作' })
+  const tools = page.getByRole('group', { name: '本组操作' })
+  if (!(await tools.isVisible())) await page.getByRole('button', { name: '复习计划', exact: true }).click()
+  await expect(tools).toBeVisible()
+  return tools
 }
 
 
@@ -319,7 +320,7 @@ test('custom daily volumes persist, preserve old plans and marks keep a neutral 
     .toEqual(frequency.exams.cet4.words.slice(0, 17).map((word: { word: string }) => word.word.toLowerCase()))
   await page.reload()
   await expect(page.locator('.english-entry')).toHaveCount(17)
-  await (await studyMenu(page)).getByRole('button', { name: '复习计划', exact: true }).click()
+  await page.getByRole('button', { name: '复习计划', exact: true }).click()
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 844 })
     await expect(page.locator('.memory-table tbody tr')).toHaveCount(6)
@@ -332,7 +333,7 @@ test('custom daily volumes persist, preserve old plans and marks keep a neutral 
   await choose(page, '复习方法', 'FSRS 自适应')
   await expect.poll(async () => (await state(page)).reviewMethod).toBe('fsrs')
   await nav(page, '学习')
-  await (await studyMenu(page)).getByRole('button', { name: '复习计划', exact: true }).click()
+  await page.getByRole('button', { name: '复习计划', exact: true }).click()
   await expect(page.getByRole('table', { name: 'FSRS 复习规则' })).toBeVisible()
 })
 
@@ -394,7 +395,7 @@ test('card layouts persist and spaced reviews support due completion and undo', 
     await page.screenshot({ path: `test-results/cards-preview-${width}.png`, animations: 'disabled' })
   }
   await page.setViewportSize({ width: 390, height: 844 })
-  await (await studyMenu(page)).getByRole('button', { name: '复习计划', exact: true }).click()
+  await page.getByRole('button', { name: '复习计划', exact: true }).click()
   await expect(page.locator('.memory-table tbody tr')).toHaveCount(6)
   await page.screenshot({ path: 'test-results/memory-plan-390.png', animations: 'disabled' })
   await page.getByRole('button', { name: '开始复习 · 1 词', exact: true }).click()
@@ -1086,7 +1087,7 @@ test('swiping a word slides the whole card, and 熟词 asks first, then fades th
   await alert.getByRole('button', { name: '取消' }).click()
   await expect(rows).toHaveCount(20)
   expect((await state(page)).words.find(w => w.id === id)?.known).toBe(false)
-  await swipe()
+  if ((await frame.getAttribute('data-swiped')) === null) await swipe()
   await page.getByRole('button', { name: `把 ${word} 设为熟词`, exact: true }).click()
   await alert.getByRole('button', { name: '设为熟词' }).click()
   await expect.poll(async () => (await state(page)).words.find(w => w.id === id)?.known).toBe(true)

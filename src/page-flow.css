@@ -63,3 +63,45 @@
 .update-change{display:flex;align-items:center;gap:8px;margin:0;font-size: var(--fs-body-l);color: var(--text-secondary)}
 .update-change strong{font-size: var(--fs-display);color:var(--accent);line-height:1.15}
 .update-notes{margin:4px 0 0;font-size: var(--fs-meta);line-height:1.75;color: var(--text-secondary);white-space:pre-line;overflow-wrap:anywhere}
+
+/* ==================== 学习页顶部: 只有被选中的学习方式显示文字 ==================== */
+.study-card .study-card-top .study-stage-switch button[aria-pressed=false] .stage-text{display:none}
+.study-card .study-card-top .study-stage-switch button[aria-pressed=false]{padding:0 10px}
+.study-card .plan-button{width:40px;height:40px;border-radius:50%;background:var(--surface-inset);color:var(--text-secondary)}
+.plan-tools{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px}
+.plan-tools .secondary{justify-content:center}
+
+/* ==================== 我的 · 子页面统一模板 ====================
+   页面说明 → 若干张同样的圆角卡片(内边距 16 · 标题 · 行 · 说明 · 按钮)。这一段放在最后加载,
+   盖过前面各页零散的 padding / 边框规则。 */
+.settings-layout,.book-shelf,.update-page{display:flex;flex-direction:column;gap:14px}
+.settings-layout>.page-purpose,.book-shelf>.page-purpose{margin:0 4px;font-size:var(--fs-small);line-height:1.7;color:var(--text-muted)}
+.settings-layout .settings-section,.settings-layout .profile-form,.settings-layout .data-block,.update-card,.book-shelf .owned-books{
+  margin:0;padding:16px;border-radius:var(--radius-lg);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
+.settings-layout .settings-section:has(> .data-block){padding:0;background:none;border:0;box-shadow:none;display:flex;flex-direction:column;gap:14px}
+.settings-layout .data-block+.data-block{margin-top:0}
+.settings-layout .settings-section>h2,.settings-layout .data-block>h2,.settings-layout .section-heading h2,.settings-layout .account-section>h2{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 4px;font-size:var(--fs-body-l);font-weight:var(--fw-semibold);color:var(--text-primary)}
+.settings-layout .section-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 4px}
+.settings-layout .section-heading h2{margin:0}
+.settings-layout h2>span,.settings-layout .section-heading>span{font-size:var(--fs-caption);font-weight:var(--fw-regular);color:var(--text-muted);margin:0}
+.settings-layout .configured-label{color:var(--success)}
+.settings-layout .setting-row{padding:12px 0;min-height:56px}
+.settings-layout .setting-row:last-of-type{border-bottom:0}
+.settings-layout .field-note{margin:10px 0 0;font-size:var(--fs-caption);line-height:1.7;color:var(--text-muted)}
+.settings-layout .settings-section>.primary,.settings-layout .settings-section>.secondary,.settings-layout .profile-form>.primary,.settings-layout .data-block>.secondary,.settings-layout .account-section>.secondary{width:100%;margin-top:16px;justify-content:center}
+.settings-layout .settings-form{margin-top:12px;gap:14px}
+.settings-layout .settings-form label,.settings-layout .form-label{font-size:var(--fs-body);color:var(--text-primary);gap:8px}
+.settings-layout .profile-form{gap:14px}
+.settings-layout .data-block .button-row{margin:12px 0 0}
+.settings-layout .data-summary{margin:0 4px;font-size:var(--fs-small);color:var(--text-muted)}
+.settings-layout .account-section{margin-top:0;padding-top:16px;border-top:1px solid var(--glass-edge)}
+.update-card{gap:8px}
+.update-page{gap:14px}
+.book-shelf .owned-books{padding:0 16px}
+.book-shelf .owned-book{padding:14px 0}
+.book-shelf .owned-book:last-child{border-bottom:0}
+.book-shelf .shelf-continue{margin-top:0}
+.book-shelf .shelf-toolbar{margin:0}
+@media(max-width:429px){.study-card .study-card-top{gap:6px}.study-card .study-card-top .study-day-stepper .icon-button{width:28px}.study-card .plan-button{width:36px;height:36px}}
+@media(max-width:359px){.study-card .study-card-top{gap:4px}.study-card .study-card-top .study-day-stepper{font-size:var(--fs-small)}.study-card .study-card-top .study-stage-switch button,.study-card .study-card-top .study-stage-switch button[aria-pressed=false]{padding:0 7px}.study-card .plan-button{width:34px;height:34px}}

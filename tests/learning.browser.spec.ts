@@ -2,11 +2,12 @@ import { test, expect, type Page } from '@playwright/test'
 import { emptyStore, importToPersonal, installBook, reviewWord, validateStore, type Store } from '../src/model'
 import { starterRows } from '../src/vocabulary'
 
-/** The study page keeps secondary actions behind ⋯; open it (once) and query inside. */
+/** 朗读本组 / 回看当天 / 撤销上一步 / 重新开始本组 sit in the 复习计划 sheet; open it once and query inside. */
 async function studyMenu(page: Page) {
-  const more = page.getByRole('button', { name: '更多操作', exact: true })
-  if (await more.getAttribute('aria-expanded') !== 'true') await more.click()
-  return page.getByRole('group', { name: '更多操作' })
+  const tools = page.getByRole('group', { name: '本组操作' })
+  if (!(await tools.isVisible())) await page.getByRole('button', { name: '复习计划', exact: true }).click()
+  await expect(tools).toBeVisible()
+  return tools
 }
 
 
@@ -44,7 +45,7 @@ test('all main pages share clear navigation and return to the same study group',
   await expect(page.getByRole('button', { name: '取消第 01 词不熟', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: '取消第 01 词不熟', exact: true }).click()
   await page.getByRole('button', { name: '隐藏全部释义', exact: true }).click()
-  await (await studyMenu(page)).getByRole('button', { name: '读短文', exact: true }).click()
+  await page.getByRole('button', { name: '读短文', exact: true }).click()
   // No key was ever entered: the story comes from the built-in AI instead of a setup screen.
   await expect(page.getByRole('button', { name: '设置 AI 服务', exact: true })).toHaveCount(0)
   const builtIn: { mode: string; words: { id: string; word: string; meaning: string }[] }[] = []
@@ -143,6 +144,24 @@ test('all main pages share clear navigation and return to the same study group',
   }
 })
 
+test('study header has direct controls: no vague ⋯ menu, plan sheet holds the group tools', async ({ page }) => {
+  await seed(page, fixture(40))
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: '更多操作' })).toHaveCount(0)
+    const plan = page.getByRole('button', { name: '复习计划', exact: true })
+    await expect(plan).toBeVisible()
+    expect(await page.locator('.study-card-top').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    expect(await plan.evaluate(el => el.getBoundingClientRect().right <= innerWidth)).toBe(true)
+    await page.screenshot({ path: `test-results/study-header-${width}.png`, clip: { x: 0, y: 0, width, height: 160 }, animations: 'disabled' })
+  }
+  await expect(page.getByRole('button', { name: '读短文', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '复习计划', exact: true }).click()
+  const tools = page.getByRole('group', { name: '本组操作' })
+  for (const name of ['朗读本组', '撤销上一步']) await expect(tools.getByRole('button', { name })).toBeVisible()
+  await expect(tools.getByRole('button', { name: /^回看当天/ })).toBeVisible()
+})
 test('review progress separates the current task from later due words and resumes the first unfinished group', async ({ page }) => {
   const started = new Date()
   let initial = fsrsFixture(61)
@@ -171,7 +190,7 @@ test('review progress separates the current task from later due words and resume
     await page.screenshot({ path: `test-results/task-progress-${width}.png`, animations: 'disabled' })
   }
   await page.setViewportSize({ width: 390, height: 844 })
-  await (await studyMenu(page)).getByRole('button', { name: '复习计划', exact: true }).click()
+  await page.getByRole('button', { name: '复习计划', exact: true }).click()
   await expect(page.getByLabel('复习任务进度')).toContainText('本次已完成 1 / 2 组')
   await expect(page.getByLabel('复习任务进度')).toContainText('另有 2 词到期')
   await page.screenshot({ path: 'test-results/review-plan-progress-390.png', animations: 'disabled' })
@@ -181,7 +200,7 @@ test('review progress separates the current task from later due words and resume
   expect((await state(page)).learning.drafts.review!.id).toBe(draft.id)
   await submit(page).click()
   await expect(page.getByLabel('本次任务进度')).toContainText('已完成 2 / 2 组')
-  await (await studyMenu(page)).getByRole('button', { name: '复习计划', exact: true }).click()
+  await page.getByRole('button', { name: '复习计划', exact: true }).click()
   await page.getByRole('button', { name: '开始到期复习 · 2 词', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.locator('.english-entry')).toHaveCount(2)
@@ -257,7 +276,7 @@ for (const kind of ['learn', 'review'] as const) test(`context ${kind} uses the 
   await expect(page.getByRole('slider', { name: '词组', exact: true })).toHaveAttribute('aria-valuenow', '2')
   const ids = await page.locator('.english-entry').evaluateAll(rows => rows.map(row => row.getAttribute('data-word-id')!))
   const before = await state(page), taskId = before.learning.drafts[kind]!.id
-  await (await studyMenu(page)).getByRole('button', { name: '读短文', exact: true }).click()
+  await page.getByRole('button', { name: '读短文', exact: true }).click()
   await page.getByRole('button', { name: '生成本组短文', exact: true }).click()
   await expect(page.locator('.context-reader .story-article')).toBeVisible()
   expect(requests).toEqual([ids])
@@ -429,6 +448,7 @@ test('failed submission keeps a pending copy and retry saves the same receipt ex
   await expect(page.getByRole('alert')).toContainText('当前改动尚未保存')
   expect((await state(page)).reviews).toHaveLength(0)
   await expect((await studyMenu(page)).getByRole('button', { name: /^回看当天/ })).toBeDisabled()
+  await page.locator('ion-modal').getByRole('button', { name: '关闭', exact: true }).click()
   fail = false
   await page.getByRole('button', { name: '重试保存', exact: true }).click()
   await expect(page.locator('.save-problem')).toHaveCount(0)
