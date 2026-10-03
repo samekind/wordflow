@@ -10,7 +10,6 @@ export type Screen =
   | { name: 'frequency' }
   | { name: 'article'; id?: string; scope?: ReadingScope }
   | { name: 'shelf'; cefr: ReadingCefr; topic?: string }
-  | { name: 'stories' }
   | { name: 'picks' }
   | { name: 'section'; section: Exclude<SettingsSection, 'home'> }
 type Entry = { screen: Screen; scroll: number }

@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
-import { storyContentSchema, storyIsCurrent, storyKey, type ContextStory, type DailyStory, type Store, type Word } from '../model'
+import { storyContentSchema, storyIsCurrent, type ContextStory, type Store, type Word } from '../model'
 import { contextStoryKey, studyGroupWords, studyWordStatus, type StudyAction } from '../study'
 import type { StudyDraft } from '../study-state'
-import { api, isAndroidApp, streamStory, type ArticleAssistMode, type ArticleAssistResult } from '../platform'
-import { builtInLessons, builtInStory } from '../reading-ai'
+import { api, isAndroidApp, streamStory } from '../platform'
+import { builtInStory } from '../ai'
 import type { AIConfig } from '../components/SettingsPage'
 
 type Deps = {
@@ -14,8 +14,8 @@ type Deps = {
   changeStudy: (draft: StudyDraft, action: StudyAction) => Promise<boolean>
 }
 
-/** AI provider settings and every generation request (mnemonics, day stories, context stories,
- * article assist). Only one request runs at a time; results are re-checked against the latest
+/** AI provider settings and the 本组短文 generation request (the app's one AI story feature). Chat and word help
+ * live in ai.ts and the assistant sheet. Only one request runs at a time; results are re-checked against the latest
  * store before saving, so edits made meanwhile are never overwritten by stale output. */
 export function useAIServices({ storeRef, pendingSave, commit, notify, changeStudy }: Deps) {
   const lock = useRef(false)
@@ -40,34 +40,6 @@ export function useAIServices({ storeRef, pendingSave, commit, notify, changeStu
     : isAndroidApp ? api('story', { method: 'POST', body: JSON.stringify({ ids: targets.map(word => word.id) }) })
     : streamStory(targets.map(word => word.id), setLive)
 
-  async function generateLessons(ids: string[]) {
-    if (!ids.length || lock.current) return
-    const source = new Map(storeRef.current.words.filter(w => ids.includes(w.id)).map(w => [w.id, w]))
-    await run(async () => {
-      const data = ownKey() ? await api('reinforce', { method: 'POST', body: JSON.stringify({ ids }) })
-        : await builtInLessons(ids.flatMap(id => source.get(id) ? [{ id, word: source.get(id)!.word, meaning: source.get(id)!.meaning }] : []))
-      await settled()
-      const current = storeRef.current
-      const received = data.lessons.filter((lesson: { wordId: string }) => current.words.some(w => w.id === lesson.wordId && source.get(w.id)?.meaning === w.meaning && source.get(w.id)?.word === w.word))
-      if (!received.length) throw new Error('词条已改变，请重新生成联想')
-      if (await commit({ ...current, lessons: [...current.lessons.filter(l => !received.some((n: { wordId: string }) => n.wordId === l.wordId)), ...received] })) notify('单词联想已保存')
-    })
-  }
-  async function generateStory(bookId: string, day: number, part: number, words: Word[]) {
-    if (lock.current || !words.length) return
-    setLive('')
-    const targets = words.map(({ id, word, meaning }) => ({ id, word, meaning }))
-    await run(async () => {
-      const data = await requestStory(targets)
-      const content = storyContentSchema.parse(data.story)
-      await settled()
-      const current = storeRef.current, book = current.books.find(b => b.id === bookId)
-      const result: DailyStory = { ...content, id: storyKey(bookId, day, part), bookId, day, part, targets, model: data.model, createdAt: new Date().toISOString() }
-      const currentWords = words.map(word => current.words.find(item => item.id === word.id)).filter((word): word is Word => !!word)
-      if (!book || !storyIsCurrent(result, currentWords)) throw new Error('所选词汇或释义已改变，本次短文未保存，请重新生成')
-      if (await commit({ ...current, stories: [...current.stories.filter(s => s.id !== result.id), result] })) notify(`第 ${day + 1} 天短文已保存`)
-    }, () => setLive(''))
-  }
   async function generateContextStory(draft: StudyDraft) {
     if (lock.current) return
     if (storeRef.current.learning.drafts[draft.kind]?.id !== draft.id && !await changeStudy(draft, { type: 'method', method: 'context' })) return
@@ -90,13 +62,6 @@ export function useAIServices({ storeRef, pendingSave, commit, notify, changeStu
       if (await commit({ ...current, contextStories })) notify('本组语境短文已保存，读完后请进行遮义自测')
     }, () => { setContextKey(''); setLive('') })
   }
-  async function assistArticle(data: { mode: ArticleAssistMode; title: string; text: string }): Promise<ArticleAssistResult> {
-    if (lock.current) throw new Error('已有 AI 任务正在运行，请稍后重试')
-    lock.current = true; setBusy(true); setError('')
-    try { return await api('article-assist', { method: 'POST', body: JSON.stringify(data) }) as ArticleAssistResult }
-    catch (reason) { setError((reason as Error).message); throw reason }
-    finally { lock.current = false; setBusy(false) }
-  }
   async function saveConfig(data: { provider: string; model: string; key: string }) {
     if (lock.current) return false
     return !!await run(async () => { setConfig(await api('settings', { method: 'PUT', body: JSON.stringify(data) })); notify('AI 配置已保存，生成时验证连通性'); return true })
@@ -108,6 +73,6 @@ export function useAIServices({ storeRef, pendingSave, commit, notify, changeStu
 
   return {
     config, setConfig, busy, live, contextKey, error, clearError: () => setError(''), locked: lock,
-    generateLessons, generateStory, generateContextStory, assistArticle, saveConfig, removeConfig,
+    generateContextStory, saveConfig, removeConfig,
   }
 }

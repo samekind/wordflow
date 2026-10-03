@@ -15,16 +15,8 @@ test('actual AI proxy validates upstream output, propagates errors and never ret
     received = body
     assert.equal(req.headers.authorization, 'Bearer fixture-only')
     if (mode === 'quota') { res.writeHead(429); res.end('{}'); return }
-    if (mode === 'article') {
-      res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ answer: '文章讲述了一个坚韧的学习者。', items: [{ word: 'resilient', meaning: '有韧性的', example: 'She remained resilient.' }] }) } }] }))
-      return
-    }
-    const words = JSON.parse(body.messages[1].content)
     res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify({ choices: [{ message: { content: mode === 'story' ? JSON.stringify({ title: 'A New Day', paragraphs: [{ english: 'She remained resilient.', translation: '她依然坚韧。' }] }) : mode === 'bad' ? '{"lessons":[]}' : JSON.stringify({
-      lessons: words.map((w: { wordId: string; word: string }) => ({ wordId: mode === 'wrong-id' ? 'not-requested' : w.wordId, mnemonic: '联想练习', example: 'She remained resilient.', translation: '她依然坚韧。' })),
-    }) } }] }))
+    res.end(JSON.stringify({ choices: [{ message: { content: mode === 'bad' ? '{"title":""}' : JSON.stringify({ title: 'A New Day', paragraphs: [{ english: 'She remained resilient.', translation: '她依然坚韧。' }] }) } }] }))
   })
   await new Promise<void>(r => upstream.listen(0, '127.0.0.1', r))
   const upstreamPort = (upstream.address() as { port: number }).port
@@ -66,30 +58,14 @@ test('actual AI proxy validates upstream output, propagates errors and never ret
     assert.deepEqual(readback.state.readArticleIds, [])
     assert.deepEqual(readback.state.appearance, state.appearance)
     assert.deepEqual(readback.state.aiPreferences, state.aiPreferences)
-    const request = () => fetch(`${base}reinforce`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: [state.words[0].id] }) })
-    const success = await request()
-    assert.equal(success.status, 200)
-    const data = await success.json()
-    assert.equal(data.lessons[0].mnemonic, '联想练习')
-    assert.equal(data.lessons[0].question, '')
+    const request = () => fetch(`${base}story`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: [state.words[0].id] }) })
+    const story = await request()
+    assert.equal(story.status, 200)
+    assert.equal((await story.json()).story.title, 'A New Day')
     assert.ok(received)
     assert.ok(!JSON.stringify(received).includes('reviews'))
     assert.ok(!JSON.stringify(received).includes('markCount'))
-    mode = 'story'
-    const storyRequest = () => fetch(`${base}story`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: [state.words[0].id] }) })
-    const story = await storyRequest()
-    assert.equal(story.status, 200)
-    assert.equal((await story.json()).story.title, 'A New Day')
     assert.deepEqual((received as any).messages[1].content, JSON.stringify([{ wordId: state.words[0].id, word: 'resilient', meaning: '有韧性的' }]))
-    mode = 'article'
-    const assist = await fetch(`${base}article-assist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'vocabulary', title: 'A resilient day', text: 'She remained resilient.' }) })
-    assert.equal(assist.status, 200)
-    assert.equal((await assist.json()).items[0].word, 'resilient')
-    assert.ok(JSON.stringify(received).includes('A resilient day'))
-    mode = 'bad'
-    assert.equal((await storyRequest()).status, 502)
-    mode = 'wrong-id'
-    assert.equal((await request()).status, 502)
     mode = 'bad'
     assert.equal((await request()).status, 502)
     mode = 'quota'

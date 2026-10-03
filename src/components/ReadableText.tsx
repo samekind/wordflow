@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { BookmarkPlus, Globe, Languages, LoaderCircle, Sparkles, Volume2, X } from 'lucide-react'
-import { askReadingAI } from '../reading-ai'
+import { explainWord, translateSentence } from '../ai'
 import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dictionary'
 import { lookupMeaning, shortGloss, type WordMeaning } from '../word-lookup'
 import type { ImportRow } from '../model'
@@ -62,13 +62,13 @@ export function LookupDock() {
   const lookup = useContext(LookupContext)
   if (!lookup) return null
   const { current, close, props } = lookup
-  return <div className="word-peek-dock">{current && <WordPeek key={current.key} peek={current} title={props.title} id={props.known.get(normalizeToken(current.word))}
+  return <div className="word-peek-dock">{current && <WordPeek key={current.key} peek={current} id={props.known.get(normalizeToken(current.word))}
     onClose={close} onSpeak={props.onSpeak} onStop={props.onStop} onAdd={props.onAdd} onOpenWord={props.onOpenWord} />}</div>
 }
 
 type Extra = { kind: 'sentence' | 'context'; text?: string; error?: string; busy: boolean }
-function WordPeek({ peek, title, id, onClose, onSpeak, onStop, onAdd, onOpenWord }: {
-  peek: Peek; title: string; id?: string; onClose: () => void; onSpeak: (text: string) => void; onStop: () => void
+function WordPeek({ peek, id, onClose, onSpeak, onStop, onAdd, onOpenWord }: {
+  peek: Peek; id?: string; onClose: () => void; onSpeak: (text: string) => void; onStop: () => void
   onAdd?: (row: ImportRow) => Promise<boolean>; onOpenWord?: (id: string) => void
 }) {
   const [meaning, setMeaning] = useState<WordMeaning | null | undefined>()
@@ -89,11 +89,9 @@ function WordPeek({ peek, title, id, onClose, onSpeak, onStop, onAdd, onOpenWord
     const request = ++alive.current
     setExtra({ kind, busy: true })
     try {
-      const result = kind === 'sentence'
-        ? await askReadingAI({ mode: 'translate', title, paragraphs: [peek.sentence] })
-        : await askReadingAI({ mode: 'ask', title, paragraphs: [peek.sentence], question: `在这句话里，单词 ${peek.word} 是什么意思？先给出最贴切的中文词义，再用一句话说明理由，80 字以内。` })
+      const text = kind === 'sentence' ? await translateSentence(peek.sentence) : await explainWord(peek.word, peek.sentence)
       if (request !== alive.current) return
-      setExtra({ kind, busy: false, text: kind === 'sentence' ? result.paragraphs?.[0] : result.answer })
+      setExtra({ kind, busy: false, text })
     } catch (error) {
       if (request === alive.current) setExtra({ kind, busy: false, error: (error as Error).message })
     }

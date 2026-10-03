@@ -14,6 +14,7 @@ import MarkDots from './components/MarkDots'
 import { Segmented } from './components/Controls'
 import ContextReader, { type ContextServices } from './components/ContextReader'
 import SwipeRow from './components/SwipeRow'
+import { AssistantButton, useAssistantContext } from './components/AssistantContext'
 import StartPlan from './components/StartPlan'
 import type { CatalogBook } from './wordbooks'
 
@@ -88,6 +89,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
   // The refilled group no longer contains a word that was just marked: keep it in place until its fade ends.
   previousRows.current.forEach((row, index) => { if (leaving.includes(row.id) && !rows.some(item => item.id === row.id)) shownRows.splice(Math.min(index, shownRows.length), 0, { ...row, known: true }) })
   useEffect(() => { previousRows.current = shownRows })
+  useAssistantContext(rows.some(row => !row.missing) ? { kind: 'study', label: '这组单词', words: rows.filter(row => !row.missing).map(row => ({ word: row.word, meaning: row.meaning })) } : null)
   const eligible = rows.filter(row => !row.status && !row.missing), forgotten = eligible.filter(row => row.forgotten).length
   const changed = rows.some(row => row.status.includes('重新检查')), stats = learningStatistics(store, moment)
   const scheduled = store.words.filter(word => hasLearned(word) && !word.known)
@@ -202,6 +204,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
               { value: 'test' as const, ariaLabel: '自己自查', title: '自己自查：先想再核对', label: <><RecallIcon size={15} /><span className="stage-text">自查</span></> },
               ...(mode !== 'practice' ? [{ value: 'context' as const, ariaLabel: '读短文', title: '读短文：在语境里记词', label: <><BookOpen size={15} /><span className="stage-text">短文</span></> }] : []),
             ]} />}
+          <AssistantButton className="icon-button plan-button" />
           <button className="icon-button plan-button" aria-label="复习计划" title="复习计划" onClick={() => setPlanOpen(true)}><Clock3 size={20} /></button>
         </div>
         {/* New vs due review only matters when something is due. */}

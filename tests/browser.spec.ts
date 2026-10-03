@@ -35,8 +35,7 @@ async function nav(page: Page, name: string) {
     await tabs.getByRole('tab', { name: '我的', exact: true }).click()
     await page.getByRole('button', { name: '管理目标词书', exact: true }).click()
   } else {
-    await tabs.getByRole('tab', { name: name === '当日助记' || name === '选读' ? '阅读' : name === '设置' ? '我的' : name, exact: true }).click()
-    if (name === '当日助记') await page.getByRole('button', { name: '语境记忆', exact: true }).click()
+    await tabs.getByRole('tab', { name: name === '选读' ? '阅读' : name === '设置' ? '我的' : name, exact: true }).click()
     if (name === '选读') await page.getByRole('button', { name: '每日英语选读', exact: true }).click()
   }
 }
@@ -214,7 +213,6 @@ test('daily English works offline, records reading separately, handles lookup an
   page.on('request', request => { if (request.url().startsWith('https:') && !request.url().includes('/v1/library')) external.push(request.url()) })
   await page.route('https://**/*', route => route.abort())
   await page.route('**/api/settings', route => route.fulfill({ json: { provider: 'deepseek', model: 'fixture-model', configured: true } }))
-  await page.route('**/api/article-assist', async route => route.fulfill({ json: { model: 'fixture-model', answer: '合成摘要：文章介绍了一个主题。', items: [] } }))
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   await nav(page, '选读')
@@ -663,90 +661,6 @@ test('online dictionary renders definitions, audio and attribution; missing entr
   await expect(page.locator('.word-action-meaning')).toHaveText(coreGloss(initial.words[1].meaning))
 })
 
-test('daily story uses planned words, preserves concurrent marks, caches by day and invalidates after edits', async ({ page }) => {
-  const initial = studied(importToPersonal(emptyStore(), starterRows.slice(0, 61), '短文测试').store)
-  const dayWords = initial.books[0].wordIds.slice(0, 20).map(id => initial.words.find(word => word.id === id)!)
-  await seed(page, initial)
-  await page.route('**/api/settings', route => route.fulfill({ json: { provider: 'deepseek', model: 'fixture-model', configured: true } }))
-  const requests: string[][] = []
-  let release: (() => void) | undefined
-  let delayed = true
-  let fail = false
-  await page.route('**/api/story', async route => {
-    const ids = route.request().postDataJSON().ids as string[]
-    requests.push(ids)
-    if (delayed) await new Promise<void>(resolve => { release = resolve })
-    if (fail) { await route.fulfill({ status: 502, json: { error: '测试额度不足' } }); return }
-    await route.fulfill({ json: { model: 'fixture-model', story: {
-      title: 'A Day Together (test fixture)',
-      paragraphs: [{ english: `Today we remember ${ids.slice(0, -1).map(id => initial.words.find(w => w.id === id)!.word).join(', ')}.`, translation: '合成接口测试短文，非实际 AI 生成。' }],
-    } } })
-  })
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/')
-  try {
-    await nav(page, '当日助记')
-    await page.getByRole('button', { name: '选择单词', exact: true }).click()
-    await expect(page.getByRole('dialog', { name: '选择单词' })).toBeVisible()
-    await page.getByRole('button', { name: '全选', exact: true }).click()
-    await page.getByRole('button', { name: '生成短文 · 20 词', exact: true }).click()
-    await expect.poll(() => !!release).toBe(true)
-    expect(requests[0]).toEqual(dayWords.map(word => word.id))
-    await nav(page, '学习')
-    await page.locator('.english-entry').first().locator('.english-line').click()
-    await expect(page.locator('.english-entry').first()).toHaveAttribute('data-mark-count', '1')
-    await page.getByRole('button', { name: '后一天', exact: true }).click()
-    release!()
-    await expect.poll(async () => (await state(page)).stories.length).toBe(1)
-    expect((await state(page)).words.find(word => word.id === dayWords[0].id)?.markCount).toBe(1)
-    await nav(page, '当日助记')
-    await expect(page.locator('.compact-day')).toContainText('第 2 天')
-    await expect(page.locator('.story-article')).toHaveCount(0)
-    await page.getByRole('button', { name: '短文前一天' }).click()
-    await expect(page.locator('.story-article')).toBeVisible()
-    await expect(page.getByText('覆盖 19/20 词', { exact: true })).toBeVisible()
-    await expect(page.locator('.missing-words')).toContainText(dayWords[19].word)
-    await expect(page.locator('.story-translation')).toHaveCount(0)
-    await page.getByRole('button', { name: '显示译文', exact: true }).click()
-    await expect(page.locator('.story-translation')).toBeVisible()
-    await page.getByRole('button', { name: '朗读短文', exact: true }).click()
-    await expect.poll(async () => (await page.evaluate(() => (window as any).__speech)).at(-1)?.text).toContain('Today we remember')
-    await closeToast(page)
-    await page.getByRole('button', { name: '查词 Today', exact: true }).first().click()
-    await expect(page.getByRole('dialog', { name: '阅读查词' })).toBeVisible()
-    await page.getByRole('button', { name: '关闭查词', exact: true }).click()
-    await page.screenshot({ path: 'test-results/daily-story-fixture-390.png', animations: 'disabled' })
-    await page.getByRole('button', { name: `查看 ${dayWords[0].word}`, exact: true }).click()
-    await expect(page.getByRole('dialog', { name: '单词详情' })).toBeVisible()
-    await closeSheet(page)
-    await page.reload()
-    await nav(page, '当日助记')
-    await page.getByRole('button', { name: '短文前一天' }).click()
-    await expect(page.locator('.story-article')).toBeVisible()
-    expect(requests).toHaveLength(1)
-    const reviewsBeforeCheck = (await state(page)).reviews
-    await nav(page, '学习')
-    await expect(page.locator('.day-title')).toHaveText('第 2 天')
-    await expect(page.locator('.english-entry').first()).toHaveAttribute('data-word-id', initial.books[0].wordIds[20])
-    expect((await state(page)).reviews).toEqual(reviewsBeforeCheck)
-    await nav(page, '当日助记')
-    await page.getByRole('button', { name: '短文前一天' }).click()
-    await expect(page.locator('.story-article')).toBeVisible()
-    delayed = false; fail = true
-    await page.getByRole('button', { name: '重新生成短文', exact: true }).click()
-    await expect(page.getByRole('alert')).toContainText('测试额度不足')
-    expect((await state(page)).stories).toHaveLength(1)
-    await page.getByRole('button', { name: `查看 ${dayWords[0].word}`, exact: true }).click()
-    await page.getByRole('button', { name: '编辑单词', exact: true }).click()
-    await page.getByRole('textbox', { name: '释义', exact: true }).fill('已修订的释义')
-    await page.getByRole('button', { name: '保存', exact: true }).click()
-    await expect(page.getByRole('dialog')).toHaveCount(0)
-    await expect.poll(async () => (await state(page)).stories.length).toBe(0)
-    await expect(page.locator('.story-article')).toHaveCount(0)
-    expect((await state(page)).words.find(word => word.id === dayWords[0].id)?.markCount).toBe(1)
-  } finally { release?.() }
-})
-
 test('settings contain model presets and responsive reading surfaces do not overlap', async ({ page }) => {
   const rows = starterRows.slice(0, 20).map((row, i) => i ? row : { ...row, word: 'pneumonoultramicroscopicsilicovolcanoconiosis' })
   const initial = studied(importToPersonal(emptyStore(), rows, '布局测试').store)
@@ -797,18 +711,16 @@ test('settings contain model presets and responsive reading surfaces do not over
   await expect(page.getByLabel('API Key', { exact: true })).toHaveValue('')
   await closeToast(page)
   await page.screenshot({ path: 'test-results/settings-390.png', animations: 'disabled' })
-  await nav(page, '当日助记')
-  await expect(page.locator('.story-article')).toBeVisible()
   await page.emulateMedia({ reducedMotion: 'reduce' })
   expect(await page.locator('#app-scroll').evaluate(node => getComputedStyle(node).scrollBehavior)).toBe('auto')
 })
 
-test('reading hub only offers entries; a short difficulty opens its list and the reader stays inside it', async ({ page }) => {
+test('reading hub only offers the daily selection; a short difficulty opens its list and the reader stays inside it', async ({ page }) => {
   await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 40), '选读库').store))
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   await nav(page, '阅读')
-  await expect(page.locator('.reading-entry')).toHaveCount(2)
+  await expect(page.locator('.reading-entry')).toHaveCount(1)
   await page.getByRole('button', { name: '每日英语选读', exact: true }).click()
   await page.screenshot({ path: 'test-results/reading-hub-390.png', animations: 'disabled' })
   const levels = page.getByRole('region', { name: '按难度选读' })
@@ -913,7 +825,7 @@ test('online reading library syncs, recommends, filters by level, reads with tra
   await expect(page.getByText('在线选读库 3 篇')).toBeVisible()
 })
 
-test('the magazine contents filter by level, topic and length, and built-in AI translates, summarizes, explains and answers', async ({ page }) => {
+test('the magazine contents filter by level, topic and length, and the AI assistant answers about the open article', async ({ page }) => {
   await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 40), '外刊').store))
   const articles = [
     libraryArticle('lib-simple-fixture-a', { cefr: 'A2', topic: '科技', translations: undefined }),
@@ -921,15 +833,15 @@ test('the magazine contents filter by level, topic and length, and built-in AI t
     libraryArticle('lib-en-fixture-l', { lang: 'en', level: 'standard', cefr: 'C1', topic: '科技', source: 'Wikipedia', sourceUrl: 'https://en.wikipedia.org/wiki/Fixture', stats: { words: 800, avgSentence: 20, rareRatio: 0.06, grade: 12, rare: [] } }),
   ]
   await page.route(libraryUrl, route => route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: { version: 1, cursor: 3, more: false, ids: articles.map(a => a.id), articles } }))
-  const asked: { mode: string; title: string; paragraphs: string[]; focus?: string; question?: string }[] = []
-  await page.route('**/v1/ai/reading', async route => {
+  const asked: { messages: { role: string; content: string }[]; context?: Record<string, unknown>; task?: Record<string, string> }[] = []
+  let remaining = 60
+  await page.route('**/v1/ai/chat', async route => {
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST' }
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
     const body = route.request().postDataJSON(); asked.push(body)
-    const json = body.mode === 'translate' ? { answer: '', items: [], paragraphs: ['AI 第一段。', 'AI 第二段。'], model: 'fixture' }
-      : body.mode === 'vocabulary' ? { answer: '合成词汇说明', items: [{ word: 'fixture', meaning: '固定装置', example: 'A fixture.' }] }
-      : { answer: body.mode === 'summary' ? '合成导读：这是一篇样例。' : body.mode === 'explain' ? '合成解析：第一段讲了一个小想法。' : `合成回答：${body.question}`, items: [] }
-    await route.fulfill({ headers: cors, json })
+    remaining -= 1
+    const reply = body.task?.type === 'sentence' ? '这篇酿造学文章用清楚的话解释了一个小想法。' : body.task ? '这里指“酿造学”。' : `合成回答：${body.messages.at(-1).content}`
+    await route.fulfill({ headers: cors, json: { reply, model: 'fixture', remaining } })
   })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
@@ -964,58 +876,77 @@ test('the magazine contents filter by level, topic and length, and built-in AI t
   await catalog.getByRole('button', { name: '目录 Fixture A', exact: true }).click()
   await expect(page.locator('.daily-english')).toHaveAttribute('data-article-id', 'lib-simple-fixture-a')
   await expect(page.getByRole('button', { name: '显示译文', exact: true })).toHaveCount(0)
-  await page.getByRole('button', { name: 'AI 翻译全文', exact: true }).click()
-  await expect(page.locator('.article-translation')).toHaveText(['AI 第一段。', 'AI 第二段。'])
-  await expect(page.getByRole('button', { name: '隐藏译文', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByText('译文由内置 AI 生成，仅供参考')).toBeVisible()
-  expect(asked[0]).toMatchObject({ mode: 'translate', title: 'Fixture A', paragraphs: articles[0].paragraphs })
-  const assist = page.getByRole('region', { name: 'AI 助读' })
-  await assist.getByRole('button', { name: '导读', exact: true }).click()
-  await expect(assist.locator('.article-assist-output')).toContainText('合成导读：这是一篇样例。')
-  await assist.getByRole('button', { name: '重点词汇', exact: true }).click()
-  await expect(assist.locator('.assist-item')).toContainText(['fixture固定装置A fixture.'])
-  await page.getByRole('button', { name: 'AI 解析第 1 段', exact: true }).click()
-  await expect(page.locator('.paragraph-explain')).toContainText('合成解析：第一段讲了一个小想法。')
-  expect(asked.at(-1)).toMatchObject({ mode: 'explain', focus: articles[0].paragraphs[0] })
-  await assist.getByLabel('向 AI 提问').fill('作者想说什么？')
-  await assist.getByRole('button', { name: '提问', exact: true }).click()
-  await expect(assist.locator('.article-assist-output')).toContainText('问：作者想说什么？')
-  await expect(assist.locator('.article-assist-output')).toContainText('合成回答：作者想说什么？')
-  await page.screenshot({ path: 'test-results/magazine-reader-390.png', fullPage: true, animations: 'disabled' })
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  // The AI translation is kept on the device: reopening needs no new request.
-  const requests = asked.length
-  await page.getByRole('button', { name: '返回', exact: true }).click()
+  // The old article-only panel and per-paragraph buttons are gone; one assistant answers about the open article.
+  await expect(page.getByRole('region', { name: 'AI 助读' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'AI 翻译全文', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'AI 助手', exact: true }).click()
+  const assistant = page.locator('ion-modal').filter({ has: page.getByRole('heading', { name: 'AI 助手', exact: true }) })
+  await expect(assistant.locator('.assistant-chip')).toContainText('Fixture A')
+  await assistant.getByRole('button', { name: '用中文概括这篇文章', exact: true }).click()
+  await expect(assistant.locator('.assistant-bubble[data-role=assistant]')).toHaveText('合成回答：用中文概括这篇文章')
+  expect(asked[0]).toMatchObject({ context: { kind: 'article', title: 'Fixture A', text: articles[0].paragraphs.join('\n\n') } })
+  await expect(assistant.getByText('今日还剩 59 点额度')).toBeVisible()
+  await assistant.getByLabel('向 AI 提问').fill('作者想说什么？')
+  await assistant.getByRole('button', { name: '发送', exact: true }).click()
+  await expect(assistant.locator('.assistant-bubble')).toHaveCount(4)
+  await expect(assistant.locator('.assistant-bubble').last()).toHaveText('合成回答：作者想说什么？')
+  expect(asked[1].messages.map(m => m.content)).toEqual(['用中文概括这篇文章', '合成回答：用中文概括这篇文章', '作者想说什么？'])
+  // No animations: 'disabled' here: it freezes Ionic's sheet animation in its closed position.
+  await page.screenshot({ path: 'test-results/assistant-390.png' })
+  // The chip can be removed to ask without the article, which starts a separate general conversation.
+  await assistant.getByRole('button', { name: '不带上下文提问', exact: true }).click()
+  await expect(assistant.locator('.assistant-bubble')).toHaveCount(0)
+  await assistant.getByLabel('向 AI 提问').fill('什么是现在完成时？')
+  await assistant.getByRole('button', { name: '发送', exact: true }).click()
+  await expect(assistant.locator('.assistant-bubble').last()).toHaveText('合成回答：什么是现在完成时？')
+  expect(asked[2].context).toBeUndefined()
+  await assistant.getByRole('button', { name: '关闭', exact: true }).click()
+  await expect(assistant).toHaveCount(0)
+  // The conversation about this article is kept on the device.
+  await page.reload()
+  await nav(page, '选读')
+  await catalog.getByRole('button', { name: /^筛选/ }).click()
+  await catalog.getByRole('button', { name: '难度 A2', exact: true }).click()
   await catalog.getByRole('button', { name: '目录 Fixture A', exact: true }).click()
-  await page.getByRole('button', { name: '显示译文', exact: true }).click()
-  await expect(page.locator('.article-translation').first()).toHaveText('AI 第一段。')
-  expect(asked).toHaveLength(requests)
+  await page.getByRole('button', { name: 'AI 助手', exact: true }).click()
+  await expect(assistant.locator('.assistant-bubble')).toHaveCount(4)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect(asked).toHaveLength(3)
 })
 
-test('word mnemonics come from the built-in AI without any key, and the settings page says so', async ({ page }) => {
+test('a word without a mnemonic offers the assistant instead of a generate button, and the settings page explains the allowance', async ({ page }) => {
   // A word outside the bundled mnemonics, so the generate button is offered.
   await seed(page, importToPersonal(emptyStore(), [{ word: 'qzxwvut', meaning: 'n. 合成测试词', phonetic: '', example: '', definition: '', exchange: '', source: '测试' }], '内置联想').store)
-  const asked: { mode: string; words: { id: string; word: string; meaning: string }[] }[] = []
-  await page.route('**/v1/ai/reading', async route => {
+  const asked: { messages: { role: string; content: string }[]; context?: Record<string, unknown>; task?: Record<string, string> }[] = []
+  let remaining = 60
+  await page.route('**/v1/ai/chat', async route => {
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST' }
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
     const body = route.request().postDataJSON(); asked.push(body)
-    await route.fulfill({ headers: cors, json: { model: 'fixture', lessons: body.words.map((w: { id: string; word: string }) => ({ wordId: w.id, mnemonic: `联想：${w.word}`, example: `Use ${w.word}.`, translation: '用它。', question: '', answer: '', explanation: '' })) } })
+    remaining -= 1
+    const reply = body.task?.type === 'sentence' ? '这篇酿造学文章用清楚的话解释了一个小想法。' : body.task ? '这里指“酿造学”。' : `合成回答：${body.messages.at(-1).content}`
+    await route.fulfill({ headers: cors, json: { reply, model: 'fixture', remaining } })
   })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   const word = listed(await state(page), 0)
   await holdWord(page, word.word)
   await page.getByRole('button', { name: '助记', exact: true }).click()
-  await expect(page.getByRole('button', { name: '配置 AI 后可生成联想' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'AI 生成联想', exact: true }).click()
-  await expect(page.locator('.mnemonic-line')).toHaveText(`联想：${word.word}`)
-  expect(asked).toEqual([{ mode: 'lessons', words: [{ id: word.id, word: word.word, meaning: word.meaning }] }])
-  await expect.poll(async () => (await state(page)).lessons.map(l => l.wordId)).toEqual([word.id])
+  await expect(page.getByRole('button', { name: 'AI 生成联想', exact: true })).toHaveCount(0)
+  await expect(page.locator('.mnemonic-line')).toHaveText('这条助记还在整理，可以先自己写一句。')
+  await page.getByRole('button', { name: '问 AI 怎么记', exact: true }).click()
+  const assistant = page.locator('ion-modal').filter({ has: page.getByRole('heading', { name: 'AI 助手', exact: true }) })
+  await expect(assistant.locator('.assistant-chip')).toContainText(word.word)
+  await assistant.getByRole('button', { name: '这个词怎么记？', exact: true }).click()
+  await expect(assistant.locator('.assistant-bubble[data-role=assistant]')).toHaveText('合成回答：这个词怎么记？')
+  expect(asked[0]).toMatchObject({ context: { kind: 'word', word: word.word, meaning: word.meaning } })
+  expect((await state(page)).lessons).toEqual([])
+  await assistant.getByRole('button', { name: '关闭', exact: true }).click()
+  await expect(assistant).toHaveCount(0)
   await page.locator('ion-modal').getByRole('button', { name: '关闭', exact: true }).click()
   await settings(page, 'AI 服务')
   await expect(page.getByText('使用内置 AI', { exact: true })).toBeVisible()
-  await expect(page.getByText('不需要任何设置')).toBeVisible()
+  await expect(page.getByText('每台设备每天有 60 点额度')).toBeVisible()
 })
 
 test('a CC0 cartoon avatar is saved as a PNG profile picture', async ({ page }) => {
@@ -1096,6 +1027,7 @@ test('swiping a word slides the whole card, and 熟词 asks first, then fades th
   const alert = page.locator('ion-alert:not(.overlay-hidden)')
   await expect(alert).toContainText('设为熟词？')
   await alert.getByRole('button', { name: '取消' }).click()
+  await expect(alert).toHaveCount(0)
   await expect(rows).toHaveCount(20)
   expect((await state(page)).words.find(w => w.id === id)?.known).toBe(false)
   if ((await frame.getAttribute('data-swiped')) === null) await swipe()
@@ -1117,12 +1049,15 @@ test('tapping any word shows its meaning, glosses can be prepared inline, and ar
     const word = new URL(route.request().url()).searchParams.get('q')
     route.fulfill({ headers: cors, json: { data: { entries: word === 'zymurgy' ? [{ entry: 'zymurgy', explain: 'n. 酿造学' }] : [] } } })
   })
-  const asked: { mode: string; title: string; paragraphs: string[] }[] = []
-  await page.route('**/v1/ai/reading', async route => {
-    const headers = { ...cors, 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST' }
-    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
-    asked.push(route.request().postDataJSON())
-    await route.fulfill({ headers, json: { answer: '', items: [], paragraphs: ['这篇酿造学文章用清楚的话解释了一个小想法。'] } })
+  const asked: { messages: { role: string; content: string }[]; context?: Record<string, unknown>; task?: Record<string, string> }[] = []
+  let remaining = 60
+  await page.route('**/v1/ai/chat', async route => {
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST' }
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    const body = route.request().postDataJSON(); asked.push(body)
+    remaining -= 1
+    const reply = body.task?.type === 'sentence' ? '这篇酿造学文章用清楚的话解释了一个小想法。' : body.task ? '这里指“酿造学”。' : `合成回答：${body.messages.at(-1).content}`
+    await route.fulfill({ headers: cors, json: { reply, model: 'fixture', remaining } })
   })
   const clips: string[] = []
   await page.route('**/v1/tts**', route => {
@@ -1154,7 +1089,10 @@ test('tapping any word shows its meaning, glosses can be prepared inline, and ar
   await page.setViewportSize({ width: 390, height: 844 })
   await card.getByRole('button', { name: '翻译本句', exact: true }).click()
   await expect(card.locator('.word-peek-extra')).toContainText('这篇酿造学文章用清楚的话解释了一个小想法。')
-  expect(asked[0]).toMatchObject({ mode: 'translate', title: 'Fixture A', paragraphs: [sentence] })
+  expect(asked[0]).toMatchObject({ task: { type: 'sentence', sentence } })
+  await card.getByRole('button', { name: '语境释义', exact: true }).click()
+  await expect(card.locator('.word-peek-extra')).toContainText('这里指“酿造学”。')
+  expect(asked[1]).toMatchObject({ task: { type: 'word', word: 'zymurgy', sentence } })
   await page.getByRole('button', { name: '查词 article', exact: true }).first().click()
   await expect(card.locator('h3')).toHaveText('article')
   await expect(card.locator('.word-peek-extra')).toHaveCount(0)

@@ -8,23 +8,24 @@ import { coreGloss } from '../gloss'
 import { dictionaryUrl, isAndroidApp } from '../platform'
 import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dictionary'
 import Sheet from './Sheet'
+import { AssistantButton, useAssistant, type AssistantCtx } from './AssistantContext'
 import MarkDots from './MarkDots'
 import { Segmented } from './Controls'
 
 type DetailTab = 'meaning' | 'memory' | 'dictionary'
 
 type Props = {
-  word?: Word; lesson?: Lesson; saving: boolean; generating: boolean;
-  error: string; onClose: () => void;
+  word?: Word; lesson?: Lesson; saving: boolean;
+  onClose: () => void;
   onMark: (id: string, delta: 1 | -1) => Promise<boolean>;
   onKnown: (id: string, known: boolean) => Promise<boolean>;
   onSpeak: (word: string, accent?: 'us' | 'uk') => void; onStop: () => void;
   onDictionary: (word: string) => void;
-  onGenerate: (ids: string[]) => Promise<void>;
   onEdit: (word: Word) => void;
   onSaveMnemonic: (id: string, fields: { mnemonic: string; example: string; translation: string }) => Promise<boolean>;
 }
-export default function WordDetails({ word, lesson, saving, generating, error, onClose, onMark, onKnown, onSpeak, onStop, onDictionary, onEdit, onGenerate, onSaveMnemonic }: Props) {
+export default function WordDetails({ word, lesson, saving, onClose, onMark, onKnown, onSpeak, onStop, onDictionary, onEdit, onSaveMnemonic }: Props) {
+  const ask = useAssistant()
   const [entries, setEntries] = useState<DictionaryEntry[]>([])
   const [lookupError, setLookupError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -67,6 +68,7 @@ export default function WordDetails({ word, lesson, saving, generating, error, o
   }
   const mnemonic = lesson?.mnemonic ? lesson : builtin
   const mnemonicLabel = lesson?.mnemonic ? '我写的' : builtin ? '内置' : ''
+  const assistantContext: AssistantCtx | null = word ? { kind: 'word', label: word.word, word: word.word, meaning: word.meaning, sentence: word.example || undefined } : null
   const heard = frequency?.filter(item => item.papers > 0) || []
   return <Sheet title="单词详情" open={!!word} onClose={onClose} dismissible={!saving} tall>
     {word && <div className="word-detail">
@@ -81,7 +83,10 @@ export default function WordDetails({ word, lesson, saving, generating, error, o
             </div>
           </div>
         </div>
-        <button className="icon-button" aria-label="编辑单词" title="编辑单词" disabled={saving} onClick={() => onEdit(word)}><Pencil size={16} /></button>
+        <div className="detail-head-actions">
+          <AssistantButton className="icon-button" context={assistantContext} />
+          <button className="icon-button" aria-label="编辑单词" title="编辑单词" disabled={saving} onClick={() => onEdit(word)}><Pencil size={16} /></button>
+        </div>
       </header>
       <div className="detail-status">
         <div className="word-mark-row"><span>标记</span><div className="mark-stepper">
@@ -120,7 +125,7 @@ export default function WordDetails({ word, lesson, saving, generating, error, o
             {mnemonic.example && <p lang="en">{mnemonic.example}</p>}
             {mnemonic.translation && <p>{mnemonic.translation}</p>}
           </div>}
-          {!mnemonic && <button className="text-button" disabled={generating || saving} onClick={() => void onGenerate([word.id])}>{generating ? <LoaderCircle className="spin" size={14} /> : <Sparkles size={14} />}{generating ? '正在生成联想' : 'AI 生成联想'}</button>}
+          {!mnemonic && <button className="text-button" onClick={() => ask(assistantContext)}><Sparkles size={14} />问 AI 怎么记</button>}
           <button className="text-button" disabled={saving} onClick={() => { setDraftMnemonic(mnemonic?.mnemonic || ''); setDraftExample(mnemonic?.example || ''); setDraftTranslation(mnemonic?.translation || ''); setEditing(true) }}><Pencil size={14} />自己写助记</button>
         </>}
         {editing && <div className="mnemonic-editor">
@@ -130,7 +135,6 @@ export default function WordDetails({ word, lesson, saving, generating, error, o
           <div className="modal-actions"><button className="secondary" disabled={saving} onClick={() => setEditing(false)}>取消</button>
             <button className="primary" disabled={saving} onClick={async () => { if (await onSaveMnemonic(word.id, { mnemonic: draftMnemonic, example: draftExample, translation: draftTranslation })) setEditing(false) }}>保存</button></div>
         </div>}
-        {error && <p className="error-banner" role="alert">{error}</p>}
       </section>}
       {tab === 'dictionary' && <section className="dictionary-section detail-panel">
         <div className="dictionary-actions">

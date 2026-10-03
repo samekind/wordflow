@@ -53,8 +53,7 @@ async function navigate(name, section) {
     await tabs.getByRole('tab', { name: '学习', exact: true }).click()
     await page.getByRole('button', { name: '选择目标词书', exact: true }).click()
   } else {
-    await tabs.getByRole('tab', { name: name === '当日助记' ? '阅读' : name === '设置' ? '我的' : name, exact: true }).click()
-    if (name === '当日助记') await page.getByRole('button', { name: '语境记忆', exact: true }).click()
+    await tabs.getByRole('tab', { name: name === '设置' ? '我的' : name, exact: true }).click()
     if (section) await page.getByRole('button', { name: section, exact: true }).click()
   }
 }
@@ -172,11 +171,7 @@ try {
     await window.Capacitor.Plugins.Wordflow.saveState({ state, revision })
   })
   await page.reload()
-  await navigate('当日助记')
-  await expect(page.locator('.story-article')).toContainText('Synthetic native test fixture')
-  await expect(page.getByText('覆盖 20/20 词', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: '显示译文', exact: true }).click()
-  await expect(page.locator('.story-translation')).toContainText('未调用 AI')
+  await expect.poll(async () => (await nativeState()).state.stories.some(s => s.title === 'Synthetic native test fixture')).toBe(true)
   result.storyPersistence = true
   await navigate('设置', 'AI 服务')
   await expect(page.getByLabel('AI 模型', { exact: true })).toBeVisible()

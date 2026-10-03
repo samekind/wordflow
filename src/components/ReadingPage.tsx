@@ -1,19 +1,19 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from 'react'
-import { BookA, BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, EyeOff, Languages, LoaderCircle, RefreshCw, Send, SlidersHorizontal, Sparkles, Square, Volume2 } from 'lucide-react'
-import { DailyIcon, EssayIcon } from '../icons'
+import { BookA, BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, EyeOff, Languages, LoaderCircle, RefreshCw, SlidersHorizontal, Square, Volume2 } from 'lucide-react'
+import { DailyIcon } from '../icons'
 import { dayKey, normalize, pageFontAttrs, wordsForDay, type ImportRow, type Store } from '../model'
 import { articleCefr, cachedArticle, cefrNames, dailyReadingIndex, englishWordCount, inScope, readingLengthNames, readingLengths, readingLevel, readingLevels, refreshReadingArticle, scopeLabel, type ReadingArticle, type ReadingCefr, type ReadingLength, type ReadingScope } from '../reading'
 import { fitLabels, recommendArticles } from '../library-fit'
 import { useReadingArticles } from '../app/useReadingLibrary'
-import { askReadingAI, cachedAITranslation, saveAITranslation, type ReadingAIMode, type ReadingAIResult } from '../reading-ai'
 import { articleTranslations } from '../reading-translations'
 import ChoiceSheet from './ChoiceSheet'
-import { LookupDock, LookupProvider, PeekWord, ReadableText, articleGlosses } from './ReadableText'
+import { LookupDock, LookupProvider, ReadableText, articleGlosses } from './ReadableText'
+import { useAssistantContext } from './AssistantContext'
 
 type Props = {
   store: Store; now: number;
-  /** hub = the 阅读 tab (entry cards); shelf = one difficulty's topics / list; daily / story = the pushed reader screens. */
-  view: 'hub' | 'picks' | 'shelf' | 'story' | 'daily'; onOpen: (view: 'picks' | 'story' | 'daily', articleId?: string, scope?: ReadingScope) => void;
+  /** hub = the 阅读 tab (entry cards); shelf = one difficulty's topics / list; daily = the pushed reader screen. */
+  view: 'hub' | 'picks' | 'shelf' | 'daily'; onOpen: (view: 'picks' | 'daily', articleId?: string, scope?: ReadingScope) => void;
   onShelf: (cefr: ReadingCefr, topic?: string) => void;
   /** Article chosen from a list; the reader starts on it instead of today's pick. */
   articleId?: string;
@@ -22,16 +22,11 @@ type Props = {
   saving: boolean; onRead: (id: string) => Promise<boolean>; onWord: (id: string) => void;
   /** Adds a looked-up word to 我的词本 without leaving the article. */
   onAddWord: (row: ImportRow) => Promise<boolean>;
-  onSpeak: (text: string) => void; onStop: () => void; children: ReactNode;
-  onStudy: () => void;
+  onSpeak: (text: string) => void; onStop: () => void;
 }
 export default function ReadingPage(props: Props) {
   return <div className="reading-page font-scope" data-size={props.store.readingPreferences.textSize} {...pageFontAttrs(props.store.appearance.reading)}>
-    {props.view === 'hub' ? <ReadingEntries {...props} /> : props.view === 'picks' ? <ReadingHub {...props} /> : props.view === 'shelf' && props.scope?.cefr ? <ReadingShelf {...props} scope={{ ...props.scope, cefr: props.scope.cefr }} /> : props.view === 'story' ? <>
-      <div className="reading-intro"><p>把当天的词放进一篇短文里，在上下文中记住它们。也可以自己挑词生成。</p>
-        <button className="text-button" disabled={props.saving} onClick={props.onStudy}>去本组语境记忆<ChevronRight size={15} /></button></div>
-      {props.children}
-    </> : <DailyEnglish {...props} />}
+    {props.view === 'hub' ? <ReadingEntries {...props} /> : props.view === 'picks' ? <ReadingHub {...props} /> : props.view === 'shelf' && props.scope?.cefr ? <ReadingShelf {...props} scope={{ ...props.scope, cefr: props.scope.cefr }} /> : <DailyEnglish {...props} />}
   </div>
 }
 /** An online image that cannot load (offline, taken down) must not leave a broken icon behind. */
@@ -42,15 +37,13 @@ function syncedText(at: number, now: number) {
 }
 const pageSize = 15
 const minutesFor = (words: number) => Math.max(1, Math.ceil(words / 120))
-/** 阅读 tab: exactly two entries. Everything else is one level down. */
+/** 阅读 tab: one entry card. Everything else is one level down. */
 function ReadingEntries({ store, now, onOpen }: Props) {
   const { articles: catalog } = useReadingArticles(true)
   const level = readingLevel(store)
   const choices = useMemo(() => catalog.filter(article => article.level === level), [catalog, level])
   const today = choices.length ? choices[dailyReadingIndex(choices.length, new Date(now))] : undefined
   const read = !!today && store.readArticleIds.includes(today.id)
-  const book = store.books.find(item => item.id === store.activeBookId)
-  const dayWords = book ? wordsForDay(store, book).length : 0
   return <div className="reading-hub reading-entries">
     <button className="reading-entry reading-entry-daily" aria-label="每日英语选读" onClick={() => onOpen('picks')}>
       {today?.image ? <img src={today.image.path} alt="" /> : <span className="reading-entry-icon"><DailyIcon size={26} /></span>}
@@ -60,15 +53,6 @@ function ReadingEntries({ store, now, onOpen }: Props) {
         <span>今日一篇、适合你的推荐，以及 A2–C2 按难度选读</span>
       </span>
       <span className="reading-entry-state" data-read={read}>{read ? <><CheckCheck size={14} />今日已读</> : <ChevronRight size={18} />}</span>
-    </button>
-    <button className="reading-entry" aria-label="语境记忆" onClick={() => onOpen('story')}>
-      <span className="reading-entry-icon"><EssayIcon size={26} /></span>
-      <span className="reading-entry-body">
-        <small>语境记忆</small>
-        <strong>把当天的词放进短文里记</strong>
-        <span>{dayWords ? `当天 ${dayWords} 个词` : '先选一本词书'} · 已保存 {store.stories.length} 篇</span>
-      </span>
-      <ChevronRight size={18} className="reading-entry-chevron" />
     </button>
     <p className="reading-hub-note">已读文章 {store.readArticleIds.length} 篇 · 阅读设置在“我的 → 发音与阅读”</p>
   </div>
@@ -228,7 +212,6 @@ function plainCredit(value: string) {
   template.innerHTML = value
   return template.content.textContent?.trim() || 'Wikimedia Commons'
 }
-type AIState = { mode: ReadingAIMode; paragraph?: number; question?: string; result?: ReadingAIResult; error?: string; busy: boolean }
 function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, onAddWord, onSpeak, onStop }: Props) {
   const { articles: catalog, loadError, reload } = useReadingArticles(false)
   const [offset, setOffset] = useState(0)
@@ -239,16 +222,11 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
   const [annotate, setAnnotate] = useState(() => localStorage.getItem('wordflow.reading.annotate') === '1')
   const [glosses, setGlosses] = useState<ReadonlyMap<string, string>>(new Map())
   const [translated, setTranslated] = useState(false)
-  const [aiTranslation, setAITranslation] = useState<string[] | undefined>()
-  const [ai, setAI] = useState<AIState | null>(null)
-  const [explained, setExplained] = useState<Record<number, AIState>>({})
-  const [question, setQuestion] = useState('')
   const refreshRequest = useRef(0)
-  const aiRequest = useRef(0)
   const wanted = useRef(articleId)
   const level = readingLevel(store)
   const date = dayKey(new Date(now))
-  useEffect(() => () => { refreshRequest.current++; aiRequest.current++ }, [])
+  useEffect(() => () => { refreshRequest.current++ }, [])
   const scopeKey = scope ? `${scope.cefr ?? ''}:${scope.topic ?? ''}:${scope.length ?? ''}` : ''
   useEffect(() => { setOffset(0); setTranslated(false); onStop() }, [level, date, scopeKey])
   const choices = useMemo(() => scope ? catalog.filter(article => inScope(article, scope)) : catalog.filter(article => article.level === level), [catalog, level, scopeKey])
@@ -264,9 +242,8 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
   const fallback = useMemo(() => base ? cachedArticle(base) : null, [base])
   const article = updated?.id === base?.id ? updated : fallback
   useEffect(() => {
-    refreshRequest.current++; aiRequest.current++
-    setRefreshing(false); setRefreshError(''); setUpdated(null); setTranslated(false); setAI(null); setExplained({}); setQuestion('')
-    setAITranslation(base ? cachedAITranslation(base.id, base.paragraphs.length) : undefined)
+    refreshRequest.current++
+    setRefreshing(false); setRefreshError(''); setUpdated(null); setTranslated(false)
   }, [base?.id])
   const knownWords = useMemo(() => new Map(store.words.map(word => [normalize(word.word), word.id])), [store.words])
   const knownSet = useMemo(() => new Set(knownWords.keys()), [knownWords])
@@ -282,6 +259,7 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
     }
     return [...found].map(([id, text]) => ({ id, text }))
   }, [article, book, knownWords, store.words])
+  useAssistantContext(article ? { kind: 'article', label: article.title, title: article.title, text: article.paragraphs.join('\n\n') } : null)
   const learning = useMemo(() => new Set(store.words.filter(word => !word.known).map(word => normalize(word.word))), [store.words])
   useEffect(() => {
     setGlosses(new Map())
@@ -303,34 +281,14 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
     catch (error) { if (request === refreshRequest.current) setRefreshError((error as Error).message) }
     finally { if (request === refreshRequest.current) setRefreshing(false) }
   }
-  /** One built-in AI request at a time; answers for an article that is no longer open are dropped. */
-  async function runAI(mode: ReadingAIMode, extra: { paragraph?: number; question?: string } = {}) {
-    if (!article) return
-    const request = ++aiRequest.current
-    const update = (state: AIState) => extra.paragraph === undefined ? setAI(state) : setExplained(value => ({ ...value, [extra.paragraph!]: state }))
-    update({ mode, ...extra, busy: true })
-    try {
-      const result = await askReadingAI({ mode, title: article.title, paragraphs: article.paragraphs,
-        ...(extra.paragraph !== undefined ? { focus: article.paragraphs[extra.paragraph] } : {}), ...(extra.question ? { question: extra.question } : {}) })
-      if (request !== aiRequest.current) return
-      if (mode === 'translate' && result.paragraphs) {
-        saveAITranslation(article.id, result.paragraphs); setAITranslation(result.paragraphs); setTranslated(true); setAI(null)
-      } else update({ mode, ...extra, result, busy: false })
-    } catch (error) {
-      if (request === aiRequest.current) update({ mode, ...extra, error: (error as Error).message, busy: false })
-    }
-  }
   function move(next: number) { onStop(); setOffset(next) }
   if (loadError) return <div className="empty"><BookOpen size={28} /><p role="alert">{loadError}</p><button className="secondary" onClick={reload}><RefreshCw size={16} />重新加载</button></div>
   if (!article) return <div className="empty" role="status"><LoaderCircle className="spin" size={24} /><p>正在读取选读</p></div>
   const words = englishWordCount(article.paragraphs.join(' '))
   const read = store.readArticleIds.includes(article.id)
   const online = article.id.startsWith('lib-')
-  const translations = article.translations ?? articleTranslations(article.id, article.paragraphs.length) ?? aiTranslation
-  const aiTranslated = !article.translations && !articleTranslations(article.id, article.paragraphs.length) && !!aiTranslation
+  const translations = article.translations ?? articleTranslations(article.id, article.paragraphs.length)
   const highlights = new Set([...knownSet, ...targets])
-  const busy = !!ai?.busy || Object.values(explained).some(item => item.busy)
-  const translating = ai?.mode === 'translate' && ai.busy
   return <LookupProvider title={article.title} known={knownWords} glosses={glosses} annotate={annotate} onSpeak={onSpeak} onStop={onStop} onAdd={onAddWord} onOpenWord={onWord}>
   <div className="daily-english" data-article-id={article.id}>
     <div className="daily-article-toolbar">
@@ -348,9 +306,7 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
       <div className="article-meta"><span>{article.source}</span><span>{words} 词 · 约 {Math.max(1, Math.ceil(words / 120))} 分钟</span></div>
       {article.image && <figure className="reading-image"><img src={article.image.path} alt={article.image.alt} onError={hideBroken} /><figcaption>{plainCredit(article.image.credit)}</figcaption></figure>}
       <div className="reader-tools">
-        {translations
-          ? <button className="reader-pill" aria-label={translated ? '隐藏译文' : '显示译文'} aria-pressed={translated} onClick={() => setTranslated(value => !value)}>{translated ? <EyeOff size={16} /> : <Languages size={16} />}{translated ? '收起译文' : '中文译文'}</button>
-          : <button className="reader-pill" aria-label="AI 翻译全文" disabled={busy} onClick={() => void runAI('translate')}>{translating ? <LoaderCircle size={16} className="spin" /> : <Sparkles size={16} />}{translating ? '正在翻译…' : 'AI 翻译全文'}</button>}
+        {translations && <button className="reader-pill" aria-label={translated ? '隐藏译文' : '显示译文'} aria-pressed={translated} onClick={() => setTranslated(value => !value)}>{translated ? <EyeOff size={16} /> : <Languages size={16} />}{translated ? '收起译文' : '中文译文'}</button>}
         <button className="reader-pill" aria-label="词义标注" aria-pressed={annotate} onClick={toggleAnnotate}><BookA size={16} />{annotate ? '标注中' : '词义标注'}</button>
         <div className="small-tools">
           <button className="icon-button" aria-label="朗读英语文章" title="朗读文章" onClick={() => onSpeak(article.paragraphs.join('\n'))}><Volume2 size={20} /></button>
@@ -358,40 +314,14 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
           {!online && <button className="icon-button" aria-label="更新英语文章" title="联网更新摘录" disabled={refreshing} onClick={refresh}>{refreshing ? <LoaderCircle size={18} className="spin" /> : <RefreshCw size={18} />}</button>}
         </div>
       </div>
-      {ai?.mode === 'translate' && ai.error && <p className="error-banner" role="alert">{ai.error}</p>}
       {refreshError && <p className="error-banner" role="alert">{refreshError}</p>}
       <div className="article-paragraphs">{article.paragraphs.map((paragraph, i) => {
-        const note = explained[i]
         return <div className="article-block" key={`${article.id}:${i}`}>
           <p lang="en"><ReadableText text={paragraph} keyPrefix={`${i}`} highlight={highlights} /></p>
           {translated && translations && <p className="article-translation">{translations[i]}</p>}
-          <button className="paragraph-ai" aria-label={`AI 解析第 ${i + 1} 段`} disabled={busy} onClick={() => void runAI('explain', { paragraph: i })}>{note?.busy ? <LoaderCircle size={13} className="spin" /> : <Sparkles size={13} />}解析</button>
-          {note && !note.busy && <div className="paragraph-explain" role="note">{note.error ? <p className="error-banner" role="alert">{note.error}</p> : <p>{note.result?.answer}</p>}<button className="text-button" onClick={() => setExplained(value => { const next = { ...value }; delete next[i]; return next })}>收起</button></div>}
         </div>
       })}</div>
-      {translated && aiTranslated && <p className="source-note">译文由内置 AI 生成，仅供参考</p>}
     </article>
-    <section className="article-assist" aria-label="AI 助读">
-      <div className="article-assist-heading"><div><Sparkles size={16} /><strong>AI 助读</strong></div><span>内置，无需配置</span></div>
-      <div className="assist-actions">
-        <button className={ai?.mode === 'summary' ? 'active' : undefined} disabled={busy} onClick={() => void runAI('summary')}>导读</button>
-        <button className={ai?.mode === 'vocabulary' ? 'active' : undefined} disabled={busy} onClick={() => void runAI('vocabulary')}>重点词汇</button>
-        {!translations && <button disabled={busy} onClick={() => void runAI('translate')}>全文翻译</button>}
-      </div>
-      <form className="assist-ask" onSubmit={event => { event.preventDefault(); const text = question.trim(); if (text) void runAI('ask', { question: text }) }}>
-        <input value={question} maxLength={300} onChange={event => setQuestion(event.target.value)} placeholder="就这篇文章提问，例如：作者的主要观点是什么？" aria-label="向 AI 提问" />
-        <button className="primary" type="submit" disabled={busy || !question.trim()}>{ai?.mode === 'ask' && ai.busy ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}提问</button>
-      </form>
-      {ai && ai.mode !== 'translate' && <div className="article-assist-output" aria-live="polite">
-        {ai.busy ? <p className="muted"><LoaderCircle size={15} className="spin" /> AI 正在阅读这篇文章…</p> : ai.error ? <p className="error-banner" role="alert">{ai.error}</p> : <>
-          {ai.mode === 'ask' && ai.question && <p className="assist-question">问：{ai.question}</p>}
-          <p>{ai.result?.answer}</p>
-          {!!ai.result?.items.length && <div className="assist-items">{ai.result.items.map(item => <div className="assist-item" key={item.word}>
-            <PeekWord word={item.word.split(/\s+/)[0]} sentence={item.example || item.word} label={item.word} /><span>{item.meaning}</span>{item.example && <em lang="en">{item.example}</em>}</div>)}</div>}
-          <small>内置 AI 生成，仅供参考</small>
-        </>}
-      </div>}
-    </section>
     {book && <details className="article-vocab" aria-label="文中的词书单词">
       <summary>文中出现的词书单词 <span>{inBook.length}</span></summary>
       {inBook.length ? <div className="vocab-chips">{inBook.slice(0, 24).map(item => <button key={item.id} className="vocab-chip" lang="en" onClick={() => onWord(item.id)}>{item.text}</button>)}{inBook.length > 24 && <span className="vocab-more">等 {inBook.length} 个</span>}</div>

@@ -84,7 +84,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
       <div className="settings-group">
       <button onClick={() => onSection('profile')} aria-label="账号与资料"><UserRound size={20} /><span>账号与资料<small>昵称、头像、云端账号</small></span><small>{hasCloud ? '已连接' : '未登录'}</small><ChevronRight size={16} /></button>
       <button onClick={() => onSection('data')} aria-label="数据与备份"><Database size={20} /><span>数据与备份<small>导出、恢复、云端同步</small></span><ChevronRight size={16} /></button>
-      <button onClick={() => onSection('ai')} aria-label="AI 服务"><Sparkles size={20} /><span>AI 服务<small>语境短文、单词助记、阅读助手</small></span><small>{ai.configured ? '自己的 Key' : '内置 AI'}</small><ChevronRight size={16} /></button>
+      <button onClick={() => onSection('ai')} aria-label="AI 服务"><Sparkles size={20} /><span>AI 服务<small>AI 助手、语境短文</small></span><small>{ai.configured ? '自己的 Key' : '内置 AI'}</small><ChevronRight size={16} /></button>
       </div>
       <h2 className="settings-group-title">关于</h2>
       <div className="settings-group">
@@ -172,7 +172,8 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
     </section>}
     {section === 'ai' && <section className="settings-section">
       <div className="section-heading"><h2>生成服务</h2><span className={ai.configured ? 'configured-label' : 'muted'}>{ai.configured ? '使用自己的 Key' : '使用内置 AI'}</span></div>
-      <p className="field-note">默认使用内置 AI，不需要任何设置，也不限次数。只有想改用自己的服务商时，才需要在下面填写 API Key。</p>
+      <p className="field-note">AI 助手（页面右上角的星星按钮）、点词后的“翻译本句”“语境释义”和语境短文，默认使用内置 AI，不需要设置。每台设备每天有 60 点额度，次日刷新：问一次 1 点，生成一篇语境短文 5 点。</p>
+      <p className="field-note">语境短文也可以改用自己的服务商：填写下面的 API Key 后，短文不占额度，费用由服务商收取。AI 助手和查词始终使用内置 AI。</p>
       <form className="settings-form" onSubmit={async event => { event.preventDefault(); if (await onSaveAI({ provider, model, key })) setKey('') }}>
         <SettingRow label="服务商"><SelectButton label="AI 服务商" value={provider} disabled={aiBusy} options={[{ value: 'deepseek', label: 'DeepSeek' }, { value: 'openai', label: 'OpenAI' }, { value: 'qwen', label: '通义千问' }]}
           onChange={next => { setProvider(next); setModel(defaults[next]); setCustomModel(false); setKey('') }} /></SettingRow>

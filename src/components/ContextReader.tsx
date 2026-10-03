@@ -1,10 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, Eye, EyeOff, LoaderCircle, RefreshCw, Sparkles, Square, Volume2 } from 'lucide-react'
-import { normalize, storyCoverage, storyIsCurrent, type Store } from '../model'
+import { normalize, storyCoverage, storyIsCurrent, type Store, type Word } from '../model'
 import { contextStoryKey, studyGroupWords, studyWordStatus } from '../study'
 import type { StudyDraft } from '../study-state'
-import { StoryProgress } from './DailyReader'
+import { previewStoryDraft } from '../story-draft'
 import { LookupDock, LookupProvider, ReadableText } from './ReadableText'
+
+export function StoryProgress({ words, live }: { words: Word[]; live: string }) {
+  const draft = previewStoryDraft(live)
+  const steps = ['词表已交给模型', draft.title ? `标题：${draft.title}` : '模型正在拟定标题', draft.paragraphs.length ? `已完成 ${draft.paragraphs.length} 段` : '模型正在写英文', draft.paragraphs.some(item => item.translation) ? '译文正在跟上' : '模型接着写译文']
+  const active = !live ? 0 : !draft.title ? 1 : !draft.paragraphs.length ? 2 : 3
+  return <section className="story-progress" role="status" aria-live="polite">
+    <div className="story-progress-head"><LoaderCircle className="spin" size={18} /><strong>模型正在写</strong><span>{words.length} 个词</span></div>
+    <ol>{steps.map((label, index) => <li key={index} data-state={index < active ? 'done' : index === active ? 'active' : 'wait'}>{label}</li>)}</ol>
+    <div className="story-live">
+      {draft.paragraphs.map((paragraph, index) => <p lang="en" key={index}>{paragraph.english}</p>)}
+      <p className="story-live-tail" lang="en">{draft.tail || (!live ? `正在把 ${words.length} 个词送进模型` : '')}<span className="story-caret" /></p>
+    </div>
+  </section>
+}
 
 export type ContextServices = {
   busy: boolean; generatingKey: string; live: string; error: string;

@@ -2,8 +2,6 @@ import { Capacitor, registerPlugin, SystemBars, SystemBarsStyle } from '@capacit
 import type { DailyStory, Store } from './model'
 
 type NativeSettings = { provider: string; model: string; configured: boolean }
-export type ArticleAssistMode = 'summary' | 'vocabulary' | 'translate'
-export type ArticleAssistResult = { answer: string; items: { word: string; meaning: string; example?: string }[]; model: string }
 interface WordflowPlugin {
   setAppearance(data: { theme: 'light' | 'dark' }): Promise<void>
   getState(): Promise<{ state: Store; revision: number }>
@@ -17,9 +15,7 @@ interface WordflowPlugin {
   getSettings(): Promise<NativeSettings>
   saveSettings(data: { provider: string; model: string; key: string }): Promise<NativeSettings>
   removeSettings(): Promise<NativeSettings>
-  reinforce(data: { ids: string[] }): Promise<{ lessons: Store['lessons']; model: string }>
   story(data: { ids: string[] }): Promise<{ story: Pick<DailyStory, 'title' | 'paragraphs'>; model: string }>
-  articleAssist(data: { mode: ArticleAssistMode; title: string; text: string }): Promise<ArticleAssistResult>
   exportBackup(data: { content: string; filename: string }): Promise<{ cancelled?: boolean }>
   downloadUpdate(data: { url: string; sha256: string }): Promise<{ started: boolean }>
   speak(data: { word: string; accent?: 'us' | 'uk'; rate?: number }): Promise<void>
@@ -80,9 +76,7 @@ export async function api(path: string, options?: RequestInit) {
       if (method === 'DELETE') return phone.removeSettings()
       return phone.getSettings()
     }
-    if (path === 'reinforce') return phone.reinforce(body)
     if (path === 'story') return phone.story(body)
-    if (path === 'article-assist') return phone.articleAssist(body)
     throw new Error('不支持的手机操作')
   }
   const response = await fetch(`/api/${path}`, {

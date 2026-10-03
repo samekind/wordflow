@@ -103,8 +103,8 @@
 .book-shelf .owned-book:last-child{border-bottom:0}
 .book-shelf .shelf-continue{margin-top:0}
 .book-shelf .shelf-toolbar{margin:0}
-@media(max-width:429px){.study-card .study-card-top{gap:6px}.study-card .study-card-top .study-day-stepper .icon-button{width:28px}.study-card .plan-button{width:36px;height:36px}}
-@media(max-width:359px){.study-card .study-card-top{gap:4px}.study-card .study-card-top .study-day-stepper{font-size:var(--fs-small)}.study-card .study-card-top .study-stage-switch button,.study-card .study-card-top .study-stage-switch button[aria-pressed=false]{padding:0 7px}.study-card .plan-button{width:34px;height:34px}}
+@media(max-width:429px){.study-card .study-card-top .study-stage-switch button .stage-text{display:none}.study-card .study-card-top .study-stage-switch button,.study-card .study-card-top .study-stage-switch button[aria-pressed=false]{padding:0 8px}.study-card .study-card-top{gap:6px}.study-card .study-card-top .study-day-stepper .icon-button{width:28px}.study-card .plan-button{width:36px;height:36px}}
+@media(max-width:359px){.study-card .study-card-top{gap:3px}.study-card .study-card-top .study-day-stepper{font-size:var(--fs-small)}.study-card .study-card-top .study-stage-switch button,.study-card .study-card-top .study-stage-switch button[aria-pressed=false]{padding:0 7px}.study-card .plan-button{width:30px;height:30px}.study-card .study-card-top .study-day-stepper .icon-button{width:22px}.study-card .study-card-top .study-stage-switch button,.study-card .study-card-top .study-stage-switch button[aria-pressed=false]{padding:0 5px}}
 
 /* ==================== 点词查义卡片 · 词义标注 ==================== */
 .word-peek-dock{position:sticky;bottom:calc(88px + var(--ion-safe-area-bottom,0px));height:0;z-index:25;pointer-events:none}
@@ -139,3 +139,28 @@
 .plan-tools .plan-wide{grid-column:1/-1}
 .reading-token ruby{ruby-align:center}
 .reading-token rt{text-align:center}
+
+/* AI assistant: header button, context chip and the chat sheet */
+.topbar>.header-assistant{color:var(--accent)}
+.topbar>.header-assistant{width:44px;height:44px}
+.detail-head-actions{display:flex;gap:6px;flex-shrink:0}
+.assistant-chat{display:flex;flex-direction:column;gap:10px;min-height:min(62vh,520px)}
+.assistant-context{position:sticky;top:0;z-index:2;padding:2px 0 6px;background:var(--sheet-fill);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.assistant-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;min-height:30px;padding:0 6px 0 12px;border-radius:var(--radius-pill);background:var(--accent-soft);color:var(--accent);font-size:var(--fs-small);font-weight:var(--fw-semibold)}
+.assistant-chip>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.assistant-chip[data-kind=general]{background:var(--surface-inset);color:var(--text-secondary);padding-right:12px}
+.assistant-chip-x{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;color:inherit}
+.assistant-chip-x.text{width:auto;margin-left:6px;padding:0 4px;font-size:var(--fs-small);color:var(--accent);text-decoration:underline}
+.assistant-clear{font-size:var(--fs-small);gap:4px;margin-left:auto}
+.assistant-messages{display:flex;flex-direction:column;gap:10px;flex:1;min-height:200px}
+.assistant-empty{display:grid;gap:12px;color:var(--text-muted);font-size:var(--fs-small)}
+.assistant-empty p{margin:0}
+.assistant-hints{display:flex;flex-wrap:wrap;gap:8px}
+.assistant-bubble{display:flex;align-items:center;gap:6px;max-width:88%;padding:9px 13px;border-radius:var(--radius-md);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--fs-body)}
+.assistant-bubble[data-role=user]{align-self:flex-end;background:var(--accent);color:var(--text-on-accent);border-bottom-right-radius:6px}
+.assistant-bubble[data-role=assistant]{align-self:flex-start;background:var(--surface-inset);color:var(--text-primary);border-bottom-left-radius:6px;display:block}
+.assistant-bubble[role=status]{display:flex;color:var(--text-muted)}
+.assistant-form{display:flex;align-items:flex-end;gap:8px;position:sticky;bottom:0;z-index:2;padding-top:6px;background:var(--sheet-fill)}
+.assistant-form textarea{flex:1;min-width:0;max-height:120px;resize:none;padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--line-strong);background:var(--surface-solid);color:var(--text-primary);font:inherit;line-height:1.5}
+.assistant-send{width:44px;min-height:44px;height:44px;padding:0;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
+.assistant-note{margin:0;text-align:center}
