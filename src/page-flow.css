@@ -131,3 +131,11 @@
 .reading-token rt{font-size:.66em;line-height:1;color:var(--accent);font-weight:var(--fw-regular);letter-spacing:0;white-space:nowrap}
 .article-paragraphs:has(.reading-token[data-glossed]) p[lang=en]{line-height:2.3}
 .reader-tools{flex-wrap:wrap}
+
+/* Plan sheet: tools as a compact two-column grid under the main action */
+.memory-plan .review-continue{margin:0}
+.plan-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 16px}
+.plan-tools .secondary{min-height:42px;padding:0 10px;font-size:var(--fs-small)}
+.plan-tools .plan-wide{grid-column:1/-1}
+.reading-token ruby{ruby-align:center}
+.reading-token rt{text-align:center}

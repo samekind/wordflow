@@ -89,7 +89,7 @@ export default function WordDetails({ word, lesson, saving, generating, error, o
           <output aria-label="标记等级" aria-live="polite"><MarkDots count={word.markCount} large /></output>
           <button aria-label="增加标记" title={markLevel(word.markCount) >= 6 ? '标记最高六级，本轮自测结果单独记录' : '增加标记'} disabled={saving} onClick={() => onMark(word.id, 1)}><Plus size={16} /></button>
         </div></div>
-        <IonToggle className="known-toggle" checked={word.known} disabled={saving} onIonChange={event => { void onKnown(word.id, event.detail.checked) }}>熟词</IonToggle>
+        <IonToggle className="known-toggle" justify="space-between" checked={word.known} disabled={saving} onIonChange={event => { void onKnown(word.id, event.detail.checked) }}>熟词</IonToggle>
       </div>
       <Segmented<DetailTab> label="详情分页" className="detail-tabs" value={tab} onChange={setTab}
         options={[{ value: 'meaning', label: '释义' }, { value: 'memory', label: '助记' }, { value: 'dictionary', label: '词典' }]} />

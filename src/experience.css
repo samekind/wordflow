@@ -199,3 +199,20 @@
 .avatar-choice:active{border-color:var(--accent)}
 .avatar-choice>svg{position:absolute;color:var(--accent)}
 .avatar-loading{display:flex;align-items:center;gap:8px}
+/* Restraint pass: level tiles balance, filters behind a toggle, collapsed in-article vocab */
+.level-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+.level-grid li{grid-column:span 2}
+.level-grid li:nth-child(4):nth-last-child(2),.level-grid li:nth-child(5):last-child{grid-column:span 3}
+.level-tile{min-height:72px}
+.filter-toggle{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:0 12px;border-radius:var(--radius-md);border:1px solid var(--line);background:transparent;color:var(--text-secondary);font-size:var(--fs-small);text-align:left}
+.filter-toggle span{font-weight:var(--fw-semibold);color:var(--text-primary)}
+.filter-toggle em{flex:1;min-width:0;font-style:normal;color:var(--text-muted);font-size:var(--fs-caption);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filter-toggle-chevron{flex:0 0 auto;transition:transform .2s ease}
+.filter-toggle[aria-expanded=true] .filter-toggle-chevron{transform:rotate(180deg)}
+details.article-vocab{display:block;padding:0}
+details.article-vocab>summary{display:flex;align-items:center;gap:6px;min-height:48px;padding:0 16px;list-style:none;cursor:pointer;font-size:var(--fs-meta);font-weight:var(--fw-bold);color:var(--text-primary)}
+details.article-vocab>summary::-webkit-details-marker{display:none}
+details.article-vocab>summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--text-muted);border-bottom:2px solid var(--text-muted);transform:rotate(45deg) translateY(-2px);transition:transform .2s ease}
+details.article-vocab[open]>summary::after{transform:rotate(-135deg)}
+details.article-vocab>summary span{color:var(--accent)}
+details.article-vocab>.vocab-chips,details.article-vocab>.field-note{padding:0 16px 14px;margin:0}

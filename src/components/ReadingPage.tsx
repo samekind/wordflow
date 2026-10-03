@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from 'react'
-import { BookA, BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, EyeOff, Languages, LoaderCircle, RefreshCw, Send, Sparkles, Square, Volume2 } from 'lucide-react'
+import { BookA, BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, EyeOff, Languages, LoaderCircle, RefreshCw, Send, SlidersHorizontal, Sparkles, Square, Volume2 } from 'lucide-react'
 import { DailyIcon, EssayIcon } from '../icons'
 import { dayKey, normalize, pageFontAttrs, wordsForDay, type ImportRow, type Store } from '../model'
 import { articleCefr, cachedArticle, cefrNames, dailyReadingIndex, englishWordCount, inScope, readingLengthNames, readingLengths, readingLevel, readingLevels, refreshReadingArticle, scopeLabel, type ReadingArticle, type ReadingCefr, type ReadingLength, type ReadingScope } from '../reading'
@@ -98,6 +98,8 @@ function ReadingHub({ store, now, onOpen, onShelf }: Props) {
   })
   const [filter, setFilterState] = useState(catalogFilter)
   const [limit, setLimit] = useState(filterPage)
+  const activeFilters = [filter.cefr, filter.length && readingLengthNames[filter.length], filter.status !== 'all' && (filter.status === 'read' ? '已读' : '未读'), filter.topic].filter(Boolean) as string[]
+  const [filtersOpen, setFiltersOpen] = useState(() => !!(filter.cefr || filter.topic || filter.length || filter.status !== 'all'))
   function setFilter(next: Partial<CatalogFilter>) { catalogFilter = { ...filter, ...next }; setFilterState(catalogFilter); setLimit(filterPage) }
   const topics = useMemo(() => {
     const counts = new Map<string, number>()
@@ -142,12 +144,15 @@ function ReadingHub({ store, now, onOpen, onShelf }: Props) {
     </section>
     <section className="reading-catalog" aria-label="文章筛选">
       <div className="reading-library-head"><div><h2>文章目录</h2><span>共 {catalog.length} 篇，按难度、主题、篇幅筛选</span></div></div>
-      <div className="catalog-filters">
+      <button className="filter-toggle" aria-expanded={filtersOpen} aria-controls="catalog-filters" onClick={() => setFiltersOpen(open => !open)}>
+        <SlidersHorizontal size={15} /><span>筛选</span><em>{activeFilters.length ? activeFilters.join(' · ') : '全部文章'}</em><ChevronDown size={15} className="filter-toggle-chevron" />
+      </button>
+      {filtersOpen && <div className="catalog-filters" id="catalog-filters">
         <FilterRow label="难度">{chip('全部', !filter.cefr, () => setFilter({ cefr: '' }), '全部难度')}{readingLevels.map(cefr => <Fragment key={cefr}>{chip(cefr, filter.cefr === cefr, () => setFilter({ cefr }), `难度 ${cefr}`)}</Fragment>)}</FilterRow>
         <FilterRow label="篇幅">{chip('全部', !filter.length, () => setFilter({ length: '' }), '全部篇幅')}{readingLengths.map(length => <Fragment key={length}>{chip(readingLengthNames[length], filter.length === length, () => setFilter({ length }), `篇幅 ${readingLengthNames[length]}`)}</Fragment>)}</FilterRow>
         <FilterRow label="状态">{(['all', 'unread', 'read'] as const).map(status => { const name = status === 'all' ? '全部' : status === 'unread' ? '未读' : '已读'; return <Fragment key={status}>{chip(name, filter.status === status, () => setFilter({ status }), `状态 ${name}`)}</Fragment> })}</FilterRow>
         <FilterRow label="主题">{chip('全部', !filter.topic, () => setFilter({ topic: '' }), '全部主题筛选')}{topics.map(([topic, count]) => <Fragment key={topic}>{chip(<>{topic}<i>{count}</i></>, filter.topic === topic, () => setFilter({ topic }), `主题 ${topic}`)}</Fragment>)}</FilterRow>
-      </div>
+      </div>}
       <p className="filter-summary" role="status">{matching.length ? `找到 ${matching.length} 篇` : '没有符合条件的文章，换个条件试试'}</p>
       <ul className="magazine-list">{matching.slice(0, limit).map(item => {
         const count = englishWordCount(item.paragraphs.join(' '))
@@ -387,11 +392,11 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
         </>}
       </div>}
     </section>
-    {book && <section className="article-vocab" aria-label="文中的词书单词">
-      <h3>文中出现的词书单词 <span>{inBook.length}</span></h3>
+    {book && <details className="article-vocab" aria-label="文中的词书单词">
+      <summary>文中出现的词书单词 <span>{inBook.length}</span></summary>
       {inBook.length ? <div className="vocab-chips">{inBook.slice(0, 24).map(item => <button key={item.id} className="vocab-chip" lang="en" onClick={() => onWord(item.id)}>{item.text}</button>)}{inBook.length > 24 && <span className="vocab-more">等 {inBook.length} 个</span>}</div>
         : <p className="field-note">这篇文章里没有出现《{book.title}》里还在学的单词。</p>}
-    </section>}
+    </details>}
     <div className="article-completion"><button className={read ? 'secondary' : 'primary'} disabled={saving || read} onClick={() => void onRead(article.id)}>{read ? <CheckCheck size={17} /> : <Check size={17} />}{read ? '已读' : '完成阅读'}</button>{read && <button className="secondary" onClick={() => move(offset + 1)}>读下一篇<ChevronRight size={16} /></button>}
       <a className="text-button" href={article.sourceUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={15} />原文</a>
     </div>

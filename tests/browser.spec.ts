@@ -84,6 +84,8 @@ function libraryArticle(id: string, over: Record<string, unknown> = {}) {
   }
 }
 const cors = { 'access-control-allow-origin': '*' }
+/** A decodable 50 ms silent clip, so the browser never fires an audio error that would trigger the system-voice fallback. */
+const silentWav = (() => { const data = Buffer.alloc(800); const head = Buffer.alloc(44); head.write('RIFF', 0); head.writeUInt32LE(36 + data.length, 4); head.write('WAVEfmt ', 8); head.writeUInt32LE(16, 16); head.writeUInt16LE(1, 20); head.writeUInt16LE(1, 22); head.writeUInt32LE(8000, 24); head.writeUInt32LE(16000, 28); head.writeUInt16LE(2, 32); head.writeUInt16LE(16, 34); head.write('data', 36); head.writeUInt32LE(data.length, 40); return Buffer.concat([head, data]) })()
 test.beforeEach(async ({ page }) => {
   // Cloud speech and Youdao meanings are unreachable unless a test opts in, so reading falls back to the system voice.
   await page.route('**/v1/tts**', route => route.fulfill({ status: 503, headers: cors, json: { error: 'offline' } }))
@@ -935,6 +937,7 @@ test('the magazine contents filter by level, topic and length, and built-in AI t
   await expect(page.locator('.magazine-masthead')).toContainText('每日外刊')
   await page.screenshot({ path: 'test-results/magazine-hub-390.png', animations: 'disabled' })
   const catalog = page.getByRole('region', { name: '文章筛选' })
+  await catalog.getByRole('button', { name: /^筛选/ }).click()
   await catalog.getByRole('button', { name: '难度 A2', exact: true }).click()
   await expect(catalog.locator('.magazine-card')).toHaveCount(1)
   await expect(catalog.getByRole('status')).toHaveText('找到 1 篇')
@@ -1124,12 +1127,13 @@ test('tapping any word shows its meaning, glosses can be prepared inline, and ar
   const clips: string[] = []
   await page.route('**/v1/tts**', route => {
     clips.push(decodeURIComponent(new URL(route.request().url()).searchParams.get('text') || ''))
-    route.fulfill({ headers: { ...cors, 'content-type': 'audio/mpeg' }, body: Buffer.from('ID3-fixture-audio') })
+    route.fulfill({ headers: { ...cors, 'content-type': 'audio/wav' }, body: silentWav })
   })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   await nav(page, '选读')
   const catalog = page.getByRole('region', { name: '文章筛选' })
+  await catalog.getByRole('button', { name: /^筛选/ }).click()
   await catalog.getByRole('button', { name: '难度 A2', exact: true }).click()
   await catalog.getByRole('button', { name: '目录 Fixture A', exact: true }).click()
   await expect(page.locator('.daily-english')).toHaveAttribute('data-article-id', 'lib-simple-fixture-a')
@@ -1166,6 +1170,7 @@ test('tapping any word shows its meaning, glosses can be prepared inline, and ar
   await page.screenshot({ path: 'test-results/word-gloss-390.png', animations: 'disabled' })
   await page.reload()
   await nav(page, '选读')
+  await catalog.getByRole('button', { name: /^筛选/ }).click()
   await catalog.getByRole('button', { name: '难度 A2', exact: true }).click()
   await catalog.getByRole('button', { name: '目录 Fixture A', exact: true }).click()
   await expect(page.getByRole('button', { name: '词义标注', exact: true })).toHaveAttribute('aria-pressed', 'true')
