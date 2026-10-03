@@ -118,7 +118,8 @@ try {
   expect((await state()).state.reviews).toHaveLength(0)
   await page.screenshot({ path: 'test-results/android-learning-draft.png' })
   writeFileSync('test-results/android-learning-device.png', await device!.screenshot())
-  await page.getByRole('button', { name: '读短文', exact: true }).click()
+  await page.getByRole('button', { name: '复习计划', exact: true }).click()
+  await page.getByRole('group', { name: '本组操作' }).getByRole('button', { name: '读短文', exact: true }).click()
   await expect(page.locator('.context-reader')).toBeVisible()
   const reading = await state(), draft = reading.state.learning.drafts.learn!
   const targets = draft.groups[draft.page].map(id => reading.state.words.find(word => word.id === id)!)

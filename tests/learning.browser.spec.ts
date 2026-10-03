@@ -29,6 +29,10 @@ test.afterEach(async ({ context }) => {
   expect(context.pages()).toHaveLength(0)
 })
 
+async function openStory(page: Page) {
+  await page.getByRole('button', { name: '复习计划', exact: true }).click()
+  await page.getByRole('group', { name: '本组操作' }).getByRole('button', { name: '读短文', exact: true }).click()
+}
 test('all main pages share clear navigation and return to the same study group', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await seed(page, fixture(60))
@@ -45,7 +49,7 @@ test('all main pages share clear navigation and return to the same study group',
   await expect(page.getByRole('button', { name: '取消第 01 词不熟', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: '取消第 01 词不熟', exact: true }).click()
   await page.getByRole('button', { name: '隐藏全部释义', exact: true }).click()
-  await page.getByRole('button', { name: '读短文', exact: true }).click()
+  await openStory(page)
   // No key was ever entered: the story comes from the built-in AI instead of a setup screen.
   await expect(page.getByRole('button', { name: '设置 AI 服务', exact: true })).toHaveCount(0)
   const builtIn: { mode: string; words: { id: string; word: string; meaning: string }[] }[] = []
@@ -98,7 +102,7 @@ test('all main pages share clear navigation and return to the same study group',
   await page.getByRole('button', { name: '返回', exact: true }).click()
   await page.getByRole('button', { name: '返回', exact: true }).click()
   await nav.getByRole('tab', { name: '学习', exact: true }).click()
-  await page.getByRole('button', { name: '读短文', exact: true }).click()
+  await openStory(page)
   await expect(page.locator('.context-reader')).toHaveAttribute('data-task-id', task.id)
   expect((await state(page)).reviews).toHaveLength(0)
   await page.getByRole('button', { name: '自己自查', exact: true }).click()
@@ -155,10 +159,11 @@ test('study header has direct controls: no vague ⋯ menu, plan sheet holds the 
     expect(await page.locator('.study-card-top').evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0)
     expect(await plan.evaluate(el => el.getBoundingClientRect().right <= innerWidth)).toBe(true)
   }
-  await expect(page.getByRole('button', { name: '读短文', exact: true })).toBeVisible()
+  // 读短文 lives in the plan sheet, not in the crowded header.
+  await expect(page.getByRole('button', { name: '读短文', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: '复习计划', exact: true }).click()
   const tools = page.getByRole('group', { name: '本组操作' })
-  for (const name of ['朗读本组', '撤销上一步']) await expect(tools.getByRole('button', { name })).toBeVisible()
+  for (const name of ['读短文', '朗读本组', '撤销上一步']) await expect(tools.getByRole('button', { name })).toBeVisible()
   await expect(tools.getByRole('button', { name: /^回看当天/ })).toBeVisible()
 })
 test('review progress separates the current task from later due words and resumes the first unfinished group', async ({ page }) => {
@@ -275,7 +280,7 @@ for (const kind of ['learn', 'review'] as const) test(`context ${kind} uses the 
   await expect(page.getByRole('slider', { name: '词组', exact: true })).toHaveAttribute('aria-valuenow', '2')
   const ids = await page.locator('.english-entry').evaluateAll(rows => rows.map(row => row.getAttribute('data-word-id')!))
   const before = await state(page), taskId = before.learning.drafts[kind]!.id
-  await page.getByRole('button', { name: '读短文', exact: true }).click()
+  await openStory(page)
   await page.getByRole('button', { name: '生成本组短文', exact: true }).click()
   await expect(page.locator('.context-reader .story-article')).toBeVisible()
   expect(requests).toEqual([ids])

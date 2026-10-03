@@ -202,7 +202,6 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
             options={[
               { value: 'preview' as const, ariaLabel: '快速记忆', title: '快速记忆：看词和释义', label: <><PreviewIcon size={15} /><span className="stage-text">速记</span></> },
               { value: 'test' as const, ariaLabel: '自己自查', title: '自己自查：先想再核对', label: <><RecallIcon size={15} /><span className="stage-text">自查</span></> },
-              ...(mode !== 'practice' ? [{ value: 'context' as const, ariaLabel: '读短文', title: '读短文：在语境里记词', label: <><BookOpen size={15} /><span className="stage-text">短文</span></> }] : []),
             ]} />}
           <AssistantButton className="icon-button plan-button" />
           <button className="icon-button plan-button" aria-label="复习计划" title="复习计划" onClick={() => setPlanOpen(true)}><Clock3 size={20} /></button>
@@ -264,6 +263,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
       <button className="primary review-continue" disabled={saving} onClick={() => void continueReview()}><RotateCcw size={17} />{pendingReviewGroups.length ? `继续本次复习 · 剩余 ${pendingReviewGroups.length} 组` : queue.length ? `${dayMode ? '开始复习' : '开始到期复习'} · ${queue.length} 词` : '学习新词'}</button>
       <div className="plan-tools" role="group" aria-label="本组操作">
         {book && mode !== 'review' && <button className="secondary plan-wide" disabled={saving} onClick={() => { setPlanOpen(false); switchMode(mode === 'practice' ? 'learn' : 'practice') }}><RotateCcw size={16} />{mode === 'practice' ? '返回当天新词' : '回看当天 · 不改变复习计划'}</button>}
+        {!!rows.length && mode !== 'practice' && !contextMode && <button className="secondary" disabled={saving || contextServices.busy} onClick={() => { setPlanOpen(false); chooseStage('context') }}><BookOpen size={16} />读短文</button>}
         {!!rows.length && <button className="secondary" disabled={saving} onClick={() => { setPlanOpen(false); onSpeak(rows.filter(row => !row.missing).map(row => row.word).join('. ')) }}><Volume2 size={16} />朗读本组</button>}
         <button className="secondary" disabled={!canUndo || saving} aria-label="撤销上一步" onClick={() => { setPlanOpen(false); onUndo() }}><RotateCcw size={16} />撤销上一步</button>
         {savedDraft && !draftComplete(draft) && <button className="secondary plan-wide" disabled={saving} onClick={() => { setPlanOpen(false); restart(draft.kind) }}>重新开始本组</button>}
