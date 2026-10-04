@@ -50,7 +50,7 @@ class FakeModel(BaseHTTPRequestHandler):
             return
         task = json.loads(body["messages"][1]["content"])
         if "小故事" in system:
-            content = {"title": "A Story", "paragraphs": [{"words": [w["word"] for w in task], "english": "Stories use %s." % ", ".join(w["word"] for w in task), "translation": "故事。"}]}
+            content = {"title": "A Story", "paragraphs": [{"words": [{"word": task[0]["word"], "meaning": task[0]["meaning"][-4:]}, {"word": task[0]["word"], "meaning": "编造的"}, {"word": "ghost", "meaning": "幽灵"}], "english": "Stories use %s." % ", ".join(w["word"] for w in task), "translation": "故事。"}]}
         elif "助记教练" in system:
             ids = [w["wordId"] for w in task]
             if FakeModel.wrong_ids:
@@ -160,7 +160,8 @@ class ReadingAITests(ServerCase):
         self.assertEqual(self.call({"mode": "story", "words": self.words})[0], 200)
         self.assertEqual(len(FakeModel.calls), before + 2, "asking again writes another story")
         self.assertEqual(FakeModel.calls[-1]["body"]["max_tokens"], 6000)
-        self.assertEqual(result["story"]["paragraphs"][0].keys(), {"english", "translation"}, "the model's word plan is not passed on")
+        self.assertEqual(result["story"]["paragraphs"][0]["words"], [{"word": "resilient", "meaning": "有韧性的"}],
+                         "only senses quoted from the word's own meaning for a requested word are kept")
         status, result = self.call({"mode": "lessons", "words": self.words})
         self.assertEqual(status, 200, result)
         self.assertEqual([lesson["wordId"] for lesson in result["lessons"]], ["w1", "w2"])

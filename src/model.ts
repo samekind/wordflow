@@ -125,6 +125,8 @@ export const storyContentSchema = z.object({
   title: z.string().trim().min(1).max(160),
   paragraphs: z.array(z.object({
     english: z.string().trim().min(1).max(3000), translation: z.string().trim().min(1).max(3000),
+    // The sense of each target word the paragraph uses, quoted from the word's own meaning.
+    words: z.array(z.object({ word: z.string().max(100), meaning: z.string().max(40) })).max(12).optional(),
   })).min(1).max(8),
 })
 const storySchema = storyContentSchema.extend({
@@ -438,9 +440,31 @@ export function storyIsCurrent(story: Pick<DailyStory, 'targets'>, words: Pick<W
     story.targets[i].id === w.id && story.targets[i].word === w.word && story.targets[i].meaning === w.meaning)
 }
 export function wordPattern(word: string) { return word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
+/** The sense of each word a paragraph uses (normalised word → text), only when it is quoted from that word's own meaning. */
+export function storySenses(paragraph: { words?: { word: string; meaning: string }[] }, words: Pick<Word, 'word' | 'meaning'>[]) {
+  const squash = (text: string) => text.replace(/\s+/g, '')
+  const own = new Map(words.map(w => [normalize(w.word), squash(w.meaning)]))
+  const senses = new Map<string, string>()
+  for (const item of paragraph.words ?? []) {
+    const key = normalize(item.word), sense = squash(item.meaning)
+    if (sense && own.get(key)?.includes(sense) && !senses.has(key)) senses.set(key, item.meaning.trim())
+  }
+  return senses
+}
+/** The word and its regular inflections (-s, -es, -ed, -ing, -ies, doubled final consonant), so "abandoned" still counts as "abandon". */
+export function wordForms(word: string) {
+  const w = word.trim().toLowerCase(), forms = new Set([w])
+  if (!/^[a-z]{2,}$/.test(w)) return [...forms]
+  if (/[^aeiou]y$/.test(w)) { const stem = w.slice(0, -1); forms.add(`${stem}ies`); forms.add(`${stem}ied`); forms.add(`${w}ing`); return [...forms] }
+  forms.add(`${w}s`)
+  if (/(s|x|z|ch|sh|o)$/.test(w)) forms.add(`${w}es`)
+  if (w.endsWith('e')) { forms.add(`${w}d`); forms.add(`${w.slice(0, -1)}ing`) } else { forms.add(`${w}ed`); forms.add(`${w}ing`) }
+  if (/[^aeiou][aeiou][bdgmnprt]$/.test(w)) { forms.add(`${w}${w.slice(-1)}ed`); forms.add(`${w}${w.slice(-1)}ing`) }
+  return [...forms]
+}
 export function storyCoverage(story: Pick<DailyStory, 'paragraphs'>, words: Pick<Word, 'id' | 'word'>[]) {
   const text = story.paragraphs.map(p => p.english).join('\n')
-  return words.filter(w => new RegExp(`(^|[^a-z])${wordPattern(w.word)}(?=$|[^a-z])`, 'i').test(text)).map(w => w.id)
+  return words.filter(w => new RegExp(`(^|[^a-z])(?:${wordForms(w.word).map(wordPattern).join('|')})(?=$|[^a-z])`, 'i').test(text)).map(w => w.id)
 }
 /** Paragraphs a story should have for this many words: three to five words each, one to eight paragraphs (mirrors the cloud). */
 export function storyParagraphCount(words: number) { return Math.min(8, Math.max(1, Math.ceil(words / 4))) }

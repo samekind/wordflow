@@ -956,7 +956,7 @@ test('daily story uses planned words, preserves concurrent marks, caches by day 
     if (fail) { await route.fulfill({ status: 502, json: { error: '测试额度不足' } }); return }
     await route.fulfill({ json: { model: 'fixture-model', story: {
       title: 'A Day Together (test fixture)',
-      paragraphs: [{ english: `Today we remember ${ids.slice(0, -1).map(id => initial.words.find(w => w.id === id)!.word).join(', ')}.`, translation: '合成接口测试短文，非实际 AI 生成。' }],
+      paragraphs: [{ words: [{ word: initial.words.find(w => w.id === ids[0])!.word, meaning: '编造的义项' }], english: `Today we remember ${ids.slice(0, -1).map(id => initial.words.find(w => w.id === id)!.word).join(', ')}.`, translation: '合成接口测试短文，非实际 AI 生成。' }],
     } } })
   })
   await page.setViewportSize({ width: 390, height: 844 })

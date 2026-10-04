@@ -272,6 +272,17 @@ public class WordflowPlugin extends Plugin {
                             if (text.isEmpty() || text.length() > 3000) throw new IllegalArgumentException("短文段落格式无效，请重试");
                             item.put(field, text);
                         }
+                        JSONArray senses = paragraph.optJSONArray("words");
+                        if (senses != null) {
+                            JSONArray kept = new JSONArray();
+                            for (int s = 0; s < senses.length() && kept.length() < 12; s++) {
+                                JSONObject sense = senses.optJSONObject(s);
+                                if (sense == null) continue;
+                                String senseWord = sense.optString("word").trim(), senseMeaning = sense.optString("meaning").trim();
+                                if (!senseWord.isEmpty() && senseWord.length() <= 100 && !senseMeaning.isEmpty() && senseMeaning.length() <= 40) kept.put(new JSONObject().put("word", senseWord).put("meaning", senseMeaning));
+                            }
+                            if (kept.length() > 0) item.put("words", kept);
+                        }
                         cleaned.put(item);
                     }
                     call.resolve(new JSObject().put("story", new JSONObject().put("title", title).put("paragraphs", cleaned)).put("model", config.getString("model")));

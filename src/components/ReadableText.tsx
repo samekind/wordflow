@@ -21,9 +21,9 @@ export function sentenceAround(text: string, index: number): string {
   return text.slice(start, end).trim()
 }
 
-type Peek = { word: string; sentence: string; key: string }
+type Peek = { word: string; sentence: string; key: string; own?: string }
 type Lookup = {
-  peek: (word: string, sentence: string, key: string) => void
+  peek: (word: string, sentence: string, key: string, own?: string) => void
   selected?: string
   glosses: ReadonlyMap<string, string>
   annotate: boolean
@@ -39,8 +39,6 @@ type ProviderProps = {
   known: ReadonlyMap<string, string>
   glosses?: ReadonlyMap<string, string>
   annotate?: boolean
-  /** Normalised word → the meaning kept in the user's own vocabulary, shown first and compactly for those words. */
-  ownMeanings?: ReadonlyMap<string, string>
   onSpeak: (text: string) => void; onStop: () => void
   onAdd?: (row: ImportRow) => Promise<boolean>
   onOpenWord?: (id: string) => void
@@ -53,7 +51,7 @@ export function LookupProvider(props: ProviderProps) {
   const latest = useRef(props)
   latest.current = props
   const value = useMemo<Lookup>(() => ({
-    peek: (word, sentence, key) => { latest.current.onStop(); setCurrent({ word, sentence, key }) },
+    peek: (word, sentence, key, own) => { latest.current.onStop(); setCurrent({ word, sentence, key, own }) },
     close: () => { latest.current.onStop(); setCurrent(null) },
     selected: current?.key, glosses: glosses ?? new Map(), annotate, current, props: latest.current,
   }), [current, glosses, annotate])
@@ -65,7 +63,7 @@ export function LookupDock() {
   const lookup = useContext(LookupContext)
   if (!lookup) return null
   const { current, close, props } = lookup
-  return <div className="word-peek-dock">{current && <WordPeek key={current.key} peek={current} id={props.known.get(normalizeToken(current.word))} own={props.ownMeanings?.get(normalizeToken(current.word))}
+  return <div className="word-peek-dock">{current && <WordPeek key={current.key} peek={current} id={props.known.get(normalizeToken(current.word))} own={current.own}
     onClose={close} onSpeak={props.onSpeak} onStop={props.onStop} onAdd={props.onAdd} onOpenWord={props.onOpenWord} />}</div>
 }
 
@@ -150,12 +148,13 @@ type TextProps = {
   text: string; keyPrefix: string
   /** Words highlighted as part of today's plan or the user's vocabulary. */
   highlight?: ReadonlySet<string>
-  /** Target words of a generated story are marked; tapping one shows the meaning from the user's vocabulary. */
+  /** Target words of a generated story are marked; tapping one shows the sense this text uses (normalised word → meaning). */
   targets?: ReadonlyMap<string, string>
+  meanings?: ReadonlyMap<string, string>
 }
 
 /** Every English word in the text is a button: tapping it asks the surrounding LookupProvider for the meaning. */
-export function ReadableText({ text, keyPrefix, highlight, targets }: TextProps) {
+export function ReadableText({ text, keyPrefix, highlight, targets, meanings }: TextProps) {
   const lookup = useContext(LookupContext)
   const nodes: ReactNode[] = []
   let previous = 0
@@ -163,7 +162,7 @@ export function ReadableText({ text, keyPrefix, highlight, targets }: TextProps)
     nodes.push(text.slice(previous, match.index))
     const word = match[0], normal = normalizeToken(word), key = `${keyPrefix}:${match.index}`
     if (targets?.has(normal)) {
-      nodes.push(<button className="target-word" key={key} data-selected={lookup?.selected === key || undefined} onClick={() => lookup?.peek(word, sentenceAround(text, match.index!), key)} aria-label={`查看 ${word}`}>{word}</button>)
+      nodes.push(<button className="target-word" key={key} data-selected={lookup?.selected === key || undefined} onClick={() => lookup?.peek(word, sentenceAround(text, match.index!), key, meanings?.get(normal))} aria-label={`查看 ${word}`}>{word}</button>)
     } else {
       const gloss = lookup?.annotate ? lookup.glosses.get(normal) : undefined
       const body = gloss ? <ruby>{word}<rt>{gloss}</rt></ruby> : word

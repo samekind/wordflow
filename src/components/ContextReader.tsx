@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, Eye, EyeOff, RefreshCw, Square, Volume2 } from 'lucide-react'
 import { coreGloss } from '../gloss'
-import { normalize, storyCoverage, storyIsCurrent, type Store, type Word } from '../model'
+import { normalize, storyCoverage, storyIsCurrent, storySenses, wordForms, type Store, type Word } from '../model'
 import { contextStoryKey, studyGroupWords, studyWordStatus } from '../study'
 import type { StudyDraft } from '../study-state'
 import { previewStoryDraft } from '../story-draft'
@@ -9,10 +9,23 @@ import { AIIcon } from '../icons'
 import { LookupDock, LookupProvider, ReadableText } from './ReadableText'
 
 /** The target words a paragraph actually contains, found in its text rather than trusted from the model. */
-export function ParagraphWords({ english, words }: { english: string; words: Word[] }) {
-  const ids = storyCoverage({ paragraphs: [{ english, translation: '' }] }, words)
+type Paragraph = { english: string; translation: string; words?: { word: string; meaning: string }[] }
+/** The meaning shown for each target word in a paragraph: the sense the story uses, else the word's core gloss. */
+export function paragraphMeanings(paragraph: Paragraph, words: Word[]) {
+  const senses = storySenses(paragraph, words)
+  return new Map(words.flatMap(word => {
+    const meaning = senses.get(normalize(word.word)) ?? coreGloss(word.meaning).replace(/\b[a-z]{1,5}\.\s*/g, '')
+    return wordForms(word.word).map(form => [normalize(form), meaning] as const)
+  }))
+}
+/** Every form of the target words → the word's id, so inflected uses in the story are marked too. */
+export const targetFormIds = (words: Word[]) => new Map(words.flatMap(word => wordForms(word.word).map(form => [normalize(form), word.id] as const)))
+
+export function ParagraphWords({ paragraph, words }: { paragraph: Paragraph; words: Word[] }) {
+  const ids = storyCoverage({ paragraphs: [paragraph] }, words)
+  const meanings = paragraphMeanings(paragraph, words)
   if (!ids.length) return null
-  return <p className="paragraph-words" aria-label="本段单词">{ids.map(id => { const word = words.find(item => item.id === id)!; return <span key={id}><b lang="en">{word.word}</b> {coreGloss(word.meaning).replace(/\b[a-z]{1,5}\.\s*/g, '')}</span> })}</p>
+  return <p className="paragraph-words" aria-label="本段单词">{ids.map(id => { const word = words.find(item => item.id === id)!; return <span key={id}><b lang="en">{word.word}</b> {meanings.get(normalize(word.word))}</span> })}</p>
 }
 
 export function StoryProgress({ words, live }: { words: Word[]; live: string }) {
@@ -41,8 +54,7 @@ export default function ContextReader({ store, draft, now, services, onWord, onS
   const key = contextStoryKey(draft), words = studyGroupWords(store, draft)
   const [translated, setTranslated] = useState(false)
   const known = useMemo(() => new Map(store.words.map(word => [normalize(word.word), word.id])), [store.words])
-  const targetIds = useMemo(() => new Map(words.map(word => [normalize(word.word), word.id])), [words])
-  const ownMeanings = useMemo(() => new Map(words.map(word => [normalize(word.word), coreGloss(word.meaning)])), [words])
+  const targetIds = useMemo(() => targetFormIds(words), [words])
   useEffect(() => { setTranslated(false); return onStop }, [key])
   const own = store.contextStories.find(story => story.id === key)
   // Existing saved short stories remain usable when they contain exactly this task's words.
@@ -53,7 +65,7 @@ export default function ContextReader({ store, draft, now, services, onWord, onS
   const completed = draft.completed.includes(draft.page)
   const changed = words.length !== draft.groups[draft.page].length || (!completed && words.some(word => studyWordStatus(store, draft, word.id, new Date(now))))
   const generating = services.generatingKey === key
-  return <LookupProvider title={story?.title || '语境短文'} known={known} ownMeanings={ownMeanings} onSpeak={onSpeak} onStop={onStop} onOpenWord={onWord}><section className="context-reader" aria-label="语境记忆" data-task-id={draft.id} data-group={draft.page}>
+  return <LookupProvider title={story?.title || '语境短文'} known={known} onSpeak={onSpeak} onStop={onStop} onOpenWord={onWord}><section className="context-reader" aria-label="语境记忆" data-task-id={draft.id} data-group={draft.page}>
     <p className="context-task-summary">语境记忆 · 本组 {draft.groups[draft.page].length} 词，读完仍自测这组词。</p>
     {services.error && <p className="error-banner" role="alert">{services.error}</p>}
     {changed && <p className="field-note" role="status">这组词已有变化，请返回自测核对。原学习进度保留。</p>}
@@ -70,9 +82,9 @@ export default function ContextReader({ store, draft, now, services, onWord, onS
       </div>
       <article className="story-article"><h2>{story.title}</h2>
         {story.paragraphs.map((paragraph, index) => <div className="story-paragraph" key={index}>
-          <p lang="en"><ReadableText text={paragraph.english} keyPrefix={`${index}`} targets={targetIds} /></p>
+          <p lang="en"><ReadableText text={paragraph.english} keyPrefix={`${index}`} targets={targetIds} meanings={paragraphMeanings(paragraph, words)} /></p>
           {translated && <p className="story-translation">{paragraph.translation}</p>}
-          <ParagraphWords english={paragraph.english} words={words} />
+          <ParagraphWords paragraph={paragraph} words={words} />
         </div>)}
       </article>
       {!!missing.length && <div className="missing-words"><span>这些词没写进短文，自测时仍会包含</span>{missing.map(word => <button onClick={() => onWord(word.id)} key={word.id}>{word.word}</button>)}</div>}

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { bookDays, completeBookGroup, emptyStore, importToPersonal, importWords, installBook, markWord, reviewWord, setKnown, storyCoverage, storyIsCurrent, storyParagraphCount, storyContentSchema, validateStore, wordsForDay, type DailyStory, type ImportRow } from '../src/model'
+import { bookDays, completeBookGroup, emptyStore, importToPersonal, importWords, installBook, markWord, reviewWord, setKnown, storyCoverage, storyIsCurrent, storyParagraphCount, storySenses, wordForms, storyContentSchema, validateStore, wordsForDay, type DailyStory, type ImportRow } from '../src/model'
 import { starterRows } from '../src/vocabulary'
 
 test('old backups migrate into a personal book without altering words or review history', () => {
@@ -91,6 +91,19 @@ test('a story gets one paragraph per three to five words, at most eight', () => 
   const paragraphs = Array.from({ length: 8 }, (_, i) => ({ english: `Scene ${i}.`, translation: `场景 ${i}。` }))
   assert.equal(storyContentSchema.safeParse({ title: 'Eight', paragraphs }).success, true)
   assert.equal(storyContentSchema.safeParse({ title: 'Nine', paragraphs: [...paragraphs, paragraphs[0]] }).success, false)
+})
+
+test('a paragraph\'s sense of a word is used only when quoted from the word\'s own meaning', () => {
+  const words = [{ word: 'bargain', meaning: 'n. 交易, 买卖协定, 特价商品\nv. 讲价' }, { word: 'sentence', meaning: 'n. 句子, 宣判' }]
+  const senses = storySenses({ words: [{ word: 'Bargain', meaning: '特价商品' }, { word: 'sentence', meaning: '判刑' }, { word: 'ghost', meaning: '幽灵' }] }, words)
+  assert.deepEqual([...senses], [['bargain', '特价商品']])
+})
+
+test('inflected uses of a target word still count as covering it', () => {
+  for (const [word, form] of [['abandon', 'abandoned'], ['abandon', 'abandoning'], ['policy', 'policies'], ['stop', 'stopped'], ['make', 'making'], ['wish', 'wishes'], ['carry', 'carried']]) assert.ok(wordForms(word).includes(form), `${word} → ${form}`)
+  assert.deepEqual(wordForms('look after'), ['look after'])
+  const story = { paragraphs: [{ english: 'He abandoned the plan and stopped looking after it.', translation: '译文' }] }
+  assert.deepEqual(storyCoverage(story, [{ id: 'a', word: 'abandon' }, { id: 'b', word: 'stop' }, { id: 'c', word: 'plan' }, { id: 'd', word: 'abandonment' }]), ['a', 'b', 'c'])
 })
 
 test('all bundled books can be installed and backed up within the native storage limit', () => {
