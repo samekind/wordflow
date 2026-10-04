@@ -644,7 +644,13 @@ test('online dictionary renders definitions, audio and attribution; missing entr
   await page.goto('/')
   await holdWord(page, initial.words[0].word)
   expect(requested).toHaveLength(0)
-  await expect(page.getByRole('button', { name: '释义', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  // The meaning comes first: it is already on screen, above the marks and the tabs, whichever tab is open.
+  await expect(page.locator('.word-detail .word-action-meaning')).toHaveText(coreGloss(initial.words[0].meaning))
+  const meaningBox = (await page.locator('.word-detail .word-action-meaning').boundingBox())!
+  expect(meaningBox.y + meaningBox.height).toBeLessThan(500)
+  expect(meaningBox.y).toBeLessThan((await page.getByRole('group', { name: '详情分页' }).boundingBox())!.y)
+  expect(meaningBox.y).toBeLessThan((await page.getByLabel('标记等级').boundingBox())!.y)
+  await expect(page.getByRole('button', { name: '助记', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('button', { name: '在线词典', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: '词典', exact: true }).click()
   const builtIn = page.getByRole('region', { name: '内置词典' })
@@ -662,7 +668,6 @@ test('online dictionary renders definitions, audio and attribution; missing entr
   await page.getByRole('button', { name: '词典', exact: true }).click()
   await page.getByRole('button', { name: '在线词典', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('未收录')
-  await page.getByRole('button', { name: '释义', exact: true }).click()
   await expect(page.locator('.word-action-meaning')).toHaveText(coreGloss(initial.words[1].meaning))
 })
 
@@ -1205,6 +1210,23 @@ test('tapping any word shows its meaning, glosses can be prepared inline, and ar
   const vocab = after.books.find(book => book.id === 'vocab')!
   expect(vocab.title).toBe('生词本')
   expect(vocab.wordIds.map(id => after.words.find(word => word.id === id)?.word)).toEqual(['reader'])
+  // The toast after collecting jumps straight to the list; it is also one tap away from 我的.
+  await page.getByRole('button', { name: '查看', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '生词本', exact: true })).toBeVisible()
+  await expect(page.locator('.vocab-row')).toHaveCount(1)
+  await expect(page.locator('.vocab-row').first()).toContainText('reader')
+  await page.getByRole('button', { name: '返回', exact: true }).click()
+  await nav(page, '设置')
+  await page.getByRole('button', { name: '生词本', exact: true }).click()
+  await expect(page.locator('.vocab-row')).toHaveCount(1)
+  await page.getByRole('button', { name: '移出生词本 reader', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '生词本还是空的' })).toBeVisible()
+  expect((await state(page)).books.find(book => book.id === 'vocab')!.wordIds).toEqual([])
+  expect((await state(page)).words.some(word => word.word === 'reader')).toBe(true)
+  await page.getByRole('button', { name: '返回', exact: true }).click()
+  await nav(page, '选读')
+  // The list keeps its filters while the app stays open.
+  await catalog.getByRole('button', { name: '目录 Fixture A', exact: true }).click()
 
   // Meanings are prepared ahead: hard words get a small gloss above them, basic words stay clean.
   await expect(page.locator('.reading-token rt')).toHaveCount(0)

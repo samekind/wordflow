@@ -12,7 +12,7 @@ import LocalDictionary from './LocalDictionary'
 import MarkDots from './MarkDots'
 import { Segmented } from './Controls'
 
-type DetailTab = 'meaning' | 'memory' | 'dictionary'
+type DetailTab = 'memory' | 'dictionary' | 'frequency'
 
 type Props = {
   word?: Word; lesson?: Lesson; saving: boolean;
@@ -31,14 +31,14 @@ export default function WordDetails({ word, lesson, saving, onClose, onMark, onK
   const [frequency, setFrequency] = useState<{ title: string; papers: number; occurrences: number }[] | null>(null)
   const [builtin, setBuiltin] = useState<BundledMnemonic | undefined>()
   const [editing, setEditing] = useState(false)
-  const [tab, setTab] = useState<DetailTab>('meaning')
+  const [tab, setTab] = useState<DetailTab>('memory')
   const [draftMnemonic, setDraftMnemonic] = useState('')
   const [draftExample, setDraftExample] = useState('')
   const [draftTranslation, setDraftTranslation] = useState('')
   const sequence = useRef(0)
   const audio = useRef<HTMLAudioElement | null>(null)
   useEffect(() => {
-    sequence.current++; setEntries([]); setLookupError(''); setLoading(false); setEditing(false); setFrequency(null); setBuiltin(undefined); setTab('meaning')
+    sequence.current++; setEntries([]); setLookupError(''); setLoading(false); setEditing(false); setFrequency(null); setBuiltin(undefined); setTab('memory')
     const current = word
     if (!current) return () => { sequence.current++; audio.current?.pause(); onStop() }
     let stop = false
@@ -85,6 +85,14 @@ export default function WordDetails({ word, lesson, saving, onClose, onMark, onK
           <button className="icon-button" aria-label="编辑单词" title="编辑单词" disabled={saving} onClick={() => onEdit(word)}><Pencil size={16} /></button>
         </div>
       </header>
+      <section className="detail-meaning detail-panel">
+        <p className="word-action-meaning">{coreGloss(word.meaning)}</p>
+        {word.meaning.trim().replace(/\s+/g, '') !== coreGloss(word.meaning).replace(/\s+/g, '') && <>
+          <p className="gloss-label">标准释义</p>
+          <p className="standard-meaning">{word.meaning.trim()}</p>
+        </>}
+        {word.example && <p className="word-detail-example" lang="en">{word.example}</p>}
+      </section>
       <div className="detail-status">
         <div className="word-mark-row"><span>标记</span><div className="mark-stepper">
           <button aria-label="减少标记" title="减少标记" disabled={saving || word.markCount === 0} onClick={() => onMark(word.id, -1)}><Minus size={16} /></button>
@@ -94,25 +102,7 @@ export default function WordDetails({ word, lesson, saving, onClose, onMark, onK
         <IonToggle className="known-toggle" justify="space-between" checked={word.known} disabled={saving} onIonChange={event => { void onKnown(word.id, event.detail.checked) }}>熟词</IonToggle>
       </div>
       <Segmented<DetailTab> label="详情分页" className="detail-tabs" value={tab} onChange={setTab}
-        options={[{ value: 'meaning', label: '释义' }, { value: 'memory', label: '助记' }, { value: 'dictionary', label: '词典' }]} />
-      {tab === 'meaning' && <>
-      <section className="detail-meaning detail-panel">
-        <p className="gloss-label">核心</p>
-        <p className="word-action-meaning">{coreGloss(word.meaning)}</p>
-        {word.meaning.trim().replace(/\s+/g, '') !== coreGloss(word.meaning).replace(/\s+/g, '') && <>
-          <p className="gloss-label">标准释义</p>
-          <p className="standard-meaning">{word.meaning.trim()}</p>
-        </>}
-        {word.example && <p className="word-detail-example" lang="en">{word.example}</p>}
-      </section>
-      <section className="word-frequency detail-panel" aria-label="考频">
-        <h4>近五年考频</h4>
-        {!frequency && <p className="frequency-note">正在读取</p>}
-        {frequency && heard.length === 0 && <p className="frequency-note">四级、六级、考研近五年没考到</p>}
-        {heard.length > 0 && <div className="frequency-chips">{heard.map(item => <span key={item.title}>{item.title} {item.papers} 套 · {item.occurrences} 次</span>)}</div>}
-      </section>
-      <p className="detail-status-note">六点标记帮助你关注难词；标为熟词后，会移出学习和复习队列。</p>
-      </>}
+        options={[{ value: 'memory', label: '助记' }, { value: 'dictionary', label: '词典' }, { value: 'frequency', label: '考频' }]} />
       {tab === 'memory' && <section className="word-mnemonic detail-panel" aria-label="助记">
         <div className="word-mnemonic-heading"><h4>助记</h4>{mnemonicLabel && <span>{mnemonicLabel}</span>}</div>
         {!editing && <>
@@ -131,6 +121,14 @@ export default function WordDetails({ word, lesson, saving, onClose, onMark, onK
             <button className="primary" disabled={saving} onClick={async () => { if (await onSaveMnemonic(word.id, { mnemonic: draftMnemonic, example: draftExample, translation: draftTranslation })) setEditing(false) }}>保存</button></div>
         </div>}
       </section>}
+      {tab === 'frequency' && <>
+      <section className="word-frequency detail-panel" aria-label="考频">
+        <h4>近五年考频</h4>
+        {!frequency && <p className="frequency-note">正在读取</p>}
+        {frequency && heard.length === 0 && <p className="frequency-note">四级、六级、考研近五年没考到</p>}
+        {heard.length > 0 && <div className="frequency-chips">{heard.map(item => <span key={item.title}>{item.title} {item.papers} 套 · {item.occurrences} 次</span>)}</div>}
+      </section>
+      </>}
       {tab === 'dictionary' && <section className="dictionary-section detail-panel">
         <LocalDictionary word={word.word} meaning={word.meaning} phonetic={word.phonetic} definition={word.definition} exchange={word.exchange} />
         <div className="dictionary-actions">

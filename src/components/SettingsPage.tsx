@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { BookOpen, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, RefreshCw, Settings2, Smile, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
+import { BookOpen, Bookmark, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, RefreshCw, Settings2, Smile, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
 import { AIIcon } from '../icons'
 import type { Appearance, PageFont, TextSize } from '../model'
 import { installedRelease, loadCloudAccount } from '../cloud'
@@ -22,11 +22,11 @@ type Props = {
   onSaveAI: (data: { provider: string; model: string; key: string }) => Promise<boolean>;
   onRemoveAI: () => Promise<boolean>; onPreferences: (patch: Partial<Store>) => Promise<boolean>;
   onBackup: () => void; onRestore: () => void; onSpeak: (text: string) => void; onLicenses: () => void;
-  onBooks: () => void; onLibrary: () => void;
+  onBooks: () => void; onLibrary: () => void; onVocab: () => void;
   onCloudCreate: () => Promise<string>; onCloudRecover: (code: string) => Promise<void>;
   onCloudUpload: (force: boolean) => Promise<string>; onCloudRestore: () => Promise<void>;
 }
-export default function SettingsPage({ store, ai, saving, aiBusy, error, section, onSection, onSaveAI, onRemoveAI, onPreferences, onBackup, onRestore, onSpeak, onLicenses, onBooks, onLibrary, onCloudCreate, onCloudRecover, onCloudUpload, onCloudRestore }: Props) {
+export default function SettingsPage({ store, ai, saving, aiBusy, error, section, onSection, onSaveAI, onRemoveAI, onPreferences, onBackup, onRestore, onSpeak, onLicenses, onBooks, onLibrary, onVocab, onCloudCreate, onCloudRecover, onCloudUpload, onCloudRestore }: Props) {
   const [provider, setProvider] = useState(ai.provider)
   const [model, setModel] = useState(ai.model)
   const [customModel, setCustomModel] = useState(ai.model !== defaults[ai.provider])
@@ -53,6 +53,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
   const avatarInput = useRef<HTMLInputElement>(null)
   const avatarRequest = useRef(0)
   const book = store.books.find(book => book.id === store.activeBookId)
+  const vocabCount = store.books.find(item => item.id === 'vocab')?.wordIds.length ?? 0
   useEffect(() => setDaily(Math.min(100, Math.max(5, store.goal))), [store.goal])
   useEffect(() => setProfile(store.profile), [store.profile.nickname, store.profile.avatar, store.profile.goal])
   useEffect(() => {
@@ -73,6 +74,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
     <div className="settings-menu" aria-label="个人设置">
       <h2 className="settings-group-title">学习</h2>
       <div className="settings-group">
+      <button onClick={onVocab} aria-label="生词本"><Bookmark size={20} /><span>生词本<small>阅读时收藏的词，单独复习</small></span><small>{vocabCount ? `${vocabCount} 词` : '空'}</small><ChevronRight size={16} /></button>
       <button onClick={onBooks} aria-label="管理目标词书"><BookOpen size={20} /><span>词书管理<small>{book ? `正在学习 ${book.title} · 更换或添加词书` : '选择一本词书'}</small></span><ChevronRight size={16} /></button>
       <button onClick={() => onSection('learning')} aria-label="学习设置"><Settings2 size={20} /><span>学习设置<small>每天词量、复习方法</small></span><ChevronRight size={16} /></button>
       </div>

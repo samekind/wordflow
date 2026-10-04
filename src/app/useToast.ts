@@ -4,7 +4,8 @@ import { useCallback, useState } from 'react'
 export function useToast() {
   const [message, setMessage] = useState('')
   const [allowUndo, setAllowUndo] = useState(false)
-  const notify = useCallback((text: string, undo = false) => { setAllowUndo(undo); setMessage(text) }, [])
+  const [action, setAction] = useState<{ text: string; handler: () => void } | undefined>()
+  const notify = useCallback((text: string, undo = false, extra?: { text: string; handler: () => void }) => { setAllowUndo(undo); setAction(extra); setMessage(text) }, [])
   const clear = useCallback(() => setMessage(''), [])
-  return { message, allowUndo, notify, clear }
+  return { message, allowUndo, action, notify, clear }
 }

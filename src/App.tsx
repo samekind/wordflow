@@ -4,7 +4,7 @@ import { modalController } from '@ionic/core'
 import { motion, useReducedMotion } from 'motion/react'
 import { ChartColumn, ChevronLeft, LoaderCircle, Plus } from 'lucide-react'
 import { ProfileIcon, ReadIcon, StudyIcon } from './icons'
-import { dayKey, needsSetup, validateStore, type Store, type Word } from './model'
+import { dayKey, needsSetup, validateStore, vocabBookId, type Store, type Word } from './model'
 import Onboarding from './components/Onboarding'
 import StudyList from './StudyList'
 import { checkIn, currentStudyDraft, studyView } from './study'
@@ -19,6 +19,7 @@ import ExamFrequencyView from './components/ExamFrequencyView'
 import { useConfirm } from './components/Controls'
 import { EditWordSheet, ImportSheet, LicensesSheet, RestorePicker, RestoreSheet } from './components/AppSheets'
 import LibraryPage from './pages/LibraryPage'
+import VocabPage from './pages/VocabPage'
 import StatsPage from './pages/StatsPage'
 import { createCloudAccount, downloadCloudState, recoverCloudAccount, uploadCloudState, CloudConflict } from './cloud'
 import { isTab, screenKey, useNavigation, type Screen, type TabId } from './app/useNavigation'
@@ -32,7 +33,7 @@ import { useBackButton } from './app/useBackButton'
 import { SpeechRateContext } from './components/SpeechRate'
 
 const tabs = [{ id: 'today', label: '学习', icon: StudyIcon }, { id: 'stats', label: '统计', icon: ChartColumn }, { id: 'story', label: '阅读', icon: ReadIcon }, { id: 'settings', label: '我的', icon: ProfileIcon }] as const
-const titles: Record<string, string> = { stats: '统计', books: '词书管理', story: '阅读', settings: '我的', library: '我的单词', frequency: '考频查询', article: '英语选读', stories: '语境记忆', picks: '每日英语选读' }
+const titles: Record<string, string> = { stats: '统计', books: '词书管理', story: '阅读', settings: '我的', library: '我的单词', frequency: '考频查询', article: '英语选读', stories: '语境记忆', vocab: '生词本', picks: '每日英语选读' }
 const titleOf = (screen: Screen) => screen.name === 'section' ? settingsTitles[screen.section] : screen.name === 'shelf'
   ? `${screen.cefr} ${cefrNames[screen.cefr]}${screen.topic && screen.topic !== '*' ? ` · ${screen.topic}` : ''}` : titles[screen.name]
 
@@ -49,7 +50,7 @@ export default function App() {
   const nav = useNavigation(speech.stop)
   const goStudy = () => nav.navigate({ name: 'today' })
   const study = useStudyActions({ storeRef, saving, commit, notify: toast.notify, stopSpeech: speech.stop, onStudyBook: goStudy })
-  const words = useWordActions({ storeRef, commit, notify: toast.notify, clearUndo: study.clearUndo, onStudyBook: goStudy })
+  const words = useWordActions({ storeRef, commit, notify: toast.notify, clearUndo: study.clearUndo, onStudyBook: goStudy, onOpenVocab: () => go({ name: 'vocab' }) })
   const ai = useAIServices({ storeRef, pendingSave: data.pendingSave, commit, notify: toast.notify, changeStudy: study.changeStudy })
   aiConfigRef.current = ai.setConfig
 
@@ -133,11 +134,12 @@ export default function App() {
               view={shelfView ?? (store.books.length ? 'mine' : 'catalog')} onView={setShelfView}
               onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onActivate={study.activateBook} onInstall={words.installCatalogBook} onWord={openWord} />}
             {screen.name === 'frequency' && <ExamFrequencyView initialExam={words.catalog.find(book => book.id === store.activeBookId)?.exam || (store.activeBookId === 'ecdict-ky' ? 'ky1' : 'cet4')} />}
+            {screen.name === 'vocab' && <VocabPage store={store} saving={saving} onWord={openWord} onRemove={words.removeVocabWord} onStudy={() => study.activateBook(vocabBookId)} />}
             {screen.name === 'library' && <LibraryPage store={store} onWord={openWord} onBooks={() => go({ name: 'books' })} />}
             {screen.name === 'stats' && <StatsPage store={store} now={data.clock} saving={saving} onCheckIn={doCheckIn} onStudy={goStudy} onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onBooks={() => go({ name: 'books' })} />}
             {(screen.name === 'story' || screen.name === 'article' || screen.name === 'stories' || screen.name === 'shelf' || screen.name === 'picks') && <ReadingPage store={store} now={data.clock} view={screen.name === 'story' ? 'hub' : screen.name === 'picks' ? 'picks' : screen.name === 'article' ? 'daily' : screen.name === 'shelf' ? 'shelf' : 'story'}
               onStudy={async () => { const current = storeRef.current; const mode = studyView(current); const draft = currentStudyDraft(current, mode === 'review' ? 'review' : 'learn'); if (!draft || await study.changeStudy(draft, { type: 'method', method: 'context' })) goStudy() }}
-              onOpen={(view, id, scope) => go(view === 'daily' ? { name: 'article', id, scope } : view === 'picks' ? { name: 'picks' } : { name: 'stories' })} onShelf={(cefr, topic) => go({ name: 'shelf', cefr, topic })}
+              onVocab={() => go({ name: 'vocab' })} onOpen={(view, id, scope) => go(view === 'daily' ? { name: 'article', id, scope } : view === 'picks' ? { name: 'picks' } : { name: 'stories' })} onShelf={(cefr, topic) => go({ name: 'shelf', cefr, topic })}
               articleId={screen.name === 'article' ? screen.id : undefined} scope={screen.name === 'article' ? screen.scope : screen.name === 'shelf' ? { cefr: screen.cefr, topic: screen.topic } : undefined} onAddWord={words.collectWord} saving={saving}
               onRead={id => {
                 const current = storeRef.current
@@ -150,7 +152,7 @@ export default function App() {
             {(screen.name === 'settings' || screen.name === 'section') && <SettingsPage store={store} ai={ai.config} saving={saving} aiBusy={ai.busy} error={ai.error} onSaveAI={ai.saveConfig} onRemoveAI={ai.removeConfig}
               section={screen.name === 'section' ? screen.section : 'home'} onSection={section => { if (section === 'home') back(); else go({ name: 'section', section }) }}
               onPreferences={patch => commit({ ...storeRef.current, ...patch })} onBackup={downloadBackup} onRestore={() => restoreRef.current?.click()} onSpeak={speech.speak} onLicenses={() => setLicensesOpen(true)}
-              onBooks={() => go({ name: 'books' })} onLibrary={() => go({ name: 'library' })}
+              onBooks={() => go({ name: 'books' })} onLibrary={() => go({ name: 'library' })} onVocab={() => go({ name: 'vocab' })}
               onCloudCreate={async () => (await createCloudAccount()).recoveryCode}
               onCloudRecover={async code => { await recoverCloudAccount(code) }}
               onCloudUpload={async force => { try { const saved = await uploadCloudState(storeRef.current, force); return `已上传 · ${saved.savedAt}` } catch (error) { if (error instanceof CloudConflict) throw new Error('云端有更新的记录'); throw error } }}
@@ -164,8 +166,8 @@ export default function App() {
       <IonTabBar selectedTab={selectedTab}>
         {tabs.map(tab => <IonTabButton tab={tab.id} key={tab.id} selected={selectedTab === tab.id} onClick={() => go({ name: tab.id })} aria-label={tab.label}><tab.icon /><IonLabel>{tab.label}</IonLabel></IonTabButton>)}
       </IonTabBar></nav>}
-    <IonToast isOpen={!!toast.message} message={toast.message} duration={3500} position="bottom" positionAnchor={setup ? undefined : 'phone-tabs'} cssClass="app-toast" animated={!reduced} onDidDismiss={toast.clear}
-      buttons={[...(toast.allowUndo && study.canUndo ? [{ text: '撤销', handler: () => { void study.undoLastAction(); return false } }] : []), { text: '关闭', role: 'cancel' }]} />
+    <IonToast isOpen={!!toast.message} message={toast.message} duration={toast.action ? 7000 : 3500} position="bottom" positionAnchor={setup ? undefined : 'phone-tabs'} cssClass="app-toast" animated={!reduced} onDidDismiss={toast.clear}
+      buttons={[...(toast.allowUndo && study.canUndo ? [{ text: '撤销', handler: () => { void study.undoLastAction(); return false } }] : []), ...(toast.action ? [{ text: toast.action.text, handler: () => { toast.action?.handler(); return true } }] : []), { text: '关闭', role: 'cancel' }]} />
     <WordDetails word={store.words.find(w => w.id === detailId)} lesson={store.lessons.find(l => l.wordId === detailId)} saving={saving}
       onClose={() => setDetailId('')} onMark={study.changeMarks} onKnown={study.changeKnown} onSpeak={speech.speak} onStop={speech.stop}
       onDictionary={word => { void phone.openDictionary({ word }).catch(error => toast.notify(error.message)) }}

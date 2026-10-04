@@ -185,7 +185,7 @@ progress::-moz-progress-bar{background:#7aabed}
 .word-detail .pronunciation-buttons{margin:0;gap:6px}
 .word-detail .pronunciation-buttons button{min-height:28px;padding:2px 9px}
 .detail-meaning{padding:14px 16px 12px;border-radius: var(--radius-md);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
-.word-detail .detail-meaning .word-action-meaning{margin:0;padding:0;border:0;font-size: var(--fs-word);line-height:1.65;color:var(--text-primary)}
+.word-detail .detail-meaning .word-action-meaning{margin:0;padding:0;border:0;font-size:calc(var(--fs-word) * 1.2);font-weight: var(--fw-semibold);line-height:1.5;color:var(--text-primary)}
 .gloss-label{margin:12px 0 4px;font-size: var(--fs-caption);line-height:1.4;color: var(--text-muted)}
 .detail-meaning>.gloss-label:first-child{margin-top:0}
 .standard-meaning{margin:0;max-height:8.5em;overflow:auto;white-space:pre-line;overflow-wrap:anywhere;font-size: var(--fs-meta);line-height:1.65;color: var(--text-secondary)}

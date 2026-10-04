@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from 'react'
 import { SpeechRatePill } from './SpeechRate'
-import { BookA, BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, EyeOff, Languages, LoaderCircle, RefreshCw, SlidersHorizontal, Square, Volume2 } from 'lucide-react'
+import { BookA, BookOpen, BookmarkPlus, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, EyeOff, Languages, LoaderCircle, RefreshCw, SlidersHorizontal, Square, Volume2 } from 'lucide-react'
 import { DailyIcon, EssayIcon } from '../icons'
 import { dayKey, normalize, pageFontAttrs, wordsForDay, type ImportRow, type Store } from '../model'
 import { articleCefr, cachedArticle, cefrNames, dailyReadingIndex, englishWordCount, inScope, readingLengthNames, readingLengths, readingLevel, readingLevels, refreshReadingArticle, scopeLabel, type ReadingArticle, type ReadingCefr, type ReadingLength, type ReadingScope } from '../reading'
@@ -24,6 +24,7 @@ type Props = {
   onAddWord: (row: ImportRow) => Promise<boolean>;
   onSpeak: (text: string) => void; onStop: () => void; children?: ReactNode;
   onStudy?: () => void;
+  onVocab?: () => void;
 }
 export default function ReadingPage(props: Props) {
   return <div className="reading-page font-scope" data-size={props.store.readingPreferences.textSize} {...pageFontAttrs(props.store.appearance.reading)}>
@@ -43,7 +44,7 @@ function syncedText(at: number, now: number) {
 const pageSize = 15
 const minutesFor = (words: number) => Math.max(1, Math.ceil(words / 120))
 /** 阅读 tab: exactly two entries. Everything else is one level down. */
-function ReadingEntries({ store, now, onOpen }: Props) {
+function ReadingEntries({ store, now, onOpen, onVocab }: Props) {
   const { articles: catalog } = useReadingArticles(true)
   const level = readingLevel(store)
   const choices = useMemo(() => catalog.filter(article => article.level === level), [catalog, level])
@@ -51,6 +52,7 @@ function ReadingEntries({ store, now, onOpen }: Props) {
   const read = !!today && store.readArticleIds.includes(today.id)
   const book = store.books.find(item => item.id === store.activeBookId)
   const dayWords = book ? wordsForDay(store, book).length : 0
+  const vocabCount = store.books.find(item => item.id === 'vocab')?.wordIds.length ?? 0
   return <div className="reading-hub reading-entries">
     <button className="reading-entry reading-entry-daily" aria-label="每日英语选读" onClick={() => onOpen('picks')}>
       {today?.image ? <img src={today.image.path} alt="" /> : <span className="reading-entry-icon"><DailyIcon size={26} /></span>}
@@ -70,6 +72,9 @@ function ReadingEntries({ store, now, onOpen }: Props) {
       </span>
       <ChevronRight size={18} className="reading-entry-chevron" />
     </button>
+    {onVocab && <button className="vocab-shortcut" aria-label="生词本" onClick={onVocab}>
+      <BookmarkPlus size={20} /><span><strong>生词本</strong><small>{vocabCount ? `已收藏 ${vocabCount} 词` : '读文章时点生词，加入这里'}</small></span><ChevronRight size={17} />
+    </button>}
     <p className="reading-hub-note">已读文章 {store.readArticleIds.length} 篇 · 阅读设置在“我的 → 发音与阅读”</p>
   </div>
 }

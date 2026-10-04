@@ -7,6 +7,7 @@ export type Screen =
   | { name: TabId }
   | { name: 'books' }
   | { name: 'library' }
+  | { name: 'vocab' }
   | { name: 'frequency' }
   | { name: 'article'; id?: string; scope?: ReadingScope }
   | { name: 'shelf'; cefr: ReadingCefr; topic?: string }

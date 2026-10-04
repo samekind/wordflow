@@ -438,6 +438,10 @@ export function collectToVocabBook(store: Store, rows: ImportRow[], batch = '阅
   }
   return { ...result, collected: fresh.length }
 }
+/** Takes a word out of the 生词本 only; the word and its learning record stay. */
+export function removeFromVocabBook(store: Store, wordId: string): Store {
+  return { ...store, books: store.books.map(b => b.id === vocabBookId ? { ...b, wordIds: b.wordIds.filter(id => id !== wordId), completedWordIds: b.completedWordIds.filter(id => id !== wordId) } : b) }
+}
 export function completeBookGroup(store: Store, bookId: string, ids: string[], now = new Date(), dueReview = false): Store {
   const next = dueReview ? ids.reduce((current, id) => {
     const word = current.words.find(w => w.id === id)
