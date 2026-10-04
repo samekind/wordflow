@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { modalController } from '@ionic/core'
-import { importToPersonal, installBook, setUserMnemonic, type ImportRow, type Store, type Word } from '../model'
+import { collectToVocabBook, importToPersonal, installBook, setUserMnemonic, type ImportRow, type Store, type Word } from '../model'
 import { loadExamFrequency, orderPersonalBook } from '../exam-frequency'
 import { loadBookWords, loadCatalog, type CatalogBook } from '../wordbooks'
 
@@ -50,6 +50,13 @@ export function useWordActions({ storeRef, commit, notify, clearUndo, onStudyBoo
     if (!stay) onStudyBook()
     return true
   }
+  /** Reading picks never switch the active book or reorder it, so today's plan is left as it is. */
+  async function collectWord(row: ImportRow) {
+    const result = collectToVocabBook(storeRef.current, [row])
+    if (!result.collected) { notify('这个词已经在生词本里'); return true }
+    if (!await commit(result.store)) return false
+    notify('已加入生词本，当前学习计划不变'); return true
+  }
   async function saveWord(edited: Word) {
     const current = storeRef.current, meaning = edited.meaning.trim()
     const changed = current.words.find(w => w.id === edited.id)?.meaning !== meaning
@@ -80,5 +87,5 @@ export function useWordActions({ storeRef, commit, notify, clearUndo, onStudyBoo
     await modalController.dismiss(undefined, 'saved'); clearUndo(); notify('备份已恢复'); return true
   }
 
-  return { catalog, catalogError, bookBusy, refreshCatalog, installCatalogBook, importRows, saveWord, deleteWord, saveMnemonic, restore }
+  return { catalog, catalogError, bookBusy, refreshCatalog, installCatalogBook, importRows, collectWord, saveWord, deleteWord, saveMnemonic, restore }
 }

@@ -127,7 +127,7 @@ function WordPeek({ peek, id, own, onClose, onSpeak, onStop, onAdd, onOpenWord }
           setAdding(true)
           try { const row = await lookupLocalWord(peek.word); if (row && await onAdd({ word: row.word, meaning: row.meaning, phonetic: row.phonetic, example: '', definition: row.definition, exchange: row.exchange, source: row.source })) onClose() }
           finally { setAdding(false) }
-        }}><BookmarkPlus size={15} />加入词本</button>}
+        }}><BookmarkPlus size={15} />加入生词本</button>}
     </div>
     {extra && !extra.busy && <div className="word-peek-extra" role="note">
       {extra.error ? <p className="error-banner" role="alert">{extra.error}</p> : <><p lang={extra.kind === 'sentence' ? 'zh' : undefined}>{extra.text}</p><small>内置 AI 生成，仅供参考</small></>}

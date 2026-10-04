@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { bookDays, completeBookGroup, emptyStore, importToPersonal, importWords, installBook, markWord, reviewWord, setKnown, storyCoverage, storyIsCurrent, storyParagraphCount, storySenses, wordForms, storyContentSchema, validateStore, wordsForDay, type DailyStory, type ImportRow } from '../src/model'
+import { bookDays, collectToVocabBook, completeBookGroup, emptyStore, importToPersonal, importWords, installBook, markWord, reviewWord, setKnown, storyCoverage, storyIsCurrent, storyParagraphCount, storySenses, wordForms, storyContentSchema, validateStore, wordsForDay, type DailyStory, type ImportRow } from '../src/model'
 import { starterRows } from '../src/vocabulary'
 
 test('old backups migrate into a personal book without altering words or review history', () => {
@@ -123,4 +123,21 @@ test('all bundled books can be installed and backed up within the native storage
   assert.ok(bytes < 12 * 1024 * 1024, `state is ${bytes} bytes`)
   assert.equal(new Set(valid.words.map(w => w.word.toLowerCase())).size, valid.words.length)
   console.log(`Bundled books: ${valid.words.length} words, ${(bytes / 1024 / 1024).toFixed(2)} MiB, validation ${Math.round(performance.now() - start)} ms`)
+})
+
+test('words collected while reading go to a separate 生词本 and leave the active plan alone', () => {
+  const base = importToPersonal({ ...emptyStore(), goal: 5 }, [{ word: 'resilient', meaning: '有韧性的', phonetic: '', example: '' }], '原有词').store
+  const first = collectToVocabBook(base, [{ word: 'reader', meaning: 'n. 读者', phonetic: '', example: '' }])
+  assert.equal(first.collected, 1)
+  assert.equal(first.store.activeBookId, base.activeBookId)
+  assert.deepEqual(first.store.books.find(b => b.id === 'personal'), base.books.find(b => b.id === 'personal'))
+  const vocab = first.store.books.find(b => b.id === 'vocab')!
+  assert.equal(vocab.title, '生词本')
+  assert.equal(vocab.wordIds.length, 1)
+  const again = collectToVocabBook(first.store, [{ word: 'Reader', meaning: 'n. 读者', phonetic: '', example: '' }])
+  assert.equal(again.collected, 0)
+  assert.equal(again.store.books.find(b => b.id === 'vocab')!.wordIds.length, 1)
+  const second = collectToVocabBook(again.store, [{ word: 'idea', meaning: 'n. 主意', phonetic: '', example: '' }])
+  assert.equal(second.store.books.find(b => b.id === 'vocab')!.wordIds.length, 2)
+  assert.equal(second.store.books.filter(b => b.id === 'vocab').length, 1)
 })

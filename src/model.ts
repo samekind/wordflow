@@ -423,6 +423,21 @@ export function importToPersonal(store: Store, rows: ImportRow[], batch: string)
   }
   return result
 }
+export const vocabBookId = 'vocab'
+/** Words picked while reading go into their own 生词本; the active book and its plan stay untouched. */
+export function collectToVocabBook(store: Store, rows: ImportRow[], batch = '阅读收藏') {
+  const result = importWords(store, rows, batch)
+  const ids = new Map(result.store.words.map(w => [normalize(w.word), w.id]))
+  const picked = [...new Set(rows.map(row => ids.get(normalize(row.word))!))]
+  const book = store.books.find(b => b.id === vocabBookId)
+  const fresh = picked.filter(id => !book?.wordIds.includes(id))
+  result.store = {
+    ...result.store,
+    books: book ? store.books.map(b => b.id === vocabBookId ? { ...b, wordIds: [...b.wordIds, ...fresh] } : b) :
+      [...store.books, { id: vocabBookId, title: '生词本', source: '阅读收藏', wordIds: fresh, dailyCount: Math.min(100, Math.max(5, store.goal)), planVersion: 2, currentDay: 0, completedWordIds: [] }],
+  }
+  return { ...result, collected: fresh.length }
+}
 export function completeBookGroup(store: Store, bookId: string, ids: string[], now = new Date(), dueReview = false): Store {
   const next = dueReview ? ids.reduce((current, id) => {
     const word = current.words.find(w => w.id === id)

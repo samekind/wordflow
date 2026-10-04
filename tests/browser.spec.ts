@@ -1194,6 +1194,18 @@ test('tapping any word shows its meaning, glosses can be prepared inline, and ar
   await card.getByRole('button', { name: '关闭查词', exact: true }).click()
   await expect(card).toHaveCount(0)
 
+  // A word picked while reading goes to its own 生词本; the book being studied and its day stay exactly as they were.
+  const before = await state(page)
+  await page.getByRole('button', { name: '查词 reader', exact: true }).first().click()
+  await card.getByRole('button', { name: '加入生词本', exact: true }).click()
+  await expect(card).toHaveCount(0)
+  const after = await state(page)
+  expect(after.activeBookId).toBe(before.activeBookId)
+  expect(after.books.find(book => book.id === 'personal')).toEqual(before.books.find(book => book.id === 'personal'))
+  const vocab = after.books.find(book => book.id === 'vocab')!
+  expect(vocab.title).toBe('生词本')
+  expect(vocab.wordIds.map(id => after.words.find(word => word.id === id)?.word)).toEqual(['reader'])
+
   // Meanings are prepared ahead: hard words get a small gloss above them, basic words stay clean.
   await expect(page.locator('.reading-token rt')).toHaveCount(0)
   await page.getByRole('button', { name: '词义标注', exact: true }).click()
