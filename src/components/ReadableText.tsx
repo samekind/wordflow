@@ -39,6 +39,8 @@ type ProviderProps = {
   known: ReadonlyMap<string, string>
   glosses?: ReadonlyMap<string, string>
   annotate?: boolean
+  /** Normalised word → the meaning kept in the user's own vocabulary, shown first and compactly for those words. */
+  ownMeanings?: ReadonlyMap<string, string>
   onSpeak: (text: string) => void; onStop: () => void
   onAdd?: (row: ImportRow) => Promise<boolean>
   onOpenWord?: (id: string) => void
@@ -63,13 +65,13 @@ export function LookupDock() {
   const lookup = useContext(LookupContext)
   if (!lookup) return null
   const { current, close, props } = lookup
-  return <div className="word-peek-dock">{current && <WordPeek key={current.key} peek={current} id={props.known.get(normalizeToken(current.word))}
+  return <div className="word-peek-dock">{current && <WordPeek key={current.key} peek={current} id={props.known.get(normalizeToken(current.word))} own={props.ownMeanings?.get(normalizeToken(current.word))}
     onClose={close} onSpeak={props.onSpeak} onStop={props.onStop} onAdd={props.onAdd} onOpenWord={props.onOpenWord} />}</div>
 }
 
 type Extra = { kind: 'sentence' | 'context'; text?: string; error?: string; busy: boolean }
-function WordPeek({ peek, id, onClose, onSpeak, onStop, onAdd, onOpenWord }: {
-  peek: Peek; id?: string; onClose: () => void; onSpeak: (text: string) => void; onStop: () => void
+function WordPeek({ peek, id, own, onClose, onSpeak, onStop, onAdd, onOpenWord }: {
+  peek: Peek; id?: string; own?: string; onClose: () => void; onSpeak: (text: string) => void; onStop: () => void
   onAdd?: (row: ImportRow) => Promise<boolean>; onOpenWord?: (id: string) => void
 }) {
   const [meaning, setMeaning] = useState<WordMeaning | null | undefined>()
@@ -108,16 +110,16 @@ function WordPeek({ peek, id, onClose, onSpeak, onStop, onAdd, onOpenWord }: {
       <button className="icon-button" aria-label="朗读阅读单词" title="朗读单词" onClick={() => { onStop(); onSpeak(shown) }}><Volume2 size={19} /></button>
       <button className="icon-button" aria-label="关闭查词" title="关闭" onClick={onClose}><X size={18} /></button>
     </div>
-    {meaning === undefined ? <p className="word-peek-wait"><LoaderCircle size={16} className="spin" />正在查词…</p>
+    {own ? <p className="word-action-meaning">{own}</p> : meaning === undefined ? <p className="word-peek-wait"><LoaderCircle size={16} className="spin" />正在查词…</p>
       : meaning ? <p className="word-action-meaning">{meaning.meaning}</p>
       : <p className="field-note">没有查到这个词的释义，可以点“语境释义”让 AI 结合这句话解释。</p>}
-    {meaning && meaning.word.toLowerCase() !== peek.word.toLowerCase() && <p className="source-note">原形：{meaning.word}</p>}
-    {meaning?.source === 'online' && <p className="source-note">来自有道词典（在线）</p>}
+    {!own && meaning && meaning.word.toLowerCase() !== peek.word.toLowerCase() && <p className="source-note">原形：{meaning.word}</p>}
+    {!own && meaning?.source === 'online' && <p className="source-note">来自有道词典（在线）</p>}
     {problem && <p className="error-banner" role="alert">{problem}</p>}
     <div className="word-peek-actions">
       <button className="reader-pill" disabled={extra?.busy} onClick={() => void ask('sentence')}>{extra?.busy && extra.kind === 'sentence' ? <AIIcon size={17} active /> : <Languages size={15} />}翻译本句</button>
-      <button className="reader-pill" disabled={extra?.busy} onClick={() => void ask('context')}><AIIcon size={17} active={extra?.busy && extra.kind === 'context'} />语境释义</button>
-      <button className="reader-pill" disabled={dictBusy} onClick={() => void dictionary()}>{dictBusy ? <LoaderCircle size={15} className="spin" /> : <Globe size={15} />}在线词典</button>
+      {!own && <button className="reader-pill" disabled={extra?.busy} onClick={() => void ask('context')}><AIIcon size={17} active={extra?.busy && extra.kind === 'context'} />语境释义</button>}
+      {!own && <button className="reader-pill" disabled={dictBusy} onClick={() => void dictionary()}>{dictBusy ? <LoaderCircle size={15} className="spin" /> : <Globe size={15} />}在线词典</button>}
       {id && onOpenWord ? <button className="reader-pill" onClick={() => onOpenWord(id)}>词条详情</button>
         : meaning?.source === 'local' && onAdd && <button className="reader-pill" disabled={adding} onClick={async () => {
           setAdding(true)
@@ -148,22 +150,20 @@ type TextProps = {
   text: string; keyPrefix: string
   /** Words highlighted as part of today's plan or the user's vocabulary. */
   highlight?: ReadonlySet<string>
-  /** Target words of a generated story keep their own button that opens the full vocabulary entry. */
+  /** Target words of a generated story are marked; tapping one shows the meaning from the user's vocabulary. */
   targets?: ReadonlyMap<string, string>
-  onTarget?: (id: string) => void
 }
 
 /** Every English word in the text is a button: tapping it asks the surrounding LookupProvider for the meaning. */
-export function ReadableText({ text, keyPrefix, highlight, targets, onTarget }: TextProps) {
+export function ReadableText({ text, keyPrefix, highlight, targets }: TextProps) {
   const lookup = useContext(LookupContext)
   const nodes: ReactNode[] = []
   let previous = 0
   for (const match of text.matchAll(tokenPattern)) {
     nodes.push(text.slice(previous, match.index))
     const word = match[0], normal = normalizeToken(word), key = `${keyPrefix}:${match.index}`
-    const targetId = targets?.get(normal)
-    if (targetId && onTarget) {
-      nodes.push(<button className="target-word" key={key} onClick={() => onTarget(targetId)} aria-label={`查看 ${word}`}>{word}</button>)
+    if (targets?.has(normal)) {
+      nodes.push(<button className="target-word" key={key} data-selected={lookup?.selected === key || undefined} onClick={() => lookup?.peek(word, sentenceAround(text, match.index!), key)} aria-label={`查看 ${word}`}>{word}</button>)
     } else {
       const gloss = lookup?.annotate ? lookup.glosses.get(normal) : undefined
       const body = gloss ? <ruby>{word}<rt>{gloss}</rt></ruby> : word

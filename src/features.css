@@ -84,6 +84,7 @@ progress::-moz-progress-bar{background:#7aabed}
 .small-tools .icon-button{height:36px;width:32px;color: var(--text-muted)}
 .story-head{display:flex;align-items:center;gap:10px;min-height:40px;margin-bottom:6px}
 .story-coverage{font-size: var(--fs-small);color: var(--text-muted);white-space:nowrap}
+.story-head .text-button{white-space:nowrap;flex:none}
 .story-head .small-tools{margin-left:auto}
 .story-article h2{font-size: var(--fs-page);font-weight: var(--fw-semibold);line-height:1.4;margin:2px 0 16px;overflow-wrap:anywhere}
 .story-paragraph{margin-bottom:22px}
@@ -138,8 +139,8 @@ progress::-moz-progress-bar{background:#7aabed}
 .sheet-word strong{font-size: var(--fs-body-l);font-weight: var(--fw-medium)}
 .sheet-word small{display:block;color: var(--text-muted);font-size: var(--fs-small);line-height:1.4}
 .story-translation{font-size: var(--fs-meta);line-height:1.9;color: var(--text-muted);margin-top:11px;padding:3px 0 0 12px;border-left:2px solid #dde6ed}
-.paragraph-words{display:flex;flex-wrap:wrap;gap:2px 12px;margin:6px 0 0}
-.paragraph-words button{min-height:28px;padding:0;font-size: var(--fs-caption);color: var(--text-muted)}
+.paragraph-words{display:flex;flex-wrap:wrap;gap:1px 12px;margin:4px 0 0;font-size: var(--fs-caption);line-height:1.6;color: var(--text-muted)}
+.paragraph-words b{font-weight: var(--fw-semibold);color: var(--text-secondary)}
 .missing-words{display:flex;flex-wrap:wrap;align-items:center;gap:6px 13px;border-top:1px solid var(--line);padding-top:13px}
 .missing-words span{font-size: var(--fs-caption);color:#a7907c}
 .missing-words button{font-size: var(--fs-small);min-height:32px;color:#a18670}

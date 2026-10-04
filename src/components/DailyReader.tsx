@@ -40,6 +40,7 @@ export default function DailyReader({ store, busy, live = '', error, onGenerate,
   const coverage = story ? storyCoverage(story, selectedWords) : []
   const known = useMemo(() => new Map(store.words.map(word => [normalize(word.word), word.id])), [store.words])
   const targetIds = useMemo(() => new Map(selectedWords.map(word => [normalize(word.word), word.id])), [selectedWords])
+  const ownMeanings = useMemo(() => new Map(selectedWords.map(word => [normalize(word.word), coreGloss(word.meaning)])), [selectedWords])
   const missing = selectedWords.filter(w => !coverage.includes(w.id))
   if (!book || !words.length) return <div className="empty"><BookOpen size={30} /><h2>先选择一本词书</h2><button className="primary" onClick={onBooks}>选择词书<ChevronRight size={17} /></button></div>
   const needle = query.trim().toLowerCase()
@@ -81,15 +82,15 @@ export default function DailyReader({ store, busy, live = '', error, onGenerate,
     </div></div>
     <article className="story-article"><h2>{story.title}</h2>
       {story.paragraphs.map((paragraph, index) => <div className="story-paragraph" key={index}>
-        <p lang="en"><ReadableText text={paragraph.english} keyPrefix={`${index}`} targets={targetIds} onTarget={onWord} /></p>
+        <p lang="en"><ReadableText text={paragraph.english} keyPrefix={`${index}`} targets={targetIds} /></p>
         {translated && <p className="story-translation">{paragraph.translation}</p>}
-        <ParagraphWords english={paragraph.english} words={selectedWords} onWord={onWord} />
+        <ParagraphWords english={paragraph.english} words={selectedWords} />
       </div>)}
     </article>
     {missing.length > 0 && <div className="missing-words"><span>这些词没写进短文，可重新生成</span>{missing.map(w => <button onClick={() => onWord(w.id)} key={w.id}>{w.word}</button>)}</div>}
     <p className="source-note story-source">AI 生成内容 · 请核对</p>
   </> : null
-  return <LookupProvider title={story?.title || '短文'} known={known} onSpeak={onSpeak} onStop={onStop} onAdd={onAddWord} onOpenWord={onWord}><div className="daily-reader">
+  return <LookupProvider title={story?.title || '短文'} known={known} ownMeanings={ownMeanings} onSpeak={onSpeak} onStop={onStop} onAdd={onAddWord} onOpenWord={onWord}><div className="daily-reader">
     <p className="reader-book-label">选词来源 · {book.title}</p>
     {totalParts > 1 && <div className="part-tabs" aria-label="短文分篇">{Array.from({ length: totalParts }, (_, index) =>
       <button key={index} aria-pressed={currentPart === index} onClick={() => { setPart(index); setTranslated(false); onStop() }}>短文 {index + 1}</button>)}</div>}
