@@ -63,11 +63,6 @@ export function coreGloss(raw: string): string {
   return corrections.get(raw.trim()) ?? derivedGloss(raw)
 }
 
-/** The dictionary entry as readable lines (one per part of speech), for checking a meaning beyond its core gloss. */
-export function dictionaryLines(raw: string, limit = 6): string[] {
-  return raw.split(/\n+/).map(line => line.trim()).filter(Boolean).slice(0, limit)
-}
-
 /** The rule-based extraction alone, without reviewed corrections. */
 export function derivedGloss(raw: string): string {
   // Entries that only carry field-tagged lines ([计], [经], ...) still have a meaning worth showing.

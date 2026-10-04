@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { BookmarkPlus, Globe, Languages, LoaderCircle, Volume2, X } from 'lucide-react'
+import { BookOpen, BookmarkPlus, Globe, Languages, LoaderCircle, Volume2, X } from 'lucide-react'
 import { AIIcon } from '../icons'
 import { explainWord, translateSentence } from '../ai'
 import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dictionary'
 import { lookupMeaning, shortGloss, type WordMeaning } from '../word-lookup'
 import type { ImportRow } from '../model'
 import { lookupLocalWord } from '../wordbooks'
+import LocalDictionary from './LocalDictionary'
 
 const tokenPattern = /[A-Za-z]+(?:['’-][A-Za-z]+)*/g
 export const normalizeToken = (word: string) => word.toLowerCase().replace(/’/g, "'")
@@ -78,6 +79,7 @@ function WordPeek({ peek, id, own, onClose, onSpeak, onStop, onAdd, onOpenWord }
   const [entries, setEntries] = useState<DictionaryEntry[]>([])
   const [dictBusy, setDictBusy] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [localOpen, setLocalOpen] = useState(false)
   const alive = useRef(0)
   useEffect(() => {
     const request = ++alive.current
@@ -114,10 +116,12 @@ function WordPeek({ peek, id, own, onClose, onSpeak, onStop, onAdd, onOpenWord }
     {!own && meaning && meaning.word.toLowerCase() !== peek.word.toLowerCase() && <p className="source-note">原形：{meaning.word}</p>}
     {!own && meaning?.source === 'online' && <p className="source-note">来自有道词典（在线）</p>}
     {problem && <p className="error-banner" role="alert">{problem}</p>}
+    {localOpen && !own && <LocalDictionary compact word={meaning?.word || peek.word} />}
     <div className="word-peek-actions">
       <button className="reader-pill" disabled={extra?.busy} onClick={() => void ask('sentence')}>{extra?.busy && extra.kind === 'sentence' ? <AIIcon size={17} active /> : <Languages size={15} />}翻译本句</button>
       {!own && <button className="reader-pill" disabled={extra?.busy} onClick={() => void ask('context')}><AIIcon size={17} active={extra?.busy && extra.kind === 'context'} />语境释义</button>}
-      {!own && <button className="reader-pill" disabled={dictBusy} onClick={() => void dictionary()}>{dictBusy ? <LoaderCircle size={15} className="spin" /> : <Globe size={15} />}在线词典</button>}
+      {!own && <button className="reader-pill" aria-pressed={localOpen} onClick={() => setLocalOpen(!localOpen)}><BookOpen size={15} />词典</button>}
+      {!own && localOpen && <button className="reader-pill" disabled={dictBusy} onClick={() => void dictionary()}>{dictBusy ? <LoaderCircle size={15} className="spin" /> : <Globe size={15} />}在线词典</button>}
       {id && onOpenWord ? <button className="reader-pill" onClick={() => onOpenWord(id)}>词条详情</button>
         : meaning?.source === 'local' && onAdd && <button className="reader-pill" disabled={adding} onClick={async () => {
           setAdding(true)

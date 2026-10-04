@@ -8,6 +8,7 @@ import { coreGloss } from '../gloss'
 import { dictionaryUrl, isAndroidApp } from '../platform'
 import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dictionary'
 import Sheet from './Sheet'
+import LocalDictionary from './LocalDictionary'
 import MarkDots from './MarkDots'
 import { Segmented } from './Controls'
 
@@ -104,7 +105,6 @@ export default function WordDetails({ word, lesson, saving, onClose, onMark, onK
         </>}
         {word.example && <p className="word-detail-example" lang="en">{word.example}</p>}
       </section>
-      {word.definition && <section className="detail-panel local-definition" aria-label="英英释义"><p className="gloss-label">英英释义</p><p lang="en">{word.definition}</p></section>}
       <section className="word-frequency detail-panel" aria-label="考频">
         <h4>近五年考频</h4>
         {!frequency && <p className="frequency-note">正在读取</p>}
@@ -132,6 +132,7 @@ export default function WordDetails({ word, lesson, saving, onClose, onMark, onK
         </div>}
       </section>}
       {tab === 'dictionary' && <section className="dictionary-section detail-panel">
+        <LocalDictionary word={word.word} meaning={word.meaning} phonetic={word.phonetic} definition={word.definition} exchange={word.exchange} />
         <div className="dictionary-actions">
           <button disabled={loading} onClick={lookup}>{loading ? <LoaderCircle className="spin" size={16} /> : <Globe size={16} />}{loading ? '查询中' : '在线词典'}</button>
           <a href={dictionaryUrl(word.word)} target="_blank" rel="noopener noreferrer" onClick={event => { if (isAndroidApp) { event.preventDefault(); onDictionary(word.word) } }}><ExternalLink size={15} />欧路</a>

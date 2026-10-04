@@ -25,8 +25,15 @@
 .meaning-entry[data-open] .meaning-line svg{transform:rotate(180deg)}
 .study-list-view .meaning-main .chinese-meaning{padding:0;line-height:1.5;overflow-wrap:anywhere}
 .study-list-view .meaning-row>.meaning-check,.study-list-view .meaning-row>.study-mark{flex:none}
-.meaning-dict{margin:0 0 8px 32px;padding:8px 10px;border-radius: var(--radius-sm);background: var(--glass-fill);font-size: var(--fs-small);line-height:1.7;color: var(--text-secondary)}
-.meaning-dict p{margin:0;overflow-wrap:anywhere}
+.meaning-dict{margin:0 0 8px 32px;padding:8px 10px;border-radius: var(--radius-sm);background: var(--glass-fill)}
+.local-dictionary{display:flex;flex-direction:column;gap:8px;font-size: var(--fs-small);line-height:1.7;color: var(--text-secondary)}
+.local-dictionary p{margin:0;overflow-wrap:anywhere}
+.local-dictionary b{font-weight: var(--fw-semibold);color: var(--text-primary)}
+.local-dictionary .ld-block+.ld-block{padding-top:6px;border-top:1px dashed var(--line)}
+.local-dictionary .ld-block[aria-label=英英释义]{color: var(--text-muted)}
+.local-dictionary .ld-head{display:flex;flex-wrap:wrap;gap:4px 12px}
+.local-dictionary .ld-forms{display:flex;flex-wrap:wrap;gap:0 12px;font-size: var(--fs-caption);color: var(--text-muted)}
+.local-dictionary[data-compact] .ld-block+.ld-block{padding-top:4px}
 .meaning-dict .text-button{margin-top:2px;min-height:32px;padding:0}
 @media(prefers-reduced-motion:reduce){.meaning-line svg{transition:none}}
 .meaning-check{font-size: var(--fs-small);min-height:36px;white-space:nowrap;padding:0 6px}
