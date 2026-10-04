@@ -141,10 +141,6 @@
 .word-peek-wait{display:flex;align-items:center;gap:6px}
 .word-peek-actions{display:flex;flex-wrap:wrap;gap:8px}
 .word-peek-actions .reader-pill{min-height:34px;padding:0 12px;font-size:var(--fs-small)}
-.word-peek-extra{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:var(--radius-md);background:var(--surface-inset)}
-.word-peek-extra p{margin:0;line-height:1.7;color:var(--text-primary)}
-.word-peek-extra small{color:var(--text-muted)}
-.word-peek-sentence{font-size:var(--fs-caption);color:var(--text-muted)!important}
 .reading-token[data-selected]{background:var(--accent-soft,#e6f0ff);border-radius:4px;color:var(--accent)}
 .reading-token ruby{ruby-position:over;ruby-align:center}
 .reading-token rt{font-size:.66em;line-height:1;color:var(--accent);font-weight:var(--fw-regular);letter-spacing:0;white-space:nowrap}

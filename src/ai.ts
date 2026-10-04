@@ -47,19 +47,6 @@ async function post(path: string, body: Record<string, unknown>, fetcher: typeof
   return data
 }
 
-const chatResult = z.object({ reply: z.string().min(1).max(6000), model: z.string().max(100).optional(), remaining: z.number().optional() })
-async function ask(body: Record<string, unknown>, fetcher: typeof fetch) {
-  const parsed = chatResult.safeParse(await post('/v1/ai/chat', body, fetcher))
-  if (!parsed.success) throw new Error('AI 返回的内容不完整，请重试')
-  // The bubbles are plain text, so drop the Markdown emphasis and headings models add anyway.
-  return parsed.data.reply.replace(/\*\*(.+?)\*\*/g, '$1').replace(/^#{1,6}\s+/gm, '').trim()
-}
-
-/** One sentence into Chinese (the word card's 翻译本句). */
-export const translateSentence = (sentence: string, fetcher: typeof fetch = fetch) => ask({ task: { type: 'sentence', sentence } }, fetcher)
-/** What a word means in this sentence (the word card's 语境释义). */
-export const explainWord = (word: string, sentence: string, fetcher: typeof fetch = fetch) => ask({ task: { type: 'word', word, sentence } }, fetcher)
-
 export type BuiltInWord = { id: string; word: string; meaning: string }
 const storyResult = z.object({ story: storyContentSchema, model: z.string().max(100).optional() })
 

@@ -1145,16 +1145,9 @@ test('tapping any word shows its meaning, glosses can be prepared inline, and ar
     const word = new URL(route.request().url()).searchParams.get('q')
     route.fulfill({ headers: cors, json: { data: { entries: word === 'zymurgy' ? [{ entry: 'zymurgy', explain: 'n. 酿造学' }] : [] } } })
   })
-  const asked: { messages: { role: string; content: string }[]; context?: Record<string, unknown>; task?: Record<string, string> }[] = []
-  let remaining = 60
-  await page.route('**/v1/ai/chat', async route => {
-    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST' }
-    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
-    const body = route.request().postDataJSON(); asked.push(body)
-    remaining -= 1
-    const reply = body.task?.type === 'sentence' ? '这篇酿造学文章用清楚的话解释了一个小想法。' : body.task ? '这里指“酿造学”。' : `合成回答：${body.messages.at(-1).content}`
-    await route.fulfill({ headers: cors, json: { reply, model: 'fixture', remaining } })
-  })
+  // Tapping words never calls the AI: the card is only the dictionary.
+  const aiCalls: string[] = []
+  await page.route('**/v1/ai/**', route => { aiCalls.push(route.request().url()); return route.abort() })
   const clips: string[] = []
   await page.route('**/v1/tts**', route => {
     clips.push(decodeURIComponent(new URL(route.request().url()).searchParams.get('text') || ''))
@@ -1187,15 +1180,10 @@ test('tapping any word shows its meaning, glosses can be prepared inline, and ar
     await page.screenshot({ path: `test-results/word-peek-${width}.png`, animations: 'disabled' })
   }
   await page.setViewportSize({ width: 390, height: 844 })
-  await card.getByRole('button', { name: '翻译本句', exact: true }).click()
-  await expect(card.locator('.word-peek-extra')).toContainText('这篇酿造学文章用清楚的话解释了一个小想法。')
-  expect(asked[0]).toMatchObject({ task: { type: 'sentence', sentence } })
-  await card.getByRole('button', { name: '语境释义', exact: true }).click()
-  await expect(card.locator('.word-peek-extra')).toContainText('这里指“酿造学”。')
-  expect(asked[1]).toMatchObject({ task: { type: 'word', word: 'zymurgy', sentence } })
+  await expect(card.getByRole('button', { name: '翻译本句', exact: true })).toHaveCount(0)
+  await expect(card.getByRole('button', { name: '语境释义', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: '查词 article', exact: true }).first().click()
   await expect(card.locator('h3')).toHaveText('article')
-  await expect(card.locator('.word-peek-extra')).toHaveCount(0)
   await card.getByRole('button', { name: '关闭查词', exact: true }).click()
   await expect(card).toHaveCount(0)
 
@@ -1259,5 +1247,6 @@ test('tapping any word shows its meaning, glosses can be prepared inline, and ar
   expect(clips[0]).toContain('The zymurgy article explains')
   await expect.poll(() => page.evaluate(() => (window as any).__recordings.at(-1) as string)).toMatch(/^blob:/)
   expect(await page.evaluate(() => (window as any).__recordingRate)).toBeCloseTo(1.15, 2)
+  expect(aiCalls).toEqual([])
   expect(await page.evaluate(() => (window as any).__speech)).toEqual([])
 })

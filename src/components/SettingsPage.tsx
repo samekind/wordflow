@@ -175,7 +175,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
     </section>}
     {section === 'ai' && <section className="settings-section">
       <div className="section-heading"><h2>生成服务</h2><span className={ai.configured ? 'configured-label' : 'muted'}>{ai.configured ? '使用自己的 Key' : '使用内置 AI'}</span></div>
-      <p className="field-note">点词后的“翻译本句”“语境释义”和语境短文，默认使用内置 AI，不需要设置。每台设备每天有 60 点额度，次日刷新：翻译或释义一次 1 点，生成一篇语境短文 5 点。</p>
+      <p className="field-note">语境短文默认使用内置 AI，不需要设置。每台设备每天有 60 点额度，次日刷新：生成一篇语境短文 5 点。</p>
       <p className="field-note">语境短文也可以改用自己的服务商：填写下面的 API Key 后，短文不占额度，费用由服务商收取。查词始终使用内置 AI。</p>
       <form className="settings-form" onSubmit={async event => { event.preventDefault(); if (await onSaveAI({ provider, model, key })) setKey('') }}>
         <SettingRow label="服务商"><SelectButton label="AI 服务商" value={provider} disabled={aiBusy} options={[{ value: 'deepseek', label: 'DeepSeek' }, { value: 'openai', label: 'OpenAI' }, { value: 'qwen', label: '通义千问' }]}

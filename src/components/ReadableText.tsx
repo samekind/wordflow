@@ -1,7 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { BookOpen, BookmarkPlus, Globe, Languages, LoaderCircle, Volume2, X } from 'lucide-react'
-import { AIIcon } from '../icons'
-import { explainWord, translateSentence } from '../ai'
+import { BookOpen, BookmarkPlus, Globe, LoaderCircle, Volume2, X } from 'lucide-react'
 import { lookupDictionary, safeExternalUrl, type DictionaryEntry } from '../dictionary'
 import { lookupMeaning, shortGloss, type WordMeaning } from '../word-lookup'
 import type { ImportRow } from '../model'
@@ -68,14 +66,12 @@ export function LookupDock() {
     onClose={close} onSpeak={props.onSpeak} onStop={props.onStop} onAdd={props.onAdd} onOpenWord={props.onOpenWord} />}</div>
 }
 
-type Extra = { kind: 'sentence' | 'context'; text?: string; error?: string; busy: boolean }
 function WordPeek({ peek, id, own, onClose, onSpeak, onStop, onAdd, onOpenWord }: {
   peek: Peek; id?: string; own?: string; onClose: () => void; onSpeak: (text: string) => void; onStop: () => void
   onAdd?: (row: ImportRow) => Promise<boolean>; onOpenWord?: (id: string) => void
 }) {
   const [meaning, setMeaning] = useState<WordMeaning | null | undefined>()
   const [problem, setProblem] = useState('')
-  const [extra, setExtra] = useState<Extra | null>(null)
   const [entries, setEntries] = useState<DictionaryEntry[]>([])
   const [dictBusy, setDictBusy] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -88,17 +84,6 @@ function WordPeek({ peek, id, own, onClose, onSpeak, onStop, onAdd, onOpenWord }
     return () => { alive.current++ }
   }, [peek.word])
   const shown = meaning?.word || peek.word.toLowerCase()
-  async function ask(kind: Extra['kind']) {
-    const request = ++alive.current
-    setExtra({ kind, busy: true })
-    try {
-      const text = kind === 'sentence' ? await translateSentence(peek.sentence) : await explainWord(peek.word, peek.sentence)
-      if (request !== alive.current) return
-      setExtra({ kind, busy: false, text })
-    } catch (error) {
-      if (request === alive.current) setExtra({ kind, busy: false, error: (error as Error).message })
-    }
-  }
   async function dictionary() {
     setDictBusy(true); setProblem('')
     try { setEntries(await lookupDictionary(peek.word)) } catch (error) { setProblem((error as Error).message) } finally { setDictBusy(false) }
@@ -112,14 +97,12 @@ function WordPeek({ peek, id, own, onClose, onSpeak, onStop, onAdd, onOpenWord }
     </div>
     {own ? <p className="word-action-meaning">{own}</p> : meaning === undefined ? <p className="word-peek-wait"><LoaderCircle size={16} className="spin" />正在查词…</p>
       : meaning ? <p className="word-action-meaning">{meaning.meaning}</p>
-      : <p className="field-note">没有查到这个词的释义，可以点“语境释义”让 AI 结合这句话解释。</p>}
+      : <p className="field-note">词库里没有查到这个词，可以点“词典”再看看。</p>}
     {!own && meaning && meaning.word.toLowerCase() !== peek.word.toLowerCase() && <p className="source-note">原形：{meaning.word}</p>}
     {!own && meaning?.source === 'online' && <p className="source-note">来自有道词典（在线）</p>}
     {problem && <p className="error-banner" role="alert">{problem}</p>}
     {localOpen && !own && <LocalDictionary compact word={meaning?.word || peek.word} />}
     <div className="word-peek-actions">
-      <button className="reader-pill" disabled={extra?.busy} onClick={() => void ask('sentence')}>{extra?.busy && extra.kind === 'sentence' ? <AIIcon size={17} active /> : <Languages size={15} />}翻译本句</button>
-      {!own && <button className="reader-pill" disabled={extra?.busy} onClick={() => void ask('context')}><AIIcon size={17} active={extra?.busy && extra.kind === 'context'} />语境释义</button>}
       {!own && <button className="reader-pill" aria-pressed={localOpen} onClick={() => setLocalOpen(!localOpen)}><BookOpen size={15} />词典</button>}
       {!own && localOpen && <button className="reader-pill" disabled={dictBusy} onClick={() => void dictionary()}>{dictBusy ? <LoaderCircle size={15} className="spin" /> : <Globe size={15} />}在线词典</button>}
       {id && onOpenWord ? <button className="reader-pill" onClick={() => onOpenWord(id)}>词条详情</button>
@@ -129,10 +112,6 @@ function WordPeek({ peek, id, own, onClose, onSpeak, onStop, onAdd, onOpenWord }
           finally { setAdding(false) }
         }}><BookmarkPlus size={15} />加入生词本</button>}
     </div>
-    {extra && !extra.busy && <div className="word-peek-extra" role="note">
-      {extra.error ? <p className="error-banner" role="alert">{extra.error}</p> : <><p lang={extra.kind === 'sentence' ? 'zh' : undefined}>{extra.text}</p><small>内置 AI 生成，仅供参考</small></>}
-      {extra.kind === 'sentence' && !extra.error && <p className="word-peek-sentence" lang="en">{peek.sentence}</p>}
-    </div>}
     {entries.map((entry, index) => <div className="dictionary-entry" key={index}>
       {entry.meanings.slice(0, 3).map((item, j) => <div className="dictionary-meaning" key={j}><span>{item.partOfSpeech}</span><ol>{item.definitions.slice(0, 2).map((definition, k) => <li key={k}>{definition.definition}</li>)}</ol></div>)}
       <div className="dictionary-attribution"><span>Free Dictionary API</span>
