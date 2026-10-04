@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { BookOpen, Check, ChevronLeft, ChevronRight, LoaderCircle, Upload } from 'lucide-react'
 import type { CatalogBook } from '../wordbooks'
-import type { Store } from '../model'
+import { maxDailyWords, type Store } from '../model'
 import { planSchedule, planSummary } from '../study-plan'
 import DailyWordCount, { validDailyCount } from './DailyWordCount'
 
@@ -23,7 +23,7 @@ const md = (date: Date) => `${date.getMonth() + 1}月${date.getDate()}日`
 export default function StartPlan({ store, catalog, busy, error, onRetry, onInstall, onImport }: Props) {
   const [step, setStep] = useState<0 | 1 | 2>(0)
   const [book, setBook] = useState<CatalogBook | null>(null)
-  const [daily, setDaily] = useState(Math.max(5, Math.min(100, store.goal || 20)))
+  const [daily, setDaily] = useState(Math.max(5, Math.min(maxDailyWords, store.goal || 20)))
   const valid = validDailyCount(daily)
   const summary = book && valid ? planSummary(book.count, daily) : null
   const schedule = book && valid ? planSchedule(book.count, daily, 14) : []

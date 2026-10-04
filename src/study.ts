@@ -58,7 +58,7 @@ function markSnapshot(word: Word) { return { count: word.markCount, at: word.mar
 
 export function createStudyDraft(store: Store, kind: StudyKind, now = new Date()): StudyDraft | null {
   const book = store.books.find(item => item.id === store.activeBookId)
-  const words = (kind === 'review' ? reviewQueue(store, now) : newWords(store)).slice(0, 100)
+  const words = (kind === 'review' ? reviewQueue(store, now) : newWords(store)).slice(0, kind === 'learn' && book ? Math.max(100, book.dailyCount) : 100)
   if (!words.length) return null
   const groups = Array.from({ length: Math.ceil(words.length / 20) }, (_, index) => words.slice(index * 20, index * 20 + 20).map(word => word.id))
   const ownDay = kind === 'learn' || usesDaySchedule(store)

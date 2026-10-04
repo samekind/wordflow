@@ -115,9 +115,11 @@ export const lessonSchema = z.object({
   wordId: z.string(), mnemonic: boundedText, example: boundedText, translation: boundedText,
   question: boundedText.default(''), answer: boundedText.default(''), explanation: boundedText.default(''),
 })
+/** Upper bound for words per day; the slider stops at 100 but the number can be typed higher. */
+export const maxDailyWords = 5000
 const bookSchema = z.object({
   id: z.string().min(1).max(200), title: z.string().min(1).max(200), source: z.string().max(300),
-  wordIds: z.array(z.string()).max(30000), dailyCount: z.number().int().min(5).max(100),
+  wordIds: z.array(z.string()).max(30000), dailyCount: z.number().int().min(5).max(maxDailyWords),
   planVersion: z.literal(2).optional(),
   currentDay: z.number().int().min(0).max(30000), completedWordIds: z.array(z.string()).max(30000),
 })
@@ -161,7 +163,7 @@ export function validateStore(input: unknown): Store {
   const data = z.object({
     version: z.union([z.literal(1), z.literal(2), z.literal(3)]), words: z.array(z.unknown()).max(30000),
     reviews: z.array(z.unknown()).max(500000),
-    lessons: z.array(lessonSchema).max(30000), goal: z.number().int().min(1).max(200),
+    lessons: z.array(lessonSchema).max(30000), goal: z.number().int().min(1).max(maxDailyWords),
     books: z.array(bookSchema).max(100).optional(), activeBookId: z.string().default(''),
     stories: z.array(storySchema).max(2000).default([]),
     contextStories: z.array(contextStorySchema).max(2000).default([]),
@@ -200,7 +202,7 @@ export function validateStore(input: unknown): Store {
   if (parsedReviews.some(r => !ids.has(r.wordId)) || data.lessons.some(l => !ids.has(l.wordId))) throw new Error('备份记录不完整')
   const books = data.books ?? (parsedWords.length ? [{
     id: 'personal', title: '我的词本', source: '原有词库', wordIds: parsedWords.map(w => w.id),
-    dailyCount: Math.min(100, Math.max(20, data.goal)), currentDay: 0, completedWordIds: [],
+    dailyCount: Math.min(maxDailyWords, Math.max(20, data.goal)), currentDay: 0, completedWordIds: [],
   }] : [])
   if (new Set(books.map(b => b.id)).size !== books.length || books.some(b => {
     const members = new Set(b.wordIds)
@@ -408,7 +410,7 @@ export function installBook(store: Store, id: string, title: string, source: str
   const wordIds = [...new Set(rows.map(row => ids.get(normalize(row.word))!))]
   if (!wordIds.length) return store
   return { ...imported, activeBookId: id, books: [...store.books, {
-    id, title, source, wordIds, dailyCount: Math.max(5, Math.min(100, Math.round(dailyCount) || 20)), planVersion: 2, currentDay: 0, completedWordIds: [],
+    id, title, source, wordIds, dailyCount: Math.max(5, Math.min(maxDailyWords, Math.round(dailyCount) || 20)), planVersion: 2, currentDay: 0, completedWordIds: [],
   }] }
 }
 export function importToPersonal(store: Store, rows: ImportRow[], batch: string) {
@@ -419,7 +421,7 @@ export function importToPersonal(store: Store, rows: ImportRow[], batch: string)
   result.store = {
     ...result.store, activeBookId: 'personal',
     books: personal ? store.books.map(b => b.id === 'personal' ? { ...b, wordIds: [...new Set([...b.wordIds, ...importedIds])] } : b) :
-      [...store.books, { id: 'personal', title: '我的词本', source: '个人导入', wordIds: [...new Set(importedIds)], dailyCount: Math.min(100, Math.max(5, store.goal)), planVersion: 2, currentDay: 0, completedWordIds: [] }],
+      [...store.books, { id: 'personal', title: '我的词本', source: '个人导入', wordIds: [...new Set(importedIds)], dailyCount: Math.min(maxDailyWords, Math.max(5, store.goal)), planVersion: 2, currentDay: 0, completedWordIds: [] }],
   }
   return result
 }
@@ -434,7 +436,7 @@ export function collectToVocabBook(store: Store, rows: ImportRow[], batch = '阅
   result.store = {
     ...result.store,
     books: book ? store.books.map(b => b.id === vocabBookId ? { ...b, wordIds: [...b.wordIds, ...fresh] } : b) :
-      [...store.books, { id: vocabBookId, title: '生词本', source: '阅读收藏', wordIds: fresh, dailyCount: Math.min(100, Math.max(5, store.goal)), planVersion: 2, currentDay: 0, completedWordIds: [] }],
+      [...store.books, { id: vocabBookId, title: '生词本', source: '阅读收藏', wordIds: fresh, dailyCount: Math.min(maxDailyWords, Math.max(5, store.goal)), planVersion: 2, currentDay: 0, completedWordIds: [] }],
   }
   return { ...result, collected: fresh.length }
 }

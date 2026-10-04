@@ -126,7 +126,7 @@ final class WordflowStore extends SQLiteOpenHelper {
     synchronized int saveState(JSONObject state, int revision) throws Exception {
         int version = state.getInt("version");
         if ((version < 1 || version > 3) || state.getJSONArray("words").length() > 30000 ||
-            state.getJSONArray("reviews").length() > 500000 || state.getInt("goal") < 1 || state.getInt("goal") > 200) {
+            state.getJSONArray("reviews").length() > 500000 || state.getInt("goal") < 1 || state.getInt("goal") > 5000) {
             throw new IllegalArgumentException("学习记录格式无效");
         }
         if (version >= 2 && state.optJSONObject("learning") == null) throw new IllegalArgumentException("新版学习数据缺少草稿状态");

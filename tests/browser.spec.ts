@@ -68,6 +68,7 @@ async function holdWord(page: Page, word: string) {
   const button = page.locator('.english-line').filter({ has: page.locator('.english-word', { hasText: word }) })
   await expect(button).toBeVisible()
   await expect(page.locator('.view-transition')).toHaveCSS('opacity', '1')
+  await expect(page.locator('.boot-splash')).toHaveCount(0)
   await button.hover(); await page.mouse.down()
   await expect(page.getByRole('dialog', { name: '单词详情', exact: true })).toBeVisible()
   await page.mouse.up()
@@ -1112,6 +1113,7 @@ test('swiping a word slides the whole card, and 熟词 asks first, then fades th
   const frame = target.locator('.swipe-layer')
   const before = (await frame.boundingBox())!
   const box = (await target.boundingBox())!
+  await expect(page.locator('.boot-splash')).toHaveCount(0)
   const swipe = async () => {
     await page.mouse.move(box.x + box.width - 20, box.y + box.height / 2)
     await page.mouse.down(); await page.mouse.move(box.x + box.width - 110, box.y + box.height / 2, { steps: 8 }); await page.mouse.up()
@@ -1134,6 +1136,20 @@ test('swiping a word slides the whole card, and 熟词 asks first, then fades th
   await page.getByRole('button', { name: '撤销', exact: true }).click()
   await expect.poll(async () => (await state(page)).words.find(w => w.id === id)?.known).toBe(false)
   await expect(page.locator(`.english-entry[data-word-id="${id}"]`)).toHaveCount(1)
+  // Ticking 以后不再提醒 once makes later 熟词 swipes go straight through (撤销 stays on the toast).
+  await page.waitForTimeout(500)
+  await swipe()
+  await page.getByRole('button', { name: `把 ${word} 设为熟词`, exact: true }).click()
+  await alert.getByText('以后不再提醒').click()
+  await alert.getByRole('button', { name: '设为熟词' }).click()
+  await expect.poll(async () => (await state(page)).words.find(w => w.id === id)?.known).toBe(true)
+  await page.getByRole('button', { name: '撤销', exact: true }).click()
+  await expect.poll(async () => (await state(page)).words.find(w => w.id === id)?.known).toBe(false)
+  await page.waitForTimeout(500)
+  await swipe()
+  await page.getByRole('button', { name: `把 ${word} 设为熟词`, exact: true }).click()
+  await expect.poll(async () => (await state(page)).words.find(w => w.id === id)?.known).toBe(true)
+  await expect(page.locator('ion-alert:not(.overlay-hidden)')).toHaveCount(0)
 })
 
 test('tapping any word shows its meaning, glosses can be prepared inline, and articles are read with the cloud voice', async ({ page }) => {
@@ -1207,6 +1223,16 @@ test('tapping any word shows its meaning, glosses can be prepared inline, and ar
   await nav(page, '设置')
   await page.getByRole('button', { name: '生词本', exact: true }).click()
   await expect(page.locator('.vocab-row')).toHaveCount(1)
+  // Flipping through the words never switches the book being studied; 还不熟 only adds a mark.
+  await page.getByRole('button', { name: /翻看这 1 个词/ }).click()
+  await page.getByRole('button', { name: '看意思', exact: true }).click()
+  await page.getByRole('button', { name: '还不熟', exact: true }).click()
+  await expect(page.getByText('这一轮看完了')).toBeVisible()
+  const drilled = await state(page)
+  expect(drilled.activeBookId).toBe(before.activeBookId)
+  expect(drilled.books.find(book => book.id === 'personal')).toEqual(before.books.find(book => book.id === 'personal'))
+  expect(drilled.words.find(word => word.word === 'reader')!.markCount).toBe(1)
+  await page.getByRole('button', { name: '回到列表', exact: true }).click()
   await page.getByRole('button', { name: '移出生词本 reader', exact: true }).click()
   await expect(page.getByRole('heading', { name: '生词本还是空的' })).toBeVisible()
   expect((await state(page)).books.find(book => book.id === 'vocab')!.wordIds).toEqual([])

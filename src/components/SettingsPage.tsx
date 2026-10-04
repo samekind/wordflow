@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BookOpen, Bookmark, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, RefreshCw, Settings2, Smile, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
 import { AIIcon } from '../icons'
-import type { Appearance, PageFont, TextSize } from '../model'
+import { maxDailyWords, type Appearance, type PageFont, type TextSize } from '../model'
 import { installedRelease, loadCloudAccount } from '../cloud'
 import UpdatePage from './UpdatePage'
 import { pageFontAttrs, type Store } from '../model'
@@ -9,6 +9,7 @@ import { prepareAvatar } from '../profile'
 import AvatarPicker from './AvatarPicker'
 import DailyWordCount, { validDailyCount } from './DailyWordCount'
 import { Segmented, SelectButton, SettingRow } from './Controls'
+import { setSkipKnownConfirm, skipKnownConfirm } from '../known-confirm'
 
 export type AIConfig = { provider: string; model: string; configured: boolean }
 export type SettingsSection = 'home' | 'profile' | 'learning' | 'appearance' | 'reading' | 'ai' | 'data' | 'update'
@@ -32,11 +33,12 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
   const [customModel, setCustomModel] = useState(ai.model !== defaults[ai.provider])
   const [key, setKey] = useState('')
   const [visibleKey, setVisibleKey] = useState(false)
-  const [daily, setDaily] = useState(Math.min(100, Math.max(5, store.goal)))
+  const [daily, setDaily] = useState(Math.min(maxDailyWords, Math.max(5, store.goal)))
   const [profile, setProfile] = useState(store.profile)
   const [profileError, setProfileError] = useState('')
   const [avatarBusy, setAvatarBusy] = useState(false)
   const [cartoonOpen, setCartoonOpen] = useState(false)
+  const [askKnown, setAskKnown] = useState(() => !skipKnownConfirm())
   const [hasCloud, setHasCloud] = useState(() => !!loadCloudAccount())
   const [cloudBusy, setCloudBusy] = useState(false)
   const [cloudNote, setCloudNote] = useState('')
@@ -54,7 +56,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
   const avatarRequest = useRef(0)
   const book = store.books.find(book => book.id === store.activeBookId)
   const vocabCount = store.books.find(item => item.id === 'vocab')?.wordIds.length ?? 0
-  useEffect(() => setDaily(Math.min(100, Math.max(5, store.goal))), [store.goal])
+  useEffect(() => setDaily(Math.min(maxDailyWords, Math.max(5, store.goal))), [store.goal])
   useEffect(() => setProfile(store.profile), [store.profile.nickname, store.profile.avatar, store.profile.goal])
   useEffect(() => {
     setProfileError('')
@@ -141,6 +143,10 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
       <SettingRow label="复习方法" note="现有复习日期保留，下次完成时使用新方法。">
         <SelectButton label="复习方法" value={store.reviewMethod} disabled={saving} options={[{ value: 'ebbinghaus', label: '艾宾浩斯式间隔' }, { value: 'fsrs', label: 'FSRS 自适应' }]}
           onChange={method => void onPreferences({ reviewMethod: method as Store['reviewMethod'] })} />
+      </SettingRow>
+      <SettingRow label="设为熟词前" note="熟词可以在撤销或词详情里恢复。">
+        <Segmented label="设为熟词前" value={askKnown ? 'ask' : 'direct'} options={[{ value: 'ask', label: '先确认' }, { value: 'direct', label: '直接设为' }]}
+          onChange={value => { setAskKnown(value === 'ask'); setSkipKnownConfirm(value !== 'ask') }} />
       </SettingRow>
       <DailyWordCount label="新词书每天词量" value={daily} onChange={setDaily} disabled={saving} />
       <p className="field-note">只用于以后添加的词书，现有词书的每天词量和进度保留。</p>

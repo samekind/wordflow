@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BookOpen, Check, ChevronRight, Download, LoaderCircle, Search } from 'lucide-react'
-import { bookDays, type Store, type WordBook } from '../model'
+import { bookDays, maxDailyWords, vocabBookId, type Store, type WordBook } from '../model'
 import { hasLearned } from '../study'
 import type { CatalogBook } from '../wordbooks'
 import { loadExamFrequency, type ExamFrequencyData } from '../exam-frequency'
@@ -17,12 +17,14 @@ type Props = {
   onRetry: () => void; onLibrary: () => void; onFrequency: () => void;
   onActivate: (id: string) => void; onInstall: (book: CatalogBook, daily: number) => Promise<boolean>;
   onWord: (id: string) => void;
+  /** 生词本 has its own page: studying it must not replace the plan being followed. */
+  onVocab: () => void;
 }
-export default function BookShelf({ store, catalog, busy, error, view, onView: setView, onRetry, onLibrary, onFrequency, onActivate, onInstall, onWord }: Props) {
+export default function BookShelf({ store, catalog, busy, error, view, onView: setView, onRetry, onLibrary, onFrequency, onActivate, onInstall, onWord, onVocab }: Props) {
   const [selected, setSelected] = useState<CatalogBook | null>(null)
   const [opened, setOpened] = useState<WordBook | null>(null)
   const [preview, setPreview] = useState<ExamFrequencyData>()
-  const [daily, setDaily] = useState(Math.max(5, Math.min(100, store.goal)))
+  const [daily, setDaily] = useState(Math.max(5, Math.min(maxDailyWords, store.goal)))
   useEffect(() => { if (selected?.exam) loadExamFrequency().then(setPreview).catch(() => setPreview(undefined)) }, [selected?.id])
   const learnedIds = new Set(store.words.filter(hasLearned).map(w => w.id))
   return <div className="book-shelf">
@@ -36,7 +38,7 @@ export default function BookShelf({ store, catalog, busy, error, view, onView: s
           const meta = catalog.find(c => c.id === book.id) || (book.id === 'ecdict-ky' ? catalog.find(c => c.tag === 'ky') : undefined)
           const learned = book.wordIds.filter(id => learnedIds.has(id)).length
           const days = bookDays(book)
-          return <button className="owned-book" key={book.id} disabled={busy} onClick={() => setOpened(book)}>
+          return <button className="owned-book" key={book.id} disabled={busy} onClick={() => book.id === vocabBookId ? onVocab() : setOpened(book)}>
             <span className="book-cover" style={{ background: meta?.color || '#56a495' }}><BookOpen size={25} /><b>{meta?.label || 'MY WORDS'}</b></span>
             <span className="owned-book-info"><strong>{book.title}{book.id === store.activeBookId && <small className="current-book-badge">正在学习</small>}</strong>
               <span>{book.wordIds.length.toLocaleString()} 词 · 每天 {book.dailyCount} 词</span>

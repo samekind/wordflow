@@ -229,3 +229,19 @@ html[data-theme="dark"]{--ai-1:#ffb06a;--ai-2:#ff6aa6;--ai-3:#b585ff;--ai-4:#6aa
   .boot-mark, .boot-name, .boot-sub, .boot-pixels { animation: none; }
   .boot-pixels i { animation: none; opacity: .6; }
 }
+
+.vocab-drill { display: flex; flex-direction: column; align-items: stretch; gap: 14px; padding: 4px 0 16px; }
+.vocab-drill h2 { margin: 8px 0 0; text-align: center; }
+.vocab-drill > p { margin: 0; text-align: center; color: var(--text-muted); line-height: 1.6; }
+.vocab-drill-count { text-align: center; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.vocab-card { display: flex; flex-direction: column; align-items: center; gap: 10px; min-height: 280px; justify-content: center; padding: 28px 20px; border-radius: var(--radius-lg); background: var(--glass-card-fill); border: 1px solid var(--glass-edge); box-shadow: var(--glass-card-shadow); text-align: center; }
+.vocab-card > strong { font-size: 34px; line-height: 1.15; overflow-wrap: anywhere; }
+.vocab-card-phonetic { color: var(--text-muted); }
+.vocab-card-meaning { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; animation: vocab-reveal .2s var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) both; }
+.vocab-card-meaning p { margin: 0; font-size: var(--fs-body); line-height: 1.6; }
+.vocab-card-meaning small { color: var(--text-muted); line-height: 1.5; }
+.vocab-drill-actions { display: flex; flex-direction: column; gap: 10px; }
+.vocab-drill-actions.two { flex-direction: row; }
+.vocab-drill-actions.two > button { flex: 1; min-height: 48px; }
+@keyframes vocab-reveal { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .vocab-card-meaning { animation: none; } }

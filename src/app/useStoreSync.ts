@@ -102,7 +102,8 @@ export function useStoreSync(notify: (message: string) => void, onSettings: (set
     unsaved.current = valid
     if (!draining.current) {
       setBusy(true)
-      draining.current = drain(retry).finally(() => { draining.current = null; pendingSave.current = null })
+      // Let the tap's own frame paint before the save starts; serialising can hold the main thread.
+      draining.current = new Promise<void>(resolve => setTimeout(resolve, 40)).then(() => drain(retry)).finally(() => { draining.current = null; pendingSave.current = null })
       pendingSave.current = draining.current
     }
     return true

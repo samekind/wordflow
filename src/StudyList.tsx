@@ -17,6 +17,7 @@ import ContextReader, { type ContextServices } from './components/ContextReader'
 import SwipeRow from './components/SwipeRow'
 import StartPlan from './components/StartPlan'
 import type { CatalogBook } from './wordbooks'
+import { setSkipKnownConfirm, skipKnownConfirm } from './known-confirm'
 
 type StartProps = { catalog: CatalogBook[]; busy: boolean; error: string; onRetry: () => void; onInstall: (book: CatalogBook, daily: number) => Promise<boolean> }
 type Props = {
@@ -225,7 +226,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
                 { label: <><Minus size={16} /><span>减标记</span></>, ariaLabel: `第 ${number(row.id)} 词减一个标记`, tone: 'neutral', disabled: row.markCount === 0 && !row.forgotten, onClick: () => void lessMark(row) },
                 row.known
                   ? { label: <><RotateCcw size={16} /><span>取消熟词</span></>, ariaLabel: `取消 ${row.word} 的熟词`, tone: 'known', onClick: () => void onKnown(row.id, false) }
-                  : { label: <><CheckCheck size={16} /><span>熟词</span></>, ariaLabel: `把 ${row.word} 设为熟词`, tone: 'known', onClick: () => setKnownTarget({ id: row.id, word: row.word }) },
+                  : { label: <><CheckCheck size={16} /><span>熟词</span></>, ariaLabel: `把 ${row.word} 设为熟词`, tone: 'known', onClick: () => { const target = { id: row.id, word: row.word }; if (skipKnownConfirm()) void confirmKnown(target); else setKnownTarget(target) } },
               ]}>
               <button className="english-line" disabled={saving || row.missing} aria-label={`${number(row.id)} ${row.word}，标记 ${markLevel(row.markCount)} / 6${row.forgotten ? '，本轮不熟' : ''}`} title="点按加一个标记，左滑减标记或设为熟词，长按查词"
                 onPointerDown={event => { if (event.button !== 0) return; cancelPress(); press.current = { x: event.clientX, y: event.clientY, moved: false, held: false }; timer.current = setTimeout(() => { press.current.held = true; onOpenWord(row.id) }, 480) }}
@@ -253,7 +254,11 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
     <IonAlert isOpen={knownTarget !== null} cssClass="app-alert" animated={!reduced} header={`把 ${knownTarget?.word || ''} 设为熟词？`}
       message="标记后这个词会从列表中隐藏，学习和复习计划不再安排它，本组提交时也会跳过。可以点“撤销上一步”，或在词详情里关掉“熟词”恢复。"
       onDidDismiss={() => setKnownTarget(null)}
-      buttons={[{ text: '取消', role: 'cancel' }, { text: '设为熟词', handler: () => { if (knownTarget) void confirmKnown(knownTarget) } }]} />
+      inputs={[{ type: 'checkbox', label: '以后不再提醒', value: 'skip', checked: false }]}
+      buttons={[{ text: '取消', role: 'cancel' }, { text: '设为熟词', handler: (checked?: string[] | string) => {
+        if (Array.isArray(checked) ? checked.includes('skip') : checked === 'skip') setSkipKnownConfirm(true)
+        if (knownTarget) void confirmKnown(knownTarget)
+      } }]} />
     <ChoiceSheet title="学习的天" open={daysOpen} onClose={() => setDaysOpen(false)} value={String(day)} options={dayOptions} onSelect={value => { void chooseDay(Number(value)) }} />
     <IonAlert isOpen={replaceKind !== null} cssClass="app-alert" animated={!reduced} header="结束原学习草稿？" message="已提交的学习记录和难词标记保留，未提交的本轮结果将结束。随后按当前选择重新选词。" onDidDismiss={() => setReplaceKind(null)} buttons={[{ text: '继续原任务', role: 'cancel' }, { text: '结束并重新选词', role: 'destructive', handler: () => { if (replaceKind) void onRestart(replaceKind) } }]} />
     <Sheet title="复习计划" open={planOpen} onClose={() => setPlanOpen(false)} tall><div className="memory-plan"><div className="memory-plan-heading"><h3>{dayMode ? '艾宾浩斯 · 按天复习' : store.reviewMethod === 'ebbinghaus' ? '艾宾浩斯式间隔复习' : 'FSRS 自适应复习'}</h3><span>{dayMode ? `${book?.title} · 第 ${day + 1} 天` : '全部已学单词 · 跨词书去重'}</span></div><div className="memory-totals"><div><strong>{queue.length}</strong><span>{dayMode ? '这一天还要复习' : '到期待复习'}</span></div><div><strong>{dayMode ? plan.reviewTotal : scheduled.length}</strong><span>{dayMode ? '这一天共复习' : '已加入计划'}</span></div></div>

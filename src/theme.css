@@ -420,6 +420,8 @@ ion-app{
 }
 .swipe-action.tone-neutral{ background: var(--text-muted); }
 .swipe-action.tone-known{ background: var(--success); }
+.swipe-action{ touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform .1s ease-out, filter .1s ease-out; }
+.swipe-action:active:not(:disabled){ transform: scale(.94); filter: brightness(.92); }
 .swipe-action:disabled{ opacity: .45; }
 .swipe-layer{
   position: relative;

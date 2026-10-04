@@ -1,5 +1,6 @@
 import { Capacitor, registerPlugin, SystemBars, SystemBarsStyle } from '@capacitor/core'
 import type { DailyStory, Store } from './model'
+import { serializeStore } from './serialize'
 
 type NativeSettings = { provider: string; model: string; configured: boolean }
 interface WordflowPlugin {
@@ -101,8 +102,8 @@ export async function loadState(): Promise<{ state: unknown; revision: number; a
 }
 const slice = 128 * 1024
 export async function saveState(state: Store, revision: number): Promise<{ revision: number }> {
-  if (!isAndroidApp) return api('state', { method: 'PUT', body: JSON.stringify({ state, revision }) })
-  const body = JSON.stringify(state)
+  if (!isAndroidApp) return api('state', { method: 'PUT', body: `{"state":${serializeStore(state)},"revision":${JSON.stringify(revision)}}` })
+  const body = serializeStore(state)
   // Each bridge message blocks the page while it is copied across, so send slices and let frames draw in between.
   for (let index = 0, offset = 0; ; index++, offset += slice) {
     const last = offset + slice >= body.length

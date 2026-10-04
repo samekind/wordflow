@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { createStudyDraft } from '../src/study'
+import { serializeStore } from '../src/serialize'
 import { bookDays, collectToVocabBook, completeBookGroup, emptyStore, importToPersonal, importWords, installBook, markWord, reviewWord, setKnown, storyCoverage, storyIsCurrent, storyParagraphCount, storySenses, wordForms, storyContentSchema, validateStore, wordsForDay, type DailyStory, type ImportRow } from '../src/model'
 import { starterRows } from '../src/vocabulary'
 
@@ -140,4 +142,24 @@ test('words collected while reading go to a separate 生词本 and leave the act
   const second = collectToVocabBook(again.store, [{ word: 'idea', meaning: 'n. 主意', phonetic: '', example: '' }])
   assert.equal(second.store.books.find(b => b.id === 'vocab')!.wordIds.length, 2)
   assert.equal(second.store.books.filter(b => b.id === 'vocab').length, 1)
+})
+
+test('a day can hold more than 100 words and the whole day is offered for study', () => {
+  const rows = Array.from({ length: 400 }, (_, i) => ({ word: `w${i}x`, meaning: `n. 词${i}`, phonetic: '', example: '' }))
+  const store = installBook({ ...emptyStore(), goal: 20 }, 'big', '大词量', '测试', rows, 300)
+  assert.equal(store.books[0].dailyCount, 300)
+  assert.equal(validateStore(JSON.parse(JSON.stringify(store))).books[0].dailyCount, 300)
+  assert.deepEqual(bookDays(store.books[0]).map(day => day.length), [300, 100])
+  assert.equal(createStudyDraft(store, 'learn')!.groups.flat().length, 300)
+  assert.throws(() => validateStore(JSON.parse(JSON.stringify({ ...store, books: [{ ...store.books[0], dailyCount: 6000 }] }))))
+})
+
+test('serializeStore matches JSON.stringify, including after a word changes', () => {
+  const rows = Array.from({ length: 50 }, (_, i) => ({ word: `s${i}x`, meaning: `n. 词${i}`, phonetic: '', example: '' }))
+  let store = validateStore(JSON.parse(JSON.stringify(importToPersonal(emptyStore(), rows, '序列化').store)))
+  store = reviewWord(store, store.words[0].id, 3)
+  assert.equal(serializeStore(store), JSON.stringify(store))
+  const next = validateStore(markWord(store, store.words[1].id, 1))
+  assert.equal(serializeStore(next), JSON.stringify(next))
+  assert.notEqual(serializeStore(next), serializeStore(store))
 })

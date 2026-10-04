@@ -4,7 +4,7 @@ import { modalController } from '@ionic/core'
 import { motion, useReducedMotion } from 'motion/react'
 import { ChartColumn, ChevronLeft, LoaderCircle, Plus } from 'lucide-react'
 import { ProfileIcon, ReadIcon, StudyIcon } from './icons'
-import { dayKey, needsSetup, validateStore, vocabBookId, type Store, type Word } from './model'
+import { dayKey, needsSetup, validateStore, type Store, type Word } from './model'
 import Onboarding from './components/Onboarding'
 import StudyList from './StudyList'
 import { checkIn, currentStudyDraft, studyView } from './study'
@@ -135,9 +135,9 @@ export default function App() {
               onBooks={() => go({ name: 'books' })} onImport={() => setImportOpen(true)} onSpeak={speech.speak} onCheckIn={doCheckIn} />}
             {screen.name === 'books' && <BookShelf store={store} catalog={words.catalog} busy={words.bookBusy || saving} error={words.catalogError} onRetry={words.refreshCatalog}
               view={shelfView ?? (store.books.length ? 'mine' : 'catalog')} onView={setShelfView}
-              onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onActivate={study.activateBook} onInstall={words.installCatalogBook} onWord={openWord} />}
+              onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onActivate={study.activateBook} onInstall={words.installCatalogBook} onWord={openWord} onVocab={() => go({ name: 'vocab' })} />}
             {screen.name === 'frequency' && <ExamFrequencyView initialExam={words.catalog.find(book => book.id === store.activeBookId)?.exam || (store.activeBookId === 'ecdict-ky' ? 'ky1' : 'cet4')} />}
-            {screen.name === 'vocab' && <VocabPage store={store} saving={saving} onWord={openWord} onRemove={words.removeVocabWord} onStudy={() => study.activateBook(vocabBookId)} />}
+            {screen.name === 'vocab' && <VocabPage store={store} saving={saving} onWord={openWord} onRemove={words.removeVocabWord} onMark={study.changeMarks} onSpeak={speech.speak} />}
             {screen.name === 'library' && <LibraryPage store={store} onWord={openWord} onBooks={() => go({ name: 'books' })} />}
             {screen.name === 'stats' && <StatsPage store={store} now={data.clock} saving={saving} onCheckIn={doCheckIn} onStudy={goStudy} onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onBooks={() => go({ name: 'books' })} />}
             {(screen.name === 'story' || screen.name === 'article' || screen.name === 'stories' || screen.name === 'shelf' || screen.name === 'picks') && <ReadingPage store={store} now={data.clock} view={screen.name === 'story' ? 'hub' : screen.name === 'picks' ? 'picks' : screen.name === 'article' ? 'daily' : screen.name === 'shelf' ? 'shelf' : 'story'}

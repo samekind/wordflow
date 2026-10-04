@@ -52,10 +52,10 @@ app.put('/api/state', (req, res) => {
       markedAt: z.string().datetime().nullable().default(null),
     }).passthrough()).max(30000),
     reviews: z.array(z.object({ wordId: z.string(), rating: z.number().int().min(1).max(4), at: z.string() }).passthrough()).max(500000),
-    lessons: z.array(z.object({ wordId: z.string() }).passthrough()).max(30000), goal: z.number().int().min(1).max(200),
+    lessons: z.array(z.object({ wordId: z.string() }).passthrough()).max(30000), goal: z.number().int().min(1).max(5000),
     books: z.array(z.object({
       id: z.string().min(1).max(200), title: z.string().min(1).max(200), source: z.string().max(300),
-      wordIds: z.array(z.string()).max(30000), dailyCount: z.number().int().min(5).max(100),
+      wordIds: z.array(z.string()).max(30000), dailyCount: z.number().int().min(5).max(5000),
       planVersion: z.literal(2).optional(),
       currentDay: z.number().int().min(0).max(30000), completedWordIds: z.array(z.string()).max(30000),
     })).max(100).optional(),
