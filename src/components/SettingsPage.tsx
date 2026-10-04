@@ -152,7 +152,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
           onChange={accent => void onPreferences({ pronunciation: { ...store.pronunciation, accent } })} />
       </SettingRow>
       <SettingRow label="朗读速度">
-        <SelectButton label="朗读速度" value={String(store.pronunciation.rate)} disabled={saving} options={[...new Set([.75, .85, 1, 1.15, store.pronunciation.rate])].sort((a, b) => a - b).map(rate => ({ value: String(rate), label: `${rate}x` }))}
+        <SelectButton label="朗读速度" value={String(store.pronunciation.rate)} disabled={saving} options={[...new Set([.7, .85, 1, 1.15, 1.3, store.pronunciation.rate])].sort((a, b) => a - b).map(rate => ({ value: String(rate), label: `${rate}x` }))}
           onChange={rate => void onPreferences({ pronunciation: { ...store.pronunciation, rate: Number(rate) } })} />
       </SettingRow>
       <div className="button-row voice-try">

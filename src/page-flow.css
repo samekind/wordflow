@@ -198,3 +198,6 @@ html[data-theme="dark"]{--ai-1:#ffb06a;--ai-2:#ff6aa6;--ai-3:#b585ff;--ai-4:#6aa
 .group-done .done-badge{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--success,#22a06b);color:#fff;flex-shrink:0;animation:done-pop .46s cubic-bezier(.34,1.56,.64,1)}
 @keyframes done-pop{0%{transform:scale(0)}100%{transform:none}}
 @media(prefers-reduced-motion:reduce){.mark-grid i[data-fresh=true],.english-entry[data-leaving=true] .english-word::after,.study-submit-area p.group-done,.group-done .done-badge{animation:none}.english-entry[data-leaving=true]{transition-delay:0s}}
+
+.icon-button.speed-button, .small-tools .icon-button.speed-button { width: auto; min-width: 46px; gap: 3px; padding: 0 7px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.speed-button span { line-height: 1; }

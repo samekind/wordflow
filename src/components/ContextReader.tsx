@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { SpeechRatePill } from './SpeechRate'
 import { BookOpen, Eye, EyeOff, RefreshCw, Square, Volume2 } from 'lucide-react'
 import { coreGloss } from '../gloss'
 import { normalize, storyCoverage, storyIsCurrent, storySenses, wordForms, type Store, type Word } from '../model'
@@ -74,6 +75,7 @@ export default function ContextReader({ store, draft, now, services, onWord, onS
       <div className="context-reading-tools">
         <span className="story-coverage">覆盖 {coverage.length}/{words.length} 词</span>
         <div className="small-tools">
+          <SpeechRatePill />
           <button className="icon-button" aria-label="朗读语境短文" onClick={() => onSpeak(story.paragraphs.map(p => p.english).join('\n'))}><Volume2 size={20} /></button>
           <button className="icon-button" aria-label="停止朗读" onClick={onStop}><Square size={16} /></button>
           <button className="icon-button" aria-label={translated ? '隐藏译文' : '显示译文'} onClick={() => setTranslated(!translated)}>{translated ? <EyeOff size={19} /> : <Eye size={19} />}</button>

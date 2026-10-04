@@ -15,6 +15,7 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
   const sequence = useRef(0)
   const recording = useRef<HTMLAudioElement | null>(null)
   const clips = useRef(new Map<string, Promise<string>>())
+  const liveRate = useRef(storeRef.current.pronunciation.rate)
 
   /** Fetches (and keeps) one sentence of cloud speech as a local blob so the next one can load while this one plays. */
   function clip(text: string, accent: 'us' | 'uk') {
@@ -35,6 +36,12 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
     return found
   }
 
+  /** Changes the speed of what is playing now and of every clip after it. */
+  function setRate(rate: number) {
+    liveRate.current = rate
+    if (recording.current) recording.current.playbackRate = Math.max(.5, Math.min(1.5, rate))
+  }
+
   function stop() {
     sequence.current++; recording.current?.pause(); recording.current = null
     if (isAndroidApp) { void phone.stopSpeech().catch(() => {}); return }
@@ -42,12 +49,13 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
   }
 
   /** Resolves when the clip ends; rejects if it cannot load or start within a few seconds (offline, unknown word). */
-  function play(url: string, request: number, rate: number) {
+  function play(url: string, request: number, rate: number | null) {
     return new Promise<void>((resolve, reject) => {
       if (request !== sequence.current) { resolve(); return }
       const player = new Audio(url); recording.current = player
       player.preload = 'auto'
-      player.playbackRate = Math.max(.6, Math.min(1.2, rate))
+      player.preservesPitch = true
+      player.playbackRate = Math.max(.5, Math.min(1.5, rate ?? liveRate.current))
       const timer = setTimeout(() => { player.pause(); reject(new Error('timeout')) }, 6000)
       player.onplaying = () => clearTimeout(timer)
       player.onended = () => { clearTimeout(timer); resolve() }
@@ -83,6 +91,7 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
     stop()
     const request = sequence.current
     const rate = storeRef.current.pronunciation.rate
+    liveRate.current = rate
     // "朗读本组" sends words joined by ". ": play each recording in turn.
     const parts = text.split(/\.\s+/).map(part => part.trim().replace(/\.$/, '')).filter(Boolean)
     if (!parts.length || !parts.every(recordable)) { speakProse(text, accent, rate, request); return }
@@ -112,7 +121,7 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
           const url = await next
           if (request !== sequence.current) return
           if (index + 1 < pieces.length) { next = clip(pieces[index + 1], accent); next.catch(() => {}) }
-          await play(url, request, rate)
+          await play(url, request, null)
         } catch {
           if (request !== sequence.current) return
           speakSystem(pieces.slice(index).join(' '), accent, rate, request)
@@ -122,5 +131,5 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
     })()
   }
 
-  return { speak, stop }
+  return { speak, stop, setRate }
 }

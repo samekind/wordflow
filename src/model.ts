@@ -165,7 +165,7 @@ export function validateStore(input: unknown): Store {
     books: z.array(bookSchema).max(100).optional(), activeBookId: z.string().default(''),
     stories: z.array(storySchema).max(2000).default([]),
     contextStories: z.array(contextStorySchema).max(2000).default([]),
-    pronunciation: z.object({ accent: z.enum(['us', 'uk']), rate: z.number().min(0.5).max(1.2) }).default({ accent: 'us', rate: 0.85 }),
+    pronunciation: z.object({ accent: z.enum(['us', 'uk']), rate: z.number().min(0.5).max(1.5) }).default({ accent: 'us', rate: 0.85 }),
     studyLayout: z.enum(['preview', 'test']).default('test'),
     reviewMethod: z.enum(['ebbinghaus', 'fsrs']).default('ebbinghaus'),
     profile: z.object({

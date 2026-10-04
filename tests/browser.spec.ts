@@ -1220,10 +1220,22 @@ test('tapping any word shows its meaning, glosses can be prepared inline, and ar
   await catalog.getByRole('button', { name: '目录 Fixture A', exact: true }).click()
   await expect(page.getByRole('button', { name: '词义标注', exact: true })).toHaveAttribute('aria-pressed', 'true')
 
+  // The speed sits next to the speaker, steps through the speeds, is the same saved setting, and the clip plays at it.
+  const speed = page.getByRole('button', { name: '朗读速度', exact: true })
+  await expect(speed).toHaveText('0.85x')
+  await speed.click(); await expect(speed).toHaveText('1x')
+  await speed.click(); await expect(speed).toHaveText('1.15x')
+  expect((await state(page)).pronunciation.rate).toBe(1.15)
+  const tools = (await page.locator('.reader-tools').boundingBox())!
+  const pill = (await speed.boundingBox())!
+  expect(pill.x).toBeGreaterThanOrEqual(0); expect(pill.x + pill.width).toBeLessThanOrEqual(tools.x + tools.width + 1)
+  await page.screenshot({ path: 'test-results/reading-speed-390.png', animations: 'disabled' })
+
   // Sentences and articles use the cloud voice, one clip per sentence group, played from local blobs.
   await page.getByRole('button', { name: '朗读英语文章', exact: true }).click()
   await expect.poll(() => clips.length).toBeGreaterThan(0)
   expect(clips[0]).toContain('The zymurgy article explains')
   await expect.poll(() => page.evaluate(() => (window as any).__recordings.at(-1) as string)).toMatch(/^blob:/)
+  expect(await page.evaluate(() => (window as any).__recordingRate)).toBeCloseTo(1.15, 2)
   expect(await page.evaluate(() => (window as any).__speech)).toEqual([])
 })

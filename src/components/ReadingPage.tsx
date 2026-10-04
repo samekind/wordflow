@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from 'react'
+import { SpeechRatePill } from './SpeechRate'
 import { BookA, BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, EyeOff, Languages, LoaderCircle, RefreshCw, SlidersHorizontal, Square, Volume2 } from 'lucide-react'
 import { DailyIcon, EssayIcon } from '../icons'
 import { dayKey, normalize, pageFontAttrs, wordsForDay, type ImportRow, type Store } from '../model'
@@ -323,6 +324,7 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
         {translations && <button className="reader-pill" aria-label={translated ? '隐藏译文' : '显示译文'} aria-pressed={translated} onClick={() => setTranslated(value => !value)}>{translated ? <EyeOff size={16} /> : <Languages size={16} />}{translated ? '收起译文' : '中文译文'}</button>}
         <button className="reader-pill" aria-label="词义标注" aria-pressed={annotate} onClick={toggleAnnotate}><BookA size={16} />{annotate ? '标注中' : '词义标注'}</button>
         <div className="small-tools">
+          <SpeechRatePill />
           <button className="icon-button" aria-label="朗读英语文章" title="朗读文章" onClick={() => onSpeak(article.paragraphs.join('\n'))}><Volume2 size={20} /></button>
           <button className="icon-button" aria-label="停止英语文章朗读" title="停止朗读" onClick={onStop}><Square size={16} /></button>
           {!online && <button className="icon-button" aria-label="更新英语文章" title="联网更新摘录" disabled={refreshing} onClick={refresh}>{refreshing ? <LoaderCircle size={18} className="spin" /> : <RefreshCw size={18} />}</button>}

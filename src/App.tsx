@@ -29,6 +29,7 @@ import { useStudyActions } from './app/useStudyActions'
 import { useWordActions } from './app/useWordActions'
 import { useAIServices } from './app/useAIServices'
 import { useBackButton } from './app/useBackButton'
+import { SpeechRateContext } from './components/SpeechRate'
 
 const tabs = [{ id: 'today', label: '学习', icon: StudyIcon }, { id: 'stats', label: '统计', icon: ChartColumn }, { id: 'story', label: '阅读', icon: ReadIcon }, { id: 'settings', label: '我的', icon: ProfileIcon }] as const
 const titles: Record<string, string> = { stats: '统计', books: '词书管理', story: '阅读', settings: '我的', library: '我的单词', frequency: '考频查询', article: '英语选读', stories: '语境记忆', picks: '每日英语选读' }
@@ -91,7 +92,11 @@ export default function App() {
   const secondary = !isTab(screen)
   const selectedTab: TabId = nav.tab
   const setup = needsSetup(store)
-  return <div className={`app-shell ${setup ? 'onboarding' : screen.name === 'section' ? 'settings' : screen.name}-page`}>
+  function setSpeechRate(rate: number) {
+    speech.setRate(rate)
+    void commit({ ...storeRef.current, pronunciation: { ...storeRef.current.pronunciation, rate } })
+  }
+  return <SpeechRateContext.Provider value={{ rate: store.pronunciation.rate, setRate: setSpeechRate }}><div className={`app-shell ${setup ? 'onboarding' : screen.name === 'section' ? 'settings' : screen.name}-page`}>
     <main className="main" id="app-scroll">
       {data.failedSave && <div className="save-problem" role="alert"><strong>当前改动尚未保存</strong><p>{data.failedSave.error}</p><p>请保持本页打开，重试或导出待保存备份。</p><div className="button-row">
         <button className="primary" disabled={data.savingNow} onClick={() => void commit(data.failedSave!.next, true)}>重试保存</button>
@@ -175,7 +180,7 @@ export default function App() {
     <LicensesSheet open={licensesOpen} onClose={() => setLicensesOpen(false)} />
     <RestorePicker inputRef={restoreRef} onPick={setRestoreCandidate} notify={toast.notify} />
     {confirmDialog}
-  </div>
+  </div></SpeechRateContext.Provider>
 }
 
 /** Sets the page scroll once the screen it belongs to has mounted (AnimatePresence mounts the

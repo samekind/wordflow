@@ -5,8 +5,10 @@ import json
 import os
 import secrets
 import sqlite3
+import subprocess
 import threading
 import sys
+import tempfile
 import time
 import re
 import urllib.error
@@ -456,10 +458,14 @@ def snapshot_meta(account_id):
 
 
 # ---------- sentence read-aloud ----------
-# Youdao has real recordings for words only; sentences go through this proxy to a neural-ish TTS voice and are
-# cached on disk, so a sentence is synthesized once for everybody. Only the app's own origins may call it.
+# Youdao has real recordings for words only; sentences go through this proxy to a neural voice (Microsoft Edge's
+# read-aloud service through the edge-tts package, installed in its own virtualenv) and are cached on disk, so a
+# sentence is synthesized once for everybody. Google Translate's plain voice is the fallback when that fails.
+# Only the app's own origins may call it.
 TTS_DIR = ROOT / "tts-cache"
 TTS_VOICES = {"us": "en-US", "uk": "en-GB"}
+TTS_EDGE = os.environ.get("WORDFLOW_EDGE_TTS", "/opt/wordflow-tts/bin/edge-tts")
+TTS_EDGE_VOICES = {"us": "en-US-AvaNeural", "uk": "en-GB-SoniaNeural"}
 TTS_MAX_CHARS = 200
 TTS_CACHE_BYTES = 400 * 1024 * 1024
 TTS_WINDOW = 10 * 60
@@ -503,6 +509,32 @@ def tts_fetch(text, accent):
         if "audio" not in (response.headers.get("Content-Type") or "") or len(body) < 800:
             raise ValueError("no audio")
         return body
+
+
+def tts_edge(text, accent):
+    if not os.path.exists(TTS_EDGE):
+        raise FileNotFoundError(TTS_EDGE)
+    with tempfile.TemporaryDirectory() as folder:
+        source, target = os.path.join(folder, "text.txt"), os.path.join(folder, "speech.mp3")
+        with open(source, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        subprocess.run([TTS_EDGE, "--voice", TTS_EDGE_VOICES[accent], "--file", source, "--write-media", target],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=25, check=True)
+        with open(target, "rb") as handle:
+            body = handle.read(2 * 1024 * 1024)
+    if len(body) < 800:
+        raise ValueError("no audio")
+    return body
+
+
+def tts_synthesize(text, accent):
+    """(audio, keep): a fallback voice is not kept in the cache, so the neural voice is tried again next time."""
+    try:
+        return tts_edge(text, accent), True
+    except FileNotFoundError:
+        return tts_fetch(text, accent), True
+    except (subprocess.SubprocessError, OSError, ValueError):
+        return tts_fetch(text, accent), False
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -705,7 +737,7 @@ class Handler(BaseHTTPRequestHandler):
         accent = query.get("accent", ["us"])[0]
         if accent not in TTS_VOICES or not text or len(text) > TTS_MAX_CHARS or not re.search(r"[A-Za-z]", text):
             return self.send_json(400, {"error": "朗读内容不正确"})
-        name = hashlib.sha256((accent + "\n" + text).encode("utf-8")).hexdigest() + ".mp3"
+        name = hashlib.sha256(("v2\n" + accent + "\n" + text).encode("utf-8")).hexdigest() + ".mp3"
         path = TTS_DIR / name
         body = None
         if path.is_file():
@@ -720,12 +752,14 @@ class Handler(BaseHTTPRequestHandler):
             if not TTS_PARALLEL.acquire(timeout=20):
                 return self.send_json(503, {"error": "朗读服务正忙，请稍后重试"})
             try:
-                body = tts_fetch(text, accent)
-            except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+                body, keep = tts_synthesize(text, accent)
+            except (urllib.error.URLError, TimeoutError, OSError, ValueError, subprocess.SubprocessError):
                 return self.send_json(502, {"error": "朗读服务暂时不可用"})
             finally:
                 TTS_PARALLEL.release()
             try:
+                if not keep:
+                    raise OSError("fallback voice is not cached")
                 TTS_DIR.mkdir(parents=True, exist_ok=True)
                 temporary = path.with_suffix(".tmp")
                 temporary.write_bytes(body)

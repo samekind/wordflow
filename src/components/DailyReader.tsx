@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { SpeechRatePill } from './SpeechRate'
 import { BookOpen, Check, CheckCheck, ChevronLeft, ChevronRight, Eye, EyeOff, LoaderCircle, RefreshCw, Square, Volume2 } from 'lucide-react'
 import { coreGloss } from '../gloss'
 import { bookDays, normalize, storyCoverage, storyIsCurrent, storyKey, storyParagraphCount, wordsForDay, type ImportRow, type Store, type Word } from '../model'
@@ -74,6 +75,7 @@ export default function DailyReader({ store, busy, live = '', error, onGenerate,
     <span>第 {day + 1} 天</span><button className="icon-button" aria-label="短文后一天" title="后一天" disabled={day >= days.length - 1 || busy} onClick={() => { onStop(); setSelectedDay(day + 1) }}><ChevronRight size={18} /></button></div>
   const article = story ? <>
     <div className="story-head">{dayNav}<button className="text-button" onClick={() => setPickerOpen(true)}>选择单词</button><span className="story-coverage">覆盖 {coverage.length}/{selectedWords.length} 词</span><div className="small-tools">
+      <SpeechRatePill />
       <button className="icon-button" aria-label="朗读短文" title="朗读短文" onClick={() => onSpeak(story.paragraphs.map(p => p.english).join('\n'))}><Volume2 size={20} /></button>
       <button className="icon-button" aria-label="停止朗读" title="停止朗读" onClick={onStop}><Square size={16} /></button>
       <button className="icon-button" aria-label={translated ? '隐藏译文' : '显示译文'} title={translated ? '隐藏译文' : '显示译文'} onClick={() => setTranslated(!translated)}>{translated ? <EyeOff size={19} /> : <Eye size={19} />}</button>
