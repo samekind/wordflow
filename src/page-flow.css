@@ -205,3 +205,27 @@ html[data-theme="dark"]{--ai-1:#ffb06a;--ai-2:#ff6aa6;--ai-3:#b585ff;--ai-4:#6aa
 .vocab-shortcut > svg:last-child { color: var(--text-faint); }
 .word-row.vocab-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr) 35px 32px; }
 .vocab-study { margin-top: 16px; }
+
+/* Opening screen. The system splash is #F3F5F7 with the logo, so this starts on the same ground. */
+.boot-splash { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; background: #F3F5F7; color: #1b2a41; transition: opacity 280ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }
+.boot-splash[data-leaving=true] { opacity: 0; pointer-events: none; }
+.boot-stage { display: flex; flex-direction: column; align-items: center; padding: 30px; transition: transform 280ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }
+.boot-splash[data-leaving=true] .boot-stage { transform: scale(1.04); }
+.boot-mark { width: 112px; height: 112px; object-fit: contain; animation: boot-mark-in 360ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) both; }
+.boot-name { margin: 18px 0 0; font-size: 28px; line-height: 1.2; font-weight: 700; letter-spacing: .14em; text-indent: .14em; animation: boot-rise 320ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) 140ms both; }
+.boot-sub { margin: 6px 0 0; font-size: 11px; font-weight: 600; letter-spacing: .32em; text-indent: .32em; color: #7b8798; animation: boot-rise 320ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) 220ms both; }
+.boot-pixels { display: flex; gap: 7px; margin-top: 34px; height: 8px; animation: boot-rise 280ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)) 380ms both; }
+.boot-pixels i { width: 8px; height: 8px; background: var(--accent, #0a7cff); opacity: .22; animation: boot-pixel 900ms steps(1, end) 520ms infinite; }
+.boot-pixels i:nth-child(2) { animation-delay: 820ms; }
+.boot-pixels i:nth-child(3) { animation-delay: 1120ms; }
+.boot-error { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 24px; max-width: 280px; text-align: center; }
+.boot-error p { margin: 0; color: #5b6676; line-height: 1.6; }
+@keyframes boot-mark-in { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
+@keyframes boot-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes boot-pixel { 0%, 100% { opacity: .22; } 33% { opacity: 1; } 66% { opacity: .22; } }
+@media (prefers-reduced-motion: reduce) {
+  .boot-splash { transition-duration: 140ms; }
+  .boot-stage, .boot-splash[data-leaving=true] .boot-stage { transition: none; transform: none; }
+  .boot-mark, .boot-name, .boot-sub, .boot-pixels { animation: none; }
+  .boot-pixels i { animation: none; opacity: .6; }
+}

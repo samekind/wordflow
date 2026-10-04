@@ -202,7 +202,7 @@ try {
 } catch (error) {
   console.error(JSON.stringify(await page?.evaluate(() => ({
     visibility: document.visibilityState,
-    loading: document.querySelector('.loading-page')?.textContent,
+    loading: document.querySelector('.boot-splash')?.textContent,
     content: document.querySelector('.view-transition')?.getAttribute('style'),
     dialogs: [...document.querySelectorAll('ion-modal')].map(node => ({ open: node.isOpen, top: node.getBoundingClientRect().top })),
     animations: document.getAnimations().slice(0, 8).map(animation => ({ state: animation.playState, time: animation.currentTime })),
