@@ -1,7 +1,7 @@
 {
-  "versionCode": 36,
-  "versionName": "0.4.6",
+  "versionCode": 37,
+  "versionName": "0.4.7",
   "url": "https://wordflow.43.134.190.112.sslip.io/releases/wordflow.apk",
-  "notes": "语境短文里的释义对得上正文：AI 会标出每段实际用的义项（只能从词本释义里原样摘取，如 bargain 取“特价商品”），每段下面的小字和点目标词的小卡显示的就是这个义项。abandoned、policies 这类规则变形也算写到并高亮。学习记录、词书进度和备份格式不变。",
-  "sha256": "B0C18792CCF705605FF7C23D01EBB41730B212B9C6605BC53EA1DBC52FC98DCE"
+  "notes": "学习页自查模式下的“核对释义”重做：改成单列，每行显示序号、英文单词、中文释义、“不熟”和标记点，中文不再被挤成竖排；点一行可展开该词的词典释义（按词性分行），里面有“词条详情”入口。学习记录、词书进度和备份格式不变。",
+  "sha256": "8CBF247CD4926AF5AD123256A244ECC80605169D73B08E8BD99DEFEBB5E28913"
 }

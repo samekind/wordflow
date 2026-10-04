@@ -3,7 +3,7 @@ import { IonAlert } from '@ionic/react'
 import { useReducedMotion } from 'motion/react'
 import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, Minus, Plus, RotateCcw, Volume2 } from 'lucide-react'
 import { PreviewIcon, RecallIcon } from './icons'
-import { coreGloss } from './gloss'
+import { coreGloss, dictionaryLines } from './gloss'
 import { bookDays, dayKey, ebbNextLabel, intervalLabel, listReviewOffsets, markLevel, memoryIntervals, wordsForDay, pageFontAttrs, type Store, type WordBook } from './model'
 import { currentStudyDraft, dayPlan, dayReviewKey, draftComplete, hasLearned, learningStatistics, newWords, reviewQueue, studyView, studyWordStatus, usesDaySchedule, type StudyAction } from './study'
 import type { LearningState, StudyDraft, StudyKind } from './study-state'
@@ -52,7 +52,7 @@ export function CheckInBar({ plan, saving, onCheckIn, onNextDay }: { plan: Retur
 }
 export default function StudyList({ start, store, now, saving, canUndo, onMark, onKnown, onStudy, onRestart, onLearning, onDay, onOpenWord, onUndo, onBooks, onImport, onLayout, onSpeak, onStop, onCheckIn, contextServices }: Props) {
   const reduced = useReducedMotion()
-  const [daysOpen, setDaysOpen] = useState(false), [showMeanings, setShowMeanings] = useState(false), [planOpen, setPlanOpen] = useState(false)
+  const [daysOpen, setDaysOpen] = useState(false), [showMeanings, setShowMeanings] = useState(false), [openMeaning, setOpenMeaning] = useState<string | null>(null), [planOpen, setPlanOpen] = useState(false)
   const [replaceKind, setReplaceKind] = useState<StudyKind | null>(null)
   const [knownTarget, setKnownTarget] = useState<{ id: string; word: string } | null>(null), [leaving, setLeaving] = useState<string[]>([]), [showKnown, setShowKnown] = useState(false)
   const previousRows = useRef<{ id: string; word: string; meaning: string; markCount: number; missing: boolean; known: boolean; status: string; forgotten: boolean }[]>([])
@@ -127,7 +127,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
   function scrollToEnglish() { document.getElementById('app-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }
   function cancelPress() { clearTimeout(timer.current) }
   useEffect(() => cancelPress, [])
-  useEffect(() => { setShowMeanings(false); scrollToEnglish() }, [currentKey, preview, contextMode])
+  useEffect(() => { setShowMeanings(false); setOpenMeaning(null); scrollToEnglish() }, [currentKey, preview, contextMode])
   function practiceState(patch: Partial<NonNullable<LearningState['practice']>>) {
     return onLearning({ ...store.learning, view: 'practice', practice: { bookId: book?.id || '', day, page: currentPage, forgottenIds: practice?.forgottenIds || [], completedAt: practice?.completedAt || null, ...patch } })
   }
@@ -237,7 +237,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
         </ol>
         {knownRows.length > 0 && <p className="known-note" role="status">{showKnown ? `正在显示 ${knownRows.length} 个熟词` : `已隐藏 ${hiddenKnown} 个熟词`}<button className="text-button" onClick={() => setShowKnown(!showKnown)}>{showKnown ? '再次隐藏' : '显示'}</button></p>}
         {!preview && <section className="meaning-section" aria-label="编号中文释义"><div className="meaning-heading"><h2>核对释义</h2><button className="text-button" onClick={() => setShowMeanings(!showMeanings)} aria-label={showMeanings ? '隐藏全部释义' : '显示全部释义'}>{showMeanings ? <EyeOff size={16} /> : <Eye size={16} />}{showMeanings ? '收起释义' : '展开核对'}</button></div>
-          {showMeanings && <ol className="meaning-list">{rows.map(row => <li className="meaning-entry" key={row.id} data-word-id={row.id} data-number={number(row.id)}><div className="meaning-row"><span className="word-number">{number(row.id)}</span><span className="chinese-meaning">{coreGloss(row.meaning)}</span><button className="text-button meaning-check" aria-label={`${row.forgotten ? '取消' : '标记'}第 ${number(row.id)} 词不熟`} aria-pressed={row.forgotten} disabled={saving || completed || row.missing} onClick={() => void markEntry(row.id, row.forgotten ? -1 : 1)}>{row.forgotten ? '已标不熟' : '不熟'}</button><button className="study-mark" disabled={row.missing} onClick={() => onOpenWord(row.id)} aria-label={`第 ${number(row.id)} 词详情`}><MarkDots count={row.markCount} /></button></div></li>)}</ol>}
+          {showMeanings && <ol className="meaning-list">{rows.map(row => <li className="meaning-entry" key={row.id} data-word-id={row.id} data-number={number(row.id)} data-open={openMeaning === row.id || undefined}><div className="meaning-row"><span className="word-number">{number(row.id)}</span><button className="meaning-main" aria-expanded={openMeaning === row.id} aria-label={`第 ${number(row.id)} 词词典释义`} onClick={() => setOpenMeaning(openMeaning === row.id ? null : row.id)}><span className="meaning-word" lang="en">{row.word}</span><span className="meaning-line"><span className="chinese-meaning">{coreGloss(row.meaning)}</span><ChevronDown size={14} aria-hidden="true" /></span></button><button className="text-button meaning-check" aria-label={`${row.forgotten ? '取消' : '标记'}第 ${number(row.id)} 词不熟`} aria-pressed={row.forgotten} disabled={saving || completed || row.missing} onClick={() => void markEntry(row.id, row.forgotten ? -1 : 1)}>{row.forgotten ? '已标不熟' : '不熟'}</button><button className="study-mark" disabled={row.missing} onClick={() => onOpenWord(row.id)} aria-label={`第 ${number(row.id)} 词详情`}><MarkDots count={row.markCount} /></button></div>{openMeaning === row.id && <div className="meaning-dict" aria-label={`${row.word} 词典释义`}>{dictionaryLines(row.meaning).map((line, index) => <p key={index}>{line}</p>)}{!row.missing && <button className="text-button" onClick={() => onOpenWord(row.id)}>词条详情</button>}</div>}</li>)}</ol>}
           {showMeanings && <button className="text-button" aria-label="返回英文词表" onClick={scrollToEnglish}>返回词表</button>}
         </section>}
         {!preview && <div className="study-submit-area">
