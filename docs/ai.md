@@ -22,6 +22,12 @@ AI 在拾词里只是“需要时才用的帮手”，不在学习主流程里�
 - 句子翻译、语境释义的结果在服务器缓存，命中缓存不扣点。
 - 服务器用环境变量 `AI_DAILY_LIMIT` 调整每日点数。
 
+## 速度与模型
+
+服务器默认用资料库流水线的网关和模型（`cline-pass/deepseek-v4.1-flash`）。它是会先“思考”的模型：翻译一句话要 3 到 5 秒，写一篇短文要 30 到 60 秒，其中 80% 以上的输出是看不见的思考，关闭思考的参数无效。
+
+要变快，给应用单独配一个不思考的模型：在服务器上创建只有 root 能读的 `/etc/wordflow/app-ai.env`，写入 `READING_AI_KEY=你的 DeepSeek 官方 Key`，再 `sudo systemctl restart wordflow-cloud`。此时默认用 `https://api.deepseek.com` 的 `deepseek-chat`，可用 `READING_AI_BASE`、`READING_AI_MODEL` 改，网关限定用 `READING_AI_GATEWAY_ONLY`。资料库流水线仍用原来的 `library.env`，不受影响。没有这个文件时行为不变。
+
 ## 网络不稳时
 
 手机请求在几秒内就失败（连接断了、域名解析失败）说明请求根本没到服务器，应用会自动重发最多两次，再提示“连不上内置 AI，请检查网络后重试”。已经等了很久才失败的请求不会重发，免得重复扣点。

@@ -105,13 +105,16 @@ def recover_failed(ip, now):
 
 
 # ---------- built-in reading AI ----------
-# Uses the same key and gateway as the library pipeline (/etc/wordflow/library.env). Every call is logged
+# Uses the same key and gateway as the library pipeline (/etc/wordflow/library.env) unless READING_AI_KEY is set:
+# that gives the app its own provider (default DeepSeek's non-thinking deepseek-chat, much faster than a
+# reasoning model for translations and stories) without touching the library job. Every call is logged
 # to ai-usage.log, at most AI_PARALLEL run at once, and each device gets AI_DAILY units a day (chat = 1,
 # story = 5; cache hits and failed calls are free). Old clients without a device id are counted by IP.
-AI_KEY = os.environ.get("LIBRARY_AI_KEY") or os.environ.get("DEEPSEEK_API_KEY") or ""
-AI_BASE = (os.environ.get("READING_AI_BASE") or os.environ.get("LIBRARY_AI_BASE") or "https://api.deepseek.com").rstrip("/")
-AI_MODEL = os.environ.get("READING_AI_MODEL") or os.environ.get("LIBRARY_AI_MODEL") or "deepseek-chat"
-AI_ONLY = [name.strip() for name in (os.environ.get("LIBRARY_AI_GATEWAY_ONLY") or "").split(",") if name.strip()]
+APP_OWN_AI = bool(os.environ.get("READING_AI_KEY"))
+AI_KEY = os.environ.get("READING_AI_KEY") or os.environ.get("LIBRARY_AI_KEY") or os.environ.get("DEEPSEEK_API_KEY") or ""
+AI_BASE = (os.environ.get("READING_AI_BASE") or (None if APP_OWN_AI else os.environ.get("LIBRARY_AI_BASE")) or "https://api.deepseek.com").rstrip("/")
+AI_MODEL = os.environ.get("READING_AI_MODEL") or (None if APP_OWN_AI else os.environ.get("LIBRARY_AI_MODEL")) or "deepseek-chat"
+AI_ONLY = [name.strip() for name in (os.environ.get("READING_AI_GATEWAY_ONLY" if APP_OWN_AI else "LIBRARY_AI_GATEWAY_ONLY") or "").split(",") if name.strip()]
 AI_PARALLEL = threading.BoundedSemaphore(int(os.environ.get("READING_AI_PARALLEL", "4")))
 AI_TIMEOUT = int(os.environ.get("READING_AI_TIMEOUT", "150"))
 AI_MODES = ("translate", "summary", "vocabulary", "explain", "ask")

@@ -218,6 +218,17 @@ class ReadingAITests(ServerCase):
         self.assertEqual(third["remaining"], first["remaining"] - 1)
 
 
+class OwnProviderTests(ServerCase):
+    extra_env = {"READING_AI_KEY": "app-own-key"}
+
+    def test_a_dedicated_app_key_is_used_without_the_library_gateway_options(self):
+        status, result = self.chat({"device": "device-own-1", "task": {"type": "sentence", "sentence": "Hello there."}})
+        self.assertEqual(status, 200, result)
+        call = FakeModel.calls[-1]
+        self.assertEqual(call["auth"], "Bearer app-own-key")
+        self.assertNotIn("providerOptions", call["body"])
+
+
 class QuotaTests(ServerCase):
     extra_env = {"AI_DAILY_LIMIT": "6"}
 
