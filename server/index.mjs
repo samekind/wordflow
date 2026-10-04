@@ -133,7 +133,7 @@ app.post('/api/story', async (req, res) => {
       method: 'POST', redirect: 'error', signal: AbortSignal.timeout(60000),
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.key}` },
       body: JSON.stringify({
-        model: c.model, temperature: 0.65, max_tokens: 4500, response_format: { type: 'json_object' },
+        model: c.model, temperature: 0.65, max_tokens: 6000, response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: storyPrompt },
           { role: 'user', content: JSON.stringify(words.map(w => ({ wordId: w.id, word: w.word, meaning: w.meaning }))) },
@@ -166,7 +166,7 @@ async function streamStoryResponse(res, c, words) {
     method: 'POST', redirect: 'error', signal: AbortSignal.timeout(60000),
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.key}` },
     body: JSON.stringify({
-      model: c.model, temperature: 0.65, max_tokens: 4500, stream: true, response_format: { type: 'json_object' },
+      model: c.model, temperature: 0.65, max_tokens: 6000, stream: true, response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: storyPrompt },
         { role: 'user', content: JSON.stringify(words.map(w => ({ wordId: w.id, word: w.word, meaning: w.meaning }))) },

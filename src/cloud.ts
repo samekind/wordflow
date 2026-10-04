@@ -6,7 +6,7 @@ import { isAndroidApp } from './platform'
 export const cloudBase = 'https://wordflow.43.134.190.112.sslip.io'
 /** Build-time fallback for the browser preview. On Android the installed version comes from the
  * package itself (see installedRelease), so it can never drift from the APK actually running. */
-export const appRelease = { versionCode: 33, versionName: '0.4.3' }
+export const appRelease = { versionCode: 34, versionName: '0.4.4' }
 export type InstalledRelease = { versionCode: number; versionName: string; source: 'package' | 'preview' }
 export async function installedRelease(): Promise<InstalledRelease> {
   if (!isAndroidApp) return { ...appRelease, source: 'preview' }

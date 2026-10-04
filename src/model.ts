@@ -125,7 +125,7 @@ export const storyContentSchema = z.object({
   title: z.string().trim().min(1).max(160),
   paragraphs: z.array(z.object({
     english: z.string().trim().min(1).max(3000), translation: z.string().trim().min(1).max(3000),
-  })).min(1).max(4),
+  })).min(1).max(8),
 })
 const storySchema = storyContentSchema.extend({
   id: z.string().min(1).max(300), bookId: z.string().min(1), day: z.number().int().nonnegative(),
@@ -442,6 +442,8 @@ export function storyCoverage(story: Pick<DailyStory, 'paragraphs'>, words: Pick
   const text = story.paragraphs.map(p => p.english).join('\n')
   return words.filter(w => new RegExp(`(^|[^a-z])${wordPattern(w.word)}(?=$|[^a-z])`, 'i').test(text)).map(w => w.id)
 }
+/** Paragraphs a story should have for this many words: three to five words each, one to eight paragraphs (mirrors the cloud). */
+export function storyParagraphCount(words: number) { return Math.min(8, Math.max(1, Math.ceil(words / 4))) }
 export function studyGroups<T>(words: T[]): T[][] {
   if (!words.length) return []
   const count = Math.max(1, Math.floor(words.length / 20))

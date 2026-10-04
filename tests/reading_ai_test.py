@@ -50,7 +50,7 @@ class FakeModel(BaseHTTPRequestHandler):
             return
         task = json.loads(body["messages"][1]["content"])
         if "小故事" in system:
-            content = {"title": "A Story", "paragraphs": [{"english": "Stories use %s." % ", ".join(w["word"] for w in task), "translation": "故事。"}]}
+            content = {"title": "A Story", "paragraphs": [{"words": [w["word"] for w in task], "english": "Stories use %s." % ", ".join(w["word"] for w in task), "translation": "故事。"}]}
         elif "助记教练" in system:
             ids = [w["wordId"] for w in task]
             if FakeModel.wrong_ids:
@@ -159,11 +159,23 @@ class ReadingAITests(ServerCase):
         self.assertIn("resilient, recover", result["story"]["paragraphs"][0]["english"])
         self.assertEqual(self.call({"mode": "story", "words": self.words})[0], 200)
         self.assertEqual(len(FakeModel.calls), before + 2, "asking again writes another story")
-        self.assertEqual(FakeModel.calls[-1]["body"]["max_tokens"], 4500)
+        self.assertEqual(FakeModel.calls[-1]["body"]["max_tokens"], 6000)
+        self.assertEqual(result["story"]["paragraphs"][0].keys(), {"english", "translation"}, "the model's word plan is not passed on")
         status, result = self.call({"mode": "lessons", "words": self.words})
         self.assertEqual(status, 200, result)
         self.assertEqual([lesson["wordId"] for lesson in result["lessons"]], ["w1", "w2"])
         self.assertEqual(result["lessons"][0]["question"], "")
+
+    def test_story_prompt_asks_for_a_paragraph_per_three_to_five_words(self):
+        def system_for(count):
+            words = [{"id": "w%d" % i, "word": "word%d" % i, "meaning": "词%d" % i} for i in range(count)]
+            self.assertEqual(self.call({"mode": "story", "words": words})[0], 200)
+            return FakeModel.calls[-1]["body"]["messages"][0]["content"]
+        for count, paragraphs in ((1, 1), (4, 1), (5, 2), (14, 4), (32, 8), (40, 8)):
+            self.assertTrue(system_for(count).endswith("本次共 %d 个词，请写 %d 段。" % (count, paragraphs)), (count, paragraphs))
+        prompt = system_for(14)
+        for rule in ("每段承载 3 至 5 个目标词", "不同的义项", "原形", "words"):
+            self.assertIn(rule, prompt)
 
     def test_word_requests_are_bounded_and_mismatched_lessons_are_rejected(self):
         self.assertEqual(self.call({"mode": "story", "words": []})[0], 400)

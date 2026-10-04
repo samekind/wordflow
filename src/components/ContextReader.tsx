@@ -7,6 +7,13 @@ import { previewStoryDraft } from '../story-draft'
 import { AIIcon } from '../icons'
 import { LookupDock, LookupProvider, ReadableText } from './ReadableText'
 
+/** The target words a paragraph actually contains, found in its text rather than trusted from the model. */
+export function ParagraphWords({ english, words, onWord }: { english: string; words: Word[]; onWord: (id: string) => void }) {
+  const ids = storyCoverage({ paragraphs: [{ english, translation: '' }] }, words)
+  if (!ids.length) return null
+  return <p className="paragraph-words" aria-label="本段单词">{ids.map(id => <button key={id} lang="en" onClick={() => onWord(id)}>{words.find(word => word.id === id)?.word}</button>)}</p>
+}
+
 export function StoryProgress({ words, live }: { words: Word[]; live: string }) {
   const draft = previewStoryDraft(live)
   const steps = ['词表已交给模型', draft.title ? `标题：${draft.title}` : '模型正在拟定标题', draft.paragraphs.length ? `已完成 ${draft.paragraphs.length} 段` : '模型正在写英文', draft.paragraphs.some(item => item.translation) ? '译文正在跟上' : '模型接着写译文']
@@ -63,9 +70,10 @@ export default function ContextReader({ store, draft, now, services, onWord, onS
         {story.paragraphs.map((paragraph, index) => <div className="story-paragraph" key={index}>
           <p lang="en"><ReadableText text={paragraph.english} keyPrefix={`${index}`} targets={targetIds} onTarget={onWord} /></p>
           {translated && <p className="story-translation">{paragraph.translation}</p>}
+          <ParagraphWords english={paragraph.english} words={words} onWord={onWord} />
         </div>)}
       </article>
-      {!!missing.length && <div className="missing-words"><span>短文未覆盖，自测时仍会包含</span>{missing.map(word => <button onClick={() => onWord(word.id)} key={word.id}>{word.word}</button>)}</div>}
+      {!!missing.length && <div className="missing-words"><span>这些词没写进短文，自测时仍会包含</span>{missing.map(word => <button onClick={() => onWord(word.id)} key={word.id}>{word.word}</button>)}</div>}
       <p className="source-note story-source">AI 生成内容 · 请核对</p>
     </> : <div className="context-ready">
       <BookOpen size={26} /><h2>在短文中记住本组单词</h2>

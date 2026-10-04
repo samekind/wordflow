@@ -227,7 +227,7 @@ public class WordflowPlugin extends Plugin {
                     }
                 }
                 JSONObject body = new JSONObject().put("model", config.getString("model")).put("temperature", 0.65)
-                    .put("max_tokens", isStory ? 4500 : 3000).put("response_format", new JSONObject().put("type", "json_object"))
+                    .put("max_tokens", isStory ? 6000 : 3000).put("response_format", new JSONObject().put("type", "json_object"))
                     .put("messages", new JSONArray()
                         .put(new JSONObject().put("role", "system").put("content", prompt))
                         .put(new JSONObject().put("role", "user").put("content", words.toString())));
@@ -262,7 +262,7 @@ public class WordflowPlugin extends Plugin {
                 if (isStory) {
                     String title = parsed.getString("title").trim();
                     JSONArray paragraphs = parsed.getJSONArray("paragraphs");
-                    if (title.isEmpty() || title.length() > 160 || paragraphs.length() < 1 || paragraphs.length() > 4) throw new IllegalArgumentException("短文格式不完整，请重试");
+                    if (title.isEmpty() || title.length() > 160 || paragraphs.length() < 1 || paragraphs.length() > 8) throw new IllegalArgumentException("短文格式不完整，请重试");
                     JSONArray cleaned = new JSONArray();
                     for (int i = 0; i < paragraphs.length(); i++) {
                         JSONObject paragraph = paragraphs.getJSONObject(i);

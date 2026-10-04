@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { bookDays, completeBookGroup, emptyStore, importToPersonal, importWords, installBook, markWord, reviewWord, setKnown, storyCoverage, storyIsCurrent, validateStore, wordsForDay, type DailyStory, type ImportRow } from '../src/model'
+import { bookDays, completeBookGroup, emptyStore, importToPersonal, importWords, installBook, markWord, reviewWord, setKnown, storyCoverage, storyIsCurrent, storyParagraphCount, storyContentSchema, validateStore, wordsForDay, type DailyStory, type ImportRow } from '../src/model'
 import { starterRows } from '../src/vocabulary'
 
 test('old backups migrate into a personal book without altering words or review history', () => {
@@ -84,6 +84,13 @@ test('story coverage is calculated from the English text and matches the capture
   const withStory = validateStore(JSON.parse(JSON.stringify({ ...initial, stories: [story] })))
   assert.deepEqual(withStory.stories[0], story)
   assert.throws(() => validateStore({ ...withStory, books: [] }), /短文记录/)
+})
+
+test('a story gets one paragraph per three to five words, at most eight', () => {
+  assert.deepEqual([1, 4, 5, 14, 32, 40].map(storyParagraphCount), [1, 1, 2, 4, 8, 8])
+  const paragraphs = Array.from({ length: 8 }, (_, i) => ({ english: `Scene ${i}.`, translation: `场景 ${i}。` }))
+  assert.equal(storyContentSchema.safeParse({ title: 'Eight', paragraphs }).success, true)
+  assert.equal(storyContentSchema.safeParse({ title: 'Nine', paragraphs: [...paragraphs, paragraphs[0]] }).success, false)
 })
 
 test('all bundled books can be installed and backed up within the native storage limit', () => {

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, Check, CheckCheck, ChevronLeft, ChevronRight, Eye, EyeOff, LoaderCircle, RefreshCw, Square, Volume2 } from 'lucide-react'
 import { coreGloss } from '../gloss'
-import { bookDays, normalize, storyCoverage, storyIsCurrent, storyKey, wordsForDay, type ImportRow, type Store, type Word } from '../model'
+import { bookDays, normalize, storyCoverage, storyIsCurrent, storyKey, storyParagraphCount, wordsForDay, type ImportRow, type Store, type Word } from '../model'
 import { AIIcon } from '../icons'
 import GlassSlider from './GlassSlider'
 import MarkDots from './MarkDots'
 import Sheet from './Sheet'
-import { StoryProgress } from './ContextReader'
+import { ParagraphWords, StoryProgress } from './ContextReader'
 import { LookupDock, LookupProvider, ReadableText } from './ReadableText'
 
 type Props = {
@@ -53,12 +53,13 @@ export default function DailyReader({ store, busy, live = '', error, onGenerate,
   }
   const picker = <Sheet title="选择单词" open={pickerOpen} onClose={() => setPickerOpen(false)} tall>
     <div className="picker-bar">
-      <p className="picker-note">{allWords.length > 40 ? `今天有 ${allWords.length} 个词。短文每次最多写 40 个，当前是第 ${currentPart + 1} / ${totalParts} 组。` : `这一组 ${words.length} 个词。全选和清除都只作用于下面筛出来的词。`}</p>
+      <p className="picker-note">{allWords.length > 40 ? `今天有 ${allWords.length} 个词。短文每次最多写 40 个，当前是第 ${currentPart + 1} / ${totalParts} 组。` : `选出今天没记牢的词，AI 会按词数分段，每段围绕 3 至 5 个词写一个小场景。`}</p>
       {totalParts > 1 && <div className="part-tabs" aria-label="短文分组">{Array.from({ length: totalParts }, (_, index) => <button key={index} aria-pressed={currentPart === index} onClick={() => { setPart(index); setQuery('') }}>第 {index + 1} 组 · {allWords.slice(index * 40, (index + 1) * 40).length}</button>)}</div>}
       <GlassSlider name="按标记筛选" caption="向右拖，只留下标记更高的词" thumbWidth={92} min={0} max={6} value={markFilter} label={value => value === 0 ? '全部' : `≥${value}`} accessory={<MarkDots count={markFilter} />} onChange={setMarkFilter} />
       <input className="picker-search" value={query} placeholder="搜索单词或释义" onChange={event => setQuery(event.target.value)} />
-      <div className="story-picker-heading"><span>{selectedWords.length} 已选 · 当前 {visibleWords.length}</span><div className="picker-actions">
+      <div className="story-picker-heading"><span>{selectedWords.length} 已选{selectedWords.length > 0 && ` · 约 ${storyParagraphCount(selectedWords.length)} 段`} · 当前 {visibleWords.length}</span><div className="picker-actions">
         <button type="button" aria-label="全选" disabled={busy || !visibleWords.length} onClick={() => setSelected(new Set(visibleWords.map(word => word.id)))}><CheckCheck size={15} />全选当前</button>
+        <button type="button" aria-label="选没记牢的" disabled={busy || !words.some(word => word.markCount > 0)} onClick={() => setSelected(new Set(words.filter(word => word.markCount > 0).map(word => word.id)))}>没记牢的</button>
         <button type="button" aria-label="清空" disabled={busy || selected.size === 0} onClick={() => setSelected(new Set())}>清除</button>
       </div></div>
     </div>
@@ -82,9 +83,10 @@ export default function DailyReader({ store, busy, live = '', error, onGenerate,
       {story.paragraphs.map((paragraph, index) => <div className="story-paragraph" key={index}>
         <p lang="en"><ReadableText text={paragraph.english} keyPrefix={`${index}`} targets={targetIds} onTarget={onWord} /></p>
         {translated && <p className="story-translation">{paragraph.translation}</p>}
+        <ParagraphWords english={paragraph.english} words={selectedWords} onWord={onWord} />
       </div>)}
     </article>
-    {missing.length > 0 && <div className="missing-words"><span>尚未覆盖</span>{missing.map(w => <button onClick={() => onWord(w.id)} key={w.id}>{w.word}</button>)}</div>}
+    {missing.length > 0 && <div className="missing-words"><span>这些词没写进短文，可重新生成</span>{missing.map(w => <button onClick={() => onWord(w.id)} key={w.id}>{w.word}</button>)}</div>}
     <p className="source-note story-source">AI 生成内容 · 请核对</p>
   </> : null
   return <LookupProvider title={story?.title || '短文'} known={known} onSpeak={onSpeak} onStop={onStop} onAdd={onAddWord} onOpenWord={onWord}><div className="daily-reader">
