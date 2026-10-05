@@ -80,7 +80,8 @@
 .update-progress-track>span{display:block;height:100%;border-radius:3px;background:var(--accent);transition:width .2s ease}
 .tutorial-overlay{position:fixed;inset:0;z-index:80}
 .tutorial-dim{position:absolute;inset:0;background:rgba(15,23,32,.72);animation:tutorial-in .2s ease}
-.tutorial-center{position:absolute;inset:0;display:grid;place-items:center;padding:24px;animation:tutorial-in .2s ease}
+.tutorial-center{position:absolute;inset:0;display:grid;place-items:center;padding:24px;background:rgba(15,23,32,.72);animation:tutorial-in .2s ease}
+html[data-theme="dark"] .tutorial-center{background:rgba(0,0,0,.8)}
 .tutorial-card{position:relative;display:grid;gap:12px;width:min(100%,360px);max-height:calc(100vh - 48px);overflow:auto;padding:24px 22px 18px;border-radius:20px;background:var(--surface-solid);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow);animation:tutorial-rise .26s ease}
 .tutorial-card h2{margin:0;font-size: var(--fs-title);font-weight: var(--fw-semibold);color: var(--text-primary)}
 .tutorial-card ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size: var(--fs-body);color: var(--text-secondary)}
@@ -98,10 +99,12 @@ html[data-theme="dark"] .tutorial-hole{box-shadow:0 0 0 2px rgba(255,255,255,.35
 .tutorial-spot-card p{margin:0;font-size: var(--fs-small);color:var(--text-secondary)}
 .tutorial-spot-card button{width:100%;margin-top:4px}
 .tutorial-progress{position:absolute;top:10px;right:14px;font-size: var(--fs-caption);color: var(--text-muted)}
-.tutorial-demo{position:relative;border-radius:14px;background:var(--surface-inset);padding:10px}
+.tutorial-demo{position:relative;border-radius:14px;background:var(--surface-inset);padding:10px;overflow:hidden}
 .tutorial-demo-actions{position:absolute;top:10px;bottom:10px;right:10px;display:flex;gap:8px}
 .demo-action{display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;width:84px;border-radius:10px;background:#e8f0ec;color:#3b8270;font-size: var(--fs-caption)}
 .demo-action.known{background:#e8f5ec;color:#2c8256}
+html[data-theme="dark"] .demo-action{background:#2a3542;color:#a8b7c6}
+html[data-theme="dark"] .demo-action.known{background:#1f3a2e;color:#7fc9a0}
 .tutorial-demo-row{position:relative;z-index:1;display:flex;align-items:center;gap:10px;width:100%;padding:12px;border-radius:12px;background:var(--surface-solid);border:1px solid var(--glass-edge);box-shadow:var(--glass-shadow);font-size: var(--fs-body-l);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:transform .18s ease}
 .tutorial-demo-row[data-pressed=true]{filter:brightness(.94)}
 .tutorial-demo-dict{position:relative;z-index:2;margin-top:10px;padding:10px;border-radius:10px;background:var(--surface-solid);border:1px solid var(--glass-edge);font-size: var(--fs-small);color: var(--text-secondary)}
@@ -247,6 +250,7 @@ html[data-theme="dark"]{--ai-1:#ffb06a;--ai-2:#ff6aa6;--ai-3:#b585ff;--ai-4:#6aa
 
 /* Opening screen. The system splash is #F3F5F7 with the logo, so this starts on the same ground. */
 .boot-splash { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; background: #F3F5F7; color: #1b2a41; transition: opacity 280ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }
+html[data-theme="dark"] .boot-splash { background: #111822; color: #e8ebf0; }
 .boot-splash[data-leaving=true] { opacity: 0; pointer-events: none; }
 .boot-stage { display: flex; flex-direction: column; align-items: center; padding: 30px; transition: transform 280ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)); }
 .boot-splash[data-leaving=true] .boot-stage { transform: scale(1.04); }

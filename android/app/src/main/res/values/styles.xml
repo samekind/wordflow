@@ -22,6 +22,10 @@
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
         <item name="android:background">#F3F5F7</item>
     </style>
+    <style name="AppTheme.NoActionBarLaunch.Dark" parent="AppTheme.NoActionBarLaunch">
+        <item name="windowSplashScreenBackground">#111822</item>
+        <item name="android:background">#111822</item>
+    </style>
     <style name="WordflowSystemBarsLight" parent="">
         <item name="android:windowBackground">#FAFBFC</item>
     </style>

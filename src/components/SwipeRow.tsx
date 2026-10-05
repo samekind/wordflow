@@ -27,6 +27,9 @@ export default function SwipeRow({ children, actions, disabled, onSwipeStart }: 
   const drag = useRef<{ id: number; x: number; y: number; from: number; dx: number; locked: 'x' | 'y' | null } | null>(null)
   const offset = useRef(0)
   const swiped = useRef(false)
+  // A press that started on an action button: if the browser cancels its click (finger drifted
+  // past the tap slop), we still fire it — this is the "button feels dead" fallback.
+  const tap = useRef<{ btn: HTMLButtonElement; x: number; y: number; seen: boolean } | null>(null)
 
   function place(dx: number, animate: boolean) {
     const el = layer.current
@@ -60,6 +63,16 @@ export default function SwipeRow({ children, actions, disabled, onSwipeStart }: 
       // Reset first: a swipe never produces a click, so a stale flag would swallow the next tap.
       swiped.current = false
       if (disabled || event.pointerType === 'mouse' && event.button !== 0) return
+      // A press that starts on an action button must stay a plain tap: arming the drag here would
+      // steal the pointer capture from the button on the slightest finger drift, and the browser
+      // would then never fire the click (this is what made the buttons feel dead after a swipe).
+      const actionBtn = (event.target as HTMLElement).closest<HTMLButtonElement>('.swipe-actions button')
+      if (actionBtn) {
+        tap.current = { btn: actionBtn, x: event.clientX, y: event.clientY, seen: false }
+        actionBtn.addEventListener('click', () => { if (tap.current?.btn === actionBtn) tap.current.seen = true }, { once: true, capture: true })
+        return
+      }
+      tap.current = null
       drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, from: offset.current, dx: offset.current, locked: null }
     }}
     onPointerMove={event => {
@@ -80,7 +93,16 @@ export default function SwipeRow({ children, actions, disabled, onSwipeStart }: 
       state.dx = travel > 0 ? travel * 0.2 : travel < -width ? -width - (-travel - width) * 0.3 : travel
       place(state.dx, false)
     }}
-    onPointerUp={() => end(true)}
+    onPointerUp={event => {
+      // If the press began on an action button and stayed near it but the browser cancelled the
+      // click (drift past the tap slop), fire the button ourselves a beat later.
+      const state = tap.current
+      if (state && !state.seen && state.btn.contains(event.target as Node)
+        && Math.abs(event.clientX - state.x) + Math.abs(event.clientY - state.y) < 26) {
+        window.setTimeout(() => { if (!state.seen) { state.seen = true; state.btn.click() } }, 90)
+      }
+      end(true)
+    }}
     onPointerCancel={() => end(false)}
     // Touch pointers are implicitly captured by the inner button; taking capture here makes that
     // button fire lostpointercapture, which bubbles up. Only our own capture ending counts.

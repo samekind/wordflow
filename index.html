@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#f5f5f7" />
+    <script>
+      // Fast path: the stored theme is applied before first paint so dark-mode users don't get a
+      // light flash on every start (the boot splash styles key off html[data-theme]).
+      try {
+        var theme = localStorage.getItem('wordflow-theme')
+        if (theme === 'dark' || theme === 'light') {
+          document.documentElement.dataset.theme = theme
+          document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#1c2431' : '#fafbfc')
+        }
+      } catch (e) { }
+    </script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="拾词" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />

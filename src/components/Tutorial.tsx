@@ -70,47 +70,62 @@ function Spotlight({ step, index, total, onNext }: { step: SpotStep; index: numb
 
 const practiceTasks = ['点按单词，加一个不熟标记', '左滑单词，露出减标记和熟词', '长按单词，弹出词典卡片']
 
-/** A safe demo word: the three gestures rehearsed here never touch the learning records. */
+/** A safe demo word: the three gestures rehearsed here never touch the learning records. The
+ * gesture is ref-driven like SwipeRow — transforms go straight to the element and the open/close
+ * decision reads the ref, never a possibly-stale React state. */
 function Practice({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
   const [tasks, setTasks] = useState([false, false, false])
   const [dots, setDots] = useState(0)
-  const [dx, setDx] = useState(0)
   const [open, setOpen] = useState(false)
   const [dict, setDict] = useState(false)
   const [pressed, setPressed] = useState(false)
-  const active = useRef(false)
-  const press = useRef({ x: 0, y: 0 })
-  const timer = useRef<number | null>(null)
+  const row = useRef<HTMLButtonElement>(null)
+  const dxRef = useRef(0)
+  const holdTimer = useRef<number | null>(null)
+  const gesture = useRef({ active: false, x: 0, y: 0, moved: false })
   const tick = (index: number) => setTasks(current => { if (current[index]) return current; const next = [...current]; next[index] = true; return next })
-  function clearTimer() { if (timer.current !== null) { window.clearTimeout(timer.current); timer.current = null } }
+  function clearHold() { if (holdTimer.current !== null) { window.clearTimeout(holdTimer.current); holdTimer.current = null } }
+  function place(dx: number, animate: boolean) {
+    const el = row.current
+    if (!el) return
+    el.style.transition = animate ? 'transform .18s ease' : 'none'
+    el.style.transform = `translateX(${dx}px)`
+  }
   function onDown(event: ReactPointerEvent<HTMLButtonElement>) {
     if (open) return
-    active.current = true
-    press.current = { x: event.clientX, y: event.clientY }
+    gesture.current = { active: true, x: event.clientX, y: event.clientY, moved: false }
     // Keep the hold alive even if the finger drifts a little; without capture a few pixels of
     // movement fires pointerleave and kills the long-press.
     try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* older WebView */ }
     setPressed(true)
-    timer.current = window.setTimeout(() => { timer.current = null; setDict(true); tick(2) }, 480)
+    holdTimer.current = window.setTimeout(() => { holdTimer.current = null; setDict(true); tick(2) }, 480)
   }
   function onMove(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (!active.current || open) return
-    const shift = event.clientX - press.current.x
-    if (Math.abs(shift) > 8 || Math.abs(event.clientY - press.current.y) > 8) clearTimer()
-    setDx(shift < -8 ? Math.max(-176, Math.min(0, shift)) : 0)
+    const state = gesture.current
+    if (!state.active || open) return
+    const shift = event.clientX - state.x
+    if (Math.abs(shift) > 8 || Math.abs(event.clientY - state.y) > 8) { state.moved = true; clearHold() }
+    if (shift < -8) { dxRef.current = Math.max(-176, shift); place(dxRef.current, false) }
   }
   function onUp() {
-    if (!active.current) return
-    active.current = false
-    clearTimer()
+    if (!gesture.current.active) return
+    gesture.current.active = false
+    clearHold()
     setPressed(false)
-    if (!open && dx < -60) setOpen(true)
-    setDx(0)
+    const nowOpen = dxRef.current < -60
+    dxRef.current = nowOpen ? -176 : 0
+    place(dxRef.current, true)
+    setOpen(nowOpen)
   }
   function onTap() {
-    if (open) return
+    if (open || gesture.current.moved) return
     setDots(current => (current + 1) % 3)
     tick(0)
+  }
+  function closeRow() {
+    dxRef.current = 0
+    place(0, true)
+    setOpen(false)
   }
   function onMenu(event: { preventDefault: () => void }) {
     // Android pops the text-selection menu on a long-press; swallow it and show ours instead.
@@ -118,15 +133,19 @@ function Practice({ onBack, onNext }: { onBack: () => void; onNext: () => void }
     if (!open) { setDict(true); tick(2) }
   }
   const all = tasks.every(Boolean)
+  // Touch taps on these buttons occasionally lose their click (the same tap-slop cancellation the
+  // real swipe row fights); acting on pointerup as well keeps them responsive. Both handlers are
+  // idempotent, so a tap that produces both events still counts once.
+  const act = (fn: () => void) => (event: { pointerType: string }) => { if (event.pointerType !== 'mouse') fn() }
   return <div className="tutorial-center"><div className="tutorial-card">
     <h2>试一试三个手势</h2>
     <div className="tutorial-demo">
       <div className="tutorial-demo-actions">
-        <button className="demo-action" onClick={() => { tick(1); setOpen(false) }}><Minus size={15} /><span>减标记</span></button>
-        <button className="demo-action known" onClick={() => { tick(1); setOpen(false) }}><CheckCheck size={15} /><span>熟词</span></button>
+        <button className="demo-action" onClick={() => { tick(1); closeRow() }} onPointerUp={act(() => { tick(1); closeRow() })}><Minus size={15} /><span>减标记</span></button>
+        <button className="demo-action known" onClick={() => { tick(1); closeRow() }} onPointerUp={act(() => { tick(1); closeRow() })}><CheckCheck size={15} /><span>熟词</span></button>
       </div>
-      <button className="tutorial-demo-row" data-pressed={pressed && !open} onClick={onTap} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp} onPointerCancel={onUp} onContextMenu={onMenu}
-        style={{ transform: `translateX(${open ? -176 : dx}px) scale(${pressed && !open ? .97 : 1})`, transition: active.current ? 'none' : undefined }}>
+      <button ref={row} className="tutorial-demo-row" data-pressed={pressed && !open} onClick={onTap} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp} onPointerCancel={onUp} onContextMenu={onMenu}
+        style={{ transform: `translateX(${open ? -176 : 0}px) scale(${pressed && !open ? .97 : 1})` }}>
         <span className="word-index"><span className="word-number">01</span><MarkDots count={dots} /></span>
         <span className="english-word" lang="en">practice</span>
       </button>

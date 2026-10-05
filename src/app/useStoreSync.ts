@@ -38,6 +38,8 @@ export function useStoreSync(notify: (message: string) => void, onSettings: (set
     const root = document.documentElement
     const look = store.appearance
     root.dataset.theme = look.theme
+    // Read back by the inline script in index.html on the next start, before this store loads.
+    try { localStorage.setItem('wordflow-theme', look.theme) } catch { }
     root.dataset.font = look.font
     root.dataset.weight = look.weight
     root.dataset.size = look.size
