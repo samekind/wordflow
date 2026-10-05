@@ -1,34 +1,158 @@
-import { useEffect, useState } from 'react'
-import { Bookmark, BookOpen, ChevronLeft, ChevronRight, Hand, RotateCcw } from 'lucide-react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { Check, CheckCheck, Minus } from 'lucide-react'
+import MarkDots from './MarkDots'
 
-const pages: { icon: typeof BookOpen; title: string; lines: string[] }[] = [
-  { icon: BookOpen, title: '每天学一点', lines: ['选好词书和每天词量，先速记再自查，一组最多 20 词。', '整组自查完点“本组已检查完”，当天任务完成可以打卡。'] },
-  { icon: Hand, title: '词表手势', lines: ['点按单词：加一个不熟标记。', '左滑单词：减标记，或设为熟词。', '长按单词：查词典详情。'] },
-  { icon: Bookmark, title: '生词本', lines: ['阅读和查词时点收藏，词会进生词本。', '在生词本里翻卡复习，不会改动正在学的词书和复习计划。'] },
-  { icon: RotateCcw, title: '到期复习', lines: ['学过的词按计划回来复习，在顶部“新词 / 到期复习”切换。', '复习计划的入口在词组翻页行末尾的时钟图标。'] },
+type SpotStep = { selector: string; title: string; line: string }
+
+/** Real controls to spotlight, in order. A step whose control is absent (e.g. no draft yet) skips
+ * itself after a moment. */
+const spots: SpotStep[] = [
+  { selector: '.study-stage-switch', title: '学习方式', line: '“速记”同时看词和释义，“自查”先想再核对。' },
+  { selector: '.study-task-tabs', title: '新词与到期复习', line: '学过的词到点回来复习，在两个标签间切换。' },
+  { selector: '.study-card .vocab-button', title: '生词本', line: '右上角书签打开生词本，阅读时收藏的词都在那里。' },
+  { selector: '.study-pagination', title: '词组与复习计划', line: '一组学完滑到下一组；末尾的时钟打开复习计划和读短文。' },
 ]
 
-/** Short paged walkthrough of the core gestures; opens once after the first-run setup and from
- * 我的 → 使用教程. */
-export default function Tutorial({ open, onDone }: { open: boolean; onDone: () => void }) {
-  const [page, setPage] = useState(0)
-  useEffect(() => { if (open) setPage(0) }, [open])
-  if (!open) return null
-  const current = pages[page]
-  const last = page === pages.length - 1
-  const Icon = current.icon
-  return <div className="tutorial-overlay" role="dialog" aria-modal="true" aria-label="使用教程">
-    <div className="tutorial-card">
-      <button className="tutorial-skip" onClick={onDone}>跳过</button>
-      <span className="tutorial-icon" aria-hidden="true"><Icon size={28} /></span>
-      <h2>{current.title}</h2>
-      <ul>{current.lines.map(line => <li key={line}>{line}</li>)}</ul>
-      <div className="tutorial-dots" aria-hidden="true">{pages.map((_, index) => <i key={index} data-on={index === page} />)}</div>
-      <div className="tutorial-nav">
-        {page > 0 && <button className="secondary" onClick={() => setPage(page - 1)}><ChevronLeft size={17} />上一步</button>}
-        <button className="primary" onClick={() => (last ? onDone() : setPage(page + 1))}>{last ? '开始使用' : '下一步'}{!last && <ChevronRight size={17} />}</button>
-      </div>
-      <span className="sr-only" role="status">第 {page + 1} 页，共 {pages.length} 页</span>
+/** Tracks the highlighted control; reports 'missing' when the selector never appears. */
+function useSpotRect(selector: string) {
+  const [rect, setRect] = useState<DOMRect | 'missing' | null>(null)
+  useEffect(() => {
+    setRect(null)
+    let frames = 0
+    let raf = 0
+    const update = () => {
+      const el = document.querySelector(selector)
+      if (!el) return
+      const box = el.getBoundingClientRect()
+      // Bring an off-screen control into view before measuring, so the hole and tooltip land right.
+      if (box.top < 80 || box.bottom > window.innerHeight - 80) el.scrollIntoView({ block: 'center', behavior: 'instant' })
+      setRect(el.getBoundingClientRect())
+    }
+    const tick = () => {
+      if (document.querySelector(selector)) { update(); return }
+      if (++frames > 90) { setRect('missing'); return }
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    const scroller = document.getElementById('app-scroll')
+    scroller?.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    const timer = window.setInterval(update, 400)
+    return () => { cancelAnimationFrame(raf); window.clearInterval(timer); scroller?.removeEventListener('scroll', update); window.removeEventListener('resize', update) }
+  }, [selector])
+  return rect
+}
+
+function Spotlight({ step, index, total, onNext }: { step: SpotStep; index: number; total: number; onNext: () => void }) {
+  const rect = useSpotRect(step.selector)
+  const nextRef = useRef(onNext)
+  nextRef.current = onNext
+  const missing = rect === 'missing'
+  useEffect(() => { if (missing) nextRef.current() }, [missing])
+  if (!rect || missing) return null
+  const pad = 8
+  // Prefer below the control; fall back to above only when there is real room, and never let the
+  // card leave the viewport.
+  const cardH = 170
+  const vh = window.innerHeight
+  const below = vh - rect.bottom >= cardH + 24 || rect.top < cardH + 24
+  return <>
+    <div className="tutorial-dim" />
+    <div className="tutorial-hole" style={{ left: rect.left - pad, top: rect.top - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }} />
+    <div className="tutorial-spot-card" style={below ? { top: Math.min(rect.bottom + 14, vh - cardH - 12) } : { bottom: Math.max(12, vh - rect.top + 14) }}>
+      <span className="tutorial-progress">{index} / {total}</span>
+      <h3>{step.title}</h3>
+      <p>{step.line}</p>
+      <button className="primary" onClick={onNext}>下一步</button>
     </div>
+  </>
+}
+
+const practiceTasks = ['点按单词，加一个不熟标记', '左滑单词，露出减标记和熟词', '长按单词，弹出词典卡片']
+
+/** A safe demo word: the three gestures rehearsed here never touch the learning records. */
+function Practice({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
+  const [tasks, setTasks] = useState([false, false, false])
+  const [dots, setDots] = useState(0)
+  const [dx, setDx] = useState(0)
+  const [open, setOpen] = useState(false)
+  const [dict, setDict] = useState(false)
+  const active = useRef(false)
+  const press = useRef({ x: 0, y: 0 })
+  const timer = useRef<number | null>(null)
+  const tick = (index: number) => setTasks(current => { if (current[index]) return current; const next = [...current]; next[index] = true; return next })
+  function clearTimer() { if (timer.current !== null) { window.clearTimeout(timer.current); timer.current = null } }
+  function onDown(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (open) return
+    active.current = true
+    press.current = { x: event.clientX, y: event.clientY }
+    timer.current = window.setTimeout(() => { timer.current = null; setDict(true); tick(2) }, 480)
+  }
+  function onMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!active.current || open) return
+    const shift = event.clientX - press.current.x
+    if (Math.abs(shift) > 8 || Math.abs(event.clientY - press.current.y) > 8) clearTimer()
+    setDx(Math.max(-176, Math.min(0, shift)))
+  }
+  function onUp() {
+    active.current = false
+    clearTimer()
+    if (!open && dx < -60) setOpen(true)
+    setDx(0)
+  }
+  function onTap() {
+    if (open) return
+    setDots(current => (current + 1) % 3)
+    tick(0)
+  }
+  const all = tasks.every(Boolean)
+  return <div className="tutorial-center"><div className="tutorial-card">
+    <h2>试一试三个手势</h2>
+    <div className="tutorial-demo">
+      <div className="tutorial-demo-actions">
+        <button className="demo-action" onClick={() => { tick(1); setOpen(false) }}><Minus size={15} /><span>减标记</span></button>
+        <button className="demo-action known" onClick={() => { tick(1); setOpen(false) }}><CheckCheck size={15} /><span>熟词</span></button>
+      </div>
+      <button className="tutorial-demo-row" onClick={onTap} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp}
+        style={{ transform: `translateX(${open ? -176 : dx}px)`, transition: active.current ? 'none' : undefined }}>
+        <span className="word-index"><span className="word-number">01</span><MarkDots count={dots} /></span>
+        <span className="english-word" lang="en">practice</span>
+      </button>
+    </div>
+    {dict && <div className="tutorial-demo-dict" role="status"><strong>practice</strong> /ˈpraktɪs/ 练习，实践 — 长按单词就会弹出这样的词典卡片</div>}
+    <ul className="tutorial-tasks">
+      {practiceTasks.map((line, index) => <li key={line} data-done={tasks[index]}>
+        <span className="tutorial-task-check" data-done={tasks[index]}>{tasks[index] && <Check size={12} strokeWidth={3} />}</span>{line}
+      </li>)}
+    </ul>
+    <div className="tutorial-nav">
+      <button className="secondary" onClick={onBack}>上一步</button>
+      <button className="primary" onClick={onNext}>{all ? '很棒，继续' : '下一步'}</button>
+    </div>
+  </div></div>
+}
+
+/** Interactive tour over the study page: welcome, spotlight the key controls, rehearse the
+ * gestures on a demo word, done. Reopened from 我的 → 使用教程; the auto variant pops once after
+ * the first-run setup. */
+export default function Tutorial({ open, onDone }: { open: boolean; onDone: () => void }) {
+  const [step, setStep] = useState(0)
+  useEffect(() => { if (open) setStep(0) }, [open])
+  if (!open) return null
+  const practice = 1 + spots.length
+  return <div className="tutorial-overlay" role="dialog" aria-modal="true" aria-label="使用教程">
+    <button className="tutorial-skip" onClick={onDone}>跳过</button>
+    {step === 0 && <div className="tutorial-center"><div className="tutorial-card">
+      <h2>欢迎来到拾词</h2>
+      <ul><li>在真实页面上，用 30 秒过一遍核心操作。</li><li>不想看可以随时点右上角“跳过”。</li></ul>
+      <div className="tutorial-nav"><button className="primary" onClick={() => setStep(1)}>开始体验</button></div>
+    </div></div>}
+    {step >= 1 && step <= spots.length && <Spotlight step={spots[step - 1]} index={step} total={spots.length} onNext={() => setStep(step + 1)} />}
+    {step === practice && <Practice onBack={() => setStep(practice - 1)} onNext={() => setStep(practice + 1)} />}
+    {step === practice + 1 && <div className="tutorial-center"><div className="tutorial-card">
+      <h2>可以开始学了</h2>
+      <ul><li>做完这一组，今天的词就学会了。</li><li>想重看教程：我的 › 使用教程。</li></ul>
+      <div className="tutorial-nav"><button className="primary" onClick={onDone}>完成</button></div>
+    </div></div>}
   </div>
 }

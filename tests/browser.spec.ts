@@ -807,30 +807,44 @@ test('update page shows the current version, auto-checks, pops new versions and 
   await expect(page.getByRole('region', { name: '下载安装' })).toBeVisible()
 })
 
-test('usage tutorial walks through the gestures once and reopens from 我的', async ({ page }) => {
+test('interactive tutorial spotlights the study page and rehearses the gestures', async ({ page }) => {
   await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 10), '教程').store))
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   await nav(page, '我的')
   await page.getByRole('button', { name: '使用教程', exact: true }).click()
   const tutorial = page.locator('.tutorial-overlay')
-  await expect(tutorial).toContainText('每天学一点')
-  await expect(tutorial.locator('.tutorial-dots i')).toHaveCount(4)
-  await tutorial.getByRole('button', { name: '下一步' }).click()
-  await expect(tutorial).toContainText('词表手势')
-  await tutorial.getByRole('button', { name: '下一步' }).click()
-  await expect(tutorial).toContainText('生词本')
-  await tutorial.getByRole('button', { name: '上一步' }).click()
-  await expect(tutorial).toContainText('词表手势')
-  await tutorial.getByRole('button', { name: '下一步' }).click()
-  await tutorial.getByRole('button', { name: '下一步' }).click()
-  await expect(tutorial).toContainText('到期复习')
-  await tutorial.getByRole('button', { name: '开始使用' }).click()
+  await expect(tutorial).toContainText('30 秒')
+  await tutorial.getByRole('button', { name: '开始体验' }).click()
+  // Walk the spotlight cards until the practice panel shows (absent controls skip themselves).
+  const demo = tutorial.locator('.tutorial-demo')
+  for (let i = 0; i < 6; i++) {
+    if (await demo.isVisible().catch(() => false)) break
+    const next = tutorial.getByRole('button', { name: '下一步' })
+    if (await next.isVisible().catch(() => false)) await next.click()
+    else await page.waitForTimeout(300)
+  }
+  await expect(demo).toBeVisible()
+  const tasks = tutorial.locator('.tutorial-tasks li')
+  // 点按加标记
+  await tutorial.locator('.tutorial-demo-row').click()
+  await expect(tasks.nth(0)).toHaveAttribute('data-done', 'true')
+  // 左滑露出减标记 / 熟词
+  const box = (await tutorial.locator('.tutorial-demo-row').boundingBox())!
+  await page.mouse.move(box.x + box.width - 10, box.y + box.height / 2)
+  await page.mouse.down(); await page.mouse.move(box.x + box.width - 130, box.y + box.height / 2, { steps: 6 }); await page.mouse.up()
+  await expect(tutorial.locator('.demo-action').filter({ hasText: '熟词' })).toBeVisible()
+  await tutorial.locator('.demo-action').filter({ hasText: '熟词' }).click()
+  await expect(tasks.nth(1)).toHaveAttribute('data-done', 'true')
+  // 长按弹出词典卡片
+  const held = (await tutorial.locator('.tutorial-demo-row').boundingBox())!
+  await page.mouse.move(held.x + held.width / 2, held.y + held.height / 2)
+  await page.mouse.down(); await page.waitForTimeout(650); await page.mouse.up()
+  await expect(tutorial.locator('.tutorial-demo-dict')).toBeVisible()
+  await expect(tasks.nth(2)).toHaveAttribute('data-done', 'true')
+  await tutorial.getByRole('button', { name: '很棒，继续' }).click()
+  await tutorial.getByRole('button', { name: '完成' }).click()
   await expect(tutorial).toHaveCount(0)
-  await page.reload()
-  await nav(page, '我的')
-  await page.getByRole('button', { name: '使用教程', exact: true }).click()
-  await expect(page.locator('.tutorial-overlay')).toBeVisible()
 })
 
 test('online reading library syncs, recommends, filters by level, reads with translation and stays readable offline', async ({ page }) => {

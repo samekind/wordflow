@@ -162,7 +162,7 @@ export default function App() {
             {(screen.name === 'settings' || screen.name === 'section') && <SettingsPage store={store} ai={ai.config} saving={saving} aiBusy={ai.busy} error={ai.error} onSaveAI={ai.saveConfig} onRemoveAI={ai.removeConfig}
               section={screen.name === 'section' ? screen.section : 'home'} onSection={section => { if (section === 'home') back(); else go({ name: 'section', section }) }}
               onPreferences={patch => commit({ ...storeRef.current, ...patch })} onBackup={downloadBackup} onRestore={() => restoreRef.current?.click()} onSpeak={speech.speak} onLicenses={() => setLicensesOpen(true)}
-              onBooks={() => go({ name: 'books' })} onLibrary={() => go({ name: 'library' })} onVocab={() => go({ name: 'vocab' })} onTutorial={() => setTutorialOpen(true)}
+              onBooks={() => go({ name: 'books' })} onLibrary={() => go({ name: 'library' })} onVocab={() => go({ name: 'vocab' })} onTutorial={() => { if (nav.screen.name !== 'today') go({ name: 'today' }); setTutorialOpen(true) }}
               onCloudCreate={async () => (await createCloudAccount()).recoveryCode}
               onCloudRecover={async code => { await recoverCloudAccount(code) }}
               onCloudUpload={async force => { try { const saved = await uploadCloudState(storeRef.current, force); return `已上传 · ${saved.savedAt}` } catch (error) { if (error instanceof CloudConflict) throw new Error('云端有更新的记录'); throw error } }}
