@@ -409,6 +409,8 @@ public class WordflowPlugin extends Plugin {
                 if (status < 200 || status >= 300) throw new IllegalStateException("更新服务暂时不可用 (" + status + "),请稍后重试");
                 MessageDigest digest = MessageDigest.getInstance("SHA-256");
                 long total = 0;
+                long expectedTotal = connection.getContentLengthLong();
+                long notifiedAt = 0;
                 try (InputStream input = connection.getInputStream(); OutputStream output = new FileOutputStream(file)) {
                     byte[] buffer = new byte[16384];
                     int count;
@@ -417,6 +419,11 @@ public class WordflowPlugin extends Plugin {
                         digest.update(buffer, 0, count);
                         total += count;
                         if (total > 200L * 1024 * 1024) throw new IllegalStateException("安装包过大，已取消下载");
+                        long now = System.currentTimeMillis();
+                        if (now - notifiedAt >= 150) {
+                            notifiedAt = now;
+                            notifyListeners("updateProgress", new JSObject().put("received", total).put("total", expectedTotal));
+                        }
                     }
                 }
                 if (total == 0) throw new IllegalStateException("更新服务返回空内容，请稍后重试");

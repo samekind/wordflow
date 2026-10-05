@@ -777,7 +777,7 @@ test('a large difficulty is chosen in steps: difficulty, topic, then a short pag
   await expect(page.getByRole('button', { name: '艺术，1 篇' })).toBeVisible()
 })
 
-test('update page reads the installed version first, then checks, then asks before installing', async ({ page }) => {
+test('update page shows the current version, auto-checks, pops new versions and asks before installing', async ({ page }) => {
   await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 20), '更新').store))
   let release = { versionCode: 1, versionName: '0.0.1' }
   await page.route('**/v1/release', route => route.fulfill({ headers: { 'access-control-allow-origin': '*' }, json: { ...release, url: 'https://example.invalid/app.apk', sha256: 'a'.repeat(64), notes: '合成更新说明' } }))
@@ -786,13 +786,15 @@ test('update page reads the installed version first, then checks, then asks befo
   await settings(page, '检查更新')
   const current = page.getByRole('region', { name: '当前版本' })
   await expect(current.locator('.update-version')).toHaveText(/^\d+\.\d+\.\d+$/)
-  await expect(page.getByRole('region', { name: '下载安装' })).toHaveCount(0)
-  await page.getByRole('button', { name: '检查新版本', exact: true }).click()
   await expect(page.getByRole('region', { name: '最新版本' })).toContainText('已是最新版本')
   await expect(page.getByRole('region', { name: '下载安装' })).toHaveCount(0)
   release = { versionCode: 9999, versionName: '99.0.0' }
   await page.getByRole('button', { name: '重新检查', exact: true }).click()
-  await expect(page.getByRole('region', { name: '最新版本' })).toContainText('99.0.0')
+  const popup = page.locator('ion-alert:not(.overlay-hidden)')
+  await expect(popup).toContainText('发现新版本 99.0.0')
+  await expect(popup).toContainText('合成更新说明')
+  await popup.getByRole('button', { name: '稍后' }).click()
+  await expect(popup).toHaveCount(0)
   await expect(page.getByRole('region', { name: '下载安装' })).toBeVisible()
 })
 

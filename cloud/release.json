@@ -1,7 +1,7 @@
 {
-  "versionCode": 45,
-  "versionName": "0.5.5",
+  "versionCode": 46,
+  "versionName": "0.5.6",
   "url": "https://wordflow.43.134.190.112.sslip.io/releases/wordflow.apk",
-  "notes": "学习页右上角按钮从“复习计划”换成“生词本”，直达生词本；复习计划入口移到词组翻页行末尾，面板内容不变。学习记录、词书进度和备份格式不变。",
-  "sha256": "EA8351D67895E74A20AD66926798058314FD545C1A1CAD43A44DFC89FDFF3491"
+  "notes": "“我的”页更清爽：菜单只保留当前状态值；“检查更新”显示当前版本号。更新页打开即自动检查，发现新版弹窗提示，下载时显示进度，校验通过后才安装。学习记录、词书进度和备份格式不变。",
+  "sha256": "4E376E902955AB8E29E4AE198C3E150B40FAD309DDABD188937A027EDEEAF4A2"
 }

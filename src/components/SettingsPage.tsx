@@ -76,9 +76,9 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
     <div className="settings-menu" aria-label="个人设置">
       <h2 className="settings-group-title">学习</h2>
       <div className="settings-group">
-      <button onClick={onVocab} aria-label="生词本"><Bookmark size={20} /><span>生词本<small>阅读时收藏的词，单独复习</small></span><small>{vocabCount ? `${vocabCount} 词` : '空'}</small><ChevronRight size={16} /></button>
-      <button onClick={onBooks} aria-label="管理目标词书"><BookOpen size={20} /><span>词书管理<small>{book ? `正在学习 ${book.title} · 更换或添加词书` : '选择一本词书'}</small></span><ChevronRight size={16} /></button>
-      <button onClick={() => onSection('learning')} aria-label="学习设置"><Settings2 size={20} /><span>学习设置<small>每天词量、复习方法</small></span><ChevronRight size={16} /></button>
+      <button onClick={onVocab} aria-label="生词本"><Bookmark size={20} /><span>生词本</span><small>{vocabCount ? `${vocabCount} 词` : '空'}</small><ChevronRight size={16} /></button>
+      <button onClick={onBooks} aria-label="管理目标词书"><BookOpen size={20} /><span>词书管理</span><small>{book ? book.title : '未选择'}</small><ChevronRight size={16} /></button>
+      <button onClick={() => onSection('learning')} aria-label="学习设置"><Settings2 size={20} /><span>学习设置</span><ChevronRight size={16} /></button>
       </div>
       <h2 className="settings-group-title">显示与声音</h2>
       <div className="settings-group">
@@ -87,20 +87,20 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
       </div>
       <h2 className="settings-group-title">账号与数据</h2>
       <div className="settings-group">
-      <button onClick={() => onSection('profile')} aria-label="账号与资料"><UserRound size={20} /><span>账号与资料<small>昵称、头像、云端账号</small></span><small>{hasCloud ? '已连接' : '未登录'}</small><ChevronRight size={16} /></button>
-      <button onClick={() => onSection('data')} aria-label="数据与备份"><Database size={20} /><span>数据与备份<small>导出、恢复、云端同步</small></span><ChevronRight size={16} /></button>
-      <button onClick={() => onSection('ai')} aria-label="AI 服务"><AIIcon size={21} /><span>AI 服务<small>查词翻译、语境短文</small></span><small>{ai.configured ? '自己的 Key' : '内置 AI'}</small><ChevronRight size={16} /></button>
+      <button onClick={() => onSection('profile')} aria-label="账号与资料"><UserRound size={20} /><span>账号与资料</span><small>{hasCloud ? '已连接' : '未登录'}</small><ChevronRight size={16} /></button>
+      <button onClick={() => onSection('data')} aria-label="数据与备份"><Database size={20} /><span>数据与备份</span><ChevronRight size={16} /></button>
+      <button onClick={() => onSection('ai')} aria-label="AI 服务"><AIIcon size={21} /><span>AI 服务</span><small>{ai.configured ? '自己的 Key' : '内置 AI'}</small><ChevronRight size={16} /></button>
       </div>
       <h2 className="settings-group-title">关于</h2>
       <div className="settings-group">
-      <button onClick={() => onSection('update')} aria-label="检查更新"><RefreshCw size={20} /><span>检查更新<small>{appVersion ? `当前版本 ${appVersion}` : '查看当前版本和新版本'}</small></span><ChevronRight size={16} /></button>
+      <button onClick={() => onSection('update')} aria-label="检查更新"><RefreshCw size={20} /><span>检查更新</span><small>{appVersion}</small><ChevronRight size={16} /></button>
       <button onClick={onLicenses} aria-label="来源与开源许可"><FileText size={20} /><span>来源与开源许可</span><ChevronRight size={16} /></button>
       </div>
     </div>
   </div>
 
   return <div className="settings-layout">
-    <p className="page-purpose">{({ profile: '设置昵称、头像和学习目标，管理云端账号。', learning: '设置新词书每天学多少词，以及后续复习的方法。', appearance: '调整整个应用的外观，选择后自动保存。', reading: '设置单词和文章的朗读，以及阅读时的显示方式。', ai: '用于生成语境短文和单词助记，普通背词无需配置。', data: '学习记录先保存在本机。可导出文件，或手动备份到云端。', update: '先确认当前版本，再查看新版本，确认后才会下载安装。', home: '' })[section]}</p>
+    <p className="page-purpose">{({ profile: '设置昵称、头像和学习目标，管理云端账号。', learning: '设置新词书每天学多少词，以及后续复习的方法。', appearance: '调整整个应用的外观，选择后自动保存。', reading: '设置单词和文章的朗读，以及阅读时的显示方式。', ai: '用于生成语境短文和单词助记，普通背词无需配置。', data: '学习记录先保存在本机。可导出文件，或手动备份到云端。', update: '打开时自动检查新版本，发现新版会弹窗提示，确认后才下载安装。', home: '' })[section]}</p>
     {section === 'update' && <UpdatePage />}
     {section === 'profile' && <form className="profile-form" onSubmit={async event => {
       event.preventDefault()

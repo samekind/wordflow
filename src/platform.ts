@@ -1,8 +1,9 @@
-import { Capacitor, registerPlugin, SystemBars, SystemBarsStyle } from '@capacitor/core'
+import { Capacitor, registerPlugin, SystemBars, SystemBarsStyle, type PluginListenerHandle } from '@capacitor/core'
 import type { DailyStory, Store } from './model'
 import { serializeStore } from './serialize'
 
 type NativeSettings = { provider: string; model: string; configured: boolean }
+export type UpdateProgressEvent = { received: number; total: number }
 interface WordflowPlugin {
   setAppearance(data: { theme: 'light' | 'dark' }): Promise<void>
   getState(): Promise<{ state: Store; revision: number }>
@@ -19,6 +20,8 @@ interface WordflowPlugin {
   story(data: { ids: string[] }): Promise<{ story: Pick<DailyStory, 'title' | 'paragraphs'>; model: string }>
   exportBackup(data: { content: string; filename: string }): Promise<{ cancelled?: boolean }>
   downloadUpdate(data: { url: string; sha256: string }): Promise<{ started: boolean }>
+  /** Emitted while downloadUpdate streams the APK; total is <= 0 when the server sends no length. */
+  addListener(eventName: 'updateProgress', listenerFunc: (event: UpdateProgressEvent) => void): Promise<PluginListenerHandle> & PluginListenerHandle
   speak(data: { word: string; accent?: 'us' | 'uk'; rate?: number }): Promise<void>
   stopSpeech(): Promise<void>
   openDictionary(data: { word: string }): Promise<{ source: 'app' | 'web' }>

@@ -74,7 +74,10 @@
 .update-page{display:grid;gap:12px}
 .update-card{display:grid;gap:8px;padding:16px;border-radius: var(--radius-md);background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow)}
 .update-card>.primary,.update-card>.secondary{width:100%;margin-top:4px}
-.update-step{margin:0;font-size: var(--fs-caption);color: var(--text-muted)}
+.update-progress{display:grid;gap:8px}
+.update-progress-text{font-size: var(--fs-small);color: var(--text-secondary)}
+.update-progress-track{display:block;height:6px;border-radius:3px;background:var(--surface-inset);overflow:hidden}
+.update-progress-track>span{display:block;height:100%;border-radius:3px;background:var(--accent);transition:width .2s ease}
 .update-version{font-size: var(--fs-display);line-height:1.15;font-weight: var(--fw-bold);color:var(--text-primary);letter-spacing:-.02em}
 .update-build{display:inline-flex;align-items:center;gap:6px;font-size: var(--fs-meta);color: var(--text-secondary)}
 .update-result{display:flex;align-items:center;gap:8px;margin:0;font-size: var(--fs-body);color:var(--text-primary)}
