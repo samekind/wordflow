@@ -29,6 +29,9 @@
   --line-strong: rgba(60, 60, 67, .18);
   --surface-inset: rgba(216, 224, 237, .54);
   --surface-solid: #fff;
+  /* Elevated card used by the tutorial overlay: pure white in light mode, one step lighter than
+     the dark page background so the overlay reads as a floating sheet instead of a dark patch. */
+  --tutorial-card: #fff;
 
   /* Liquid glass */
   --glass-fill: rgba(255, 255, 255, .94);
@@ -124,6 +127,7 @@ html[data-theme="dark"] {
   --line-strong: rgba(255, 255, 255, .14);
   --surface-inset: rgba(12, 19, 31, .55);
   --surface-solid: #1b222d;
+  --tutorial-card: #263243;
   --glass-fill: rgba(38, 48, 65, .94);
   --glass-edge: rgba(202, 221, 255, .17);
   --glass-shadow: 0 8px 28px #00000038, 0 1px 4px #00000024, inset 0 1px 0 #e1edff26, inset 0 -1px 0 #00000038;
