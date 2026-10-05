@@ -86,7 +86,7 @@
 /* ==================== 学习页顶部: 只有被选中的学习方式显示文字 ==================== */
 .study-card .study-card-top .study-stage-switch button[aria-pressed=false] .stage-text{display:none}
 .study-card .study-card-top .study-stage-switch button[aria-pressed=false]{padding:0 10px}
-.study-card .plan-button{width:40px;height:40px;border-radius:50%;background:var(--surface-inset);color:var(--text-secondary)}
+.study-card .vocab-button{width:40px;height:40px;border-radius:50%;background:var(--surface-inset);color:var(--text-secondary)}
 .plan-tools{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px}
 .plan-tools .secondary{justify-content:center}
 
@@ -122,8 +122,8 @@
 .book-shelf .owned-book:last-child{border-bottom:0}
 .book-shelf .shelf-continue{margin-top:0}
 .book-shelf .shelf-toolbar{margin:0}
-@media(max-width:429px){.study-card .study-card-top{gap:6px}.study-card .study-card-top .study-day-stepper .icon-button{width:28px}.study-card .plan-button{width:36px;height:36px}}
-@media(max-width:359px){.study-card .study-card-top{gap:3px}.study-card .study-card-top .study-day-stepper{font-size:var(--fs-small)}.study-card .study-card-top .study-stage-switch button,.study-card .study-card-top .study-stage-switch button[aria-pressed=false]{padding:0 7px}.study-card .plan-button{width:30px;height:30px}.study-card .study-card-top .study-day-stepper .icon-button{width:22px}.study-card .study-card-top .study-stage-switch button,.study-card .study-card-top .study-stage-switch button[aria-pressed=false]{padding:0 5px}}
+@media(max-width:429px){.study-card .study-card-top{gap:6px}.study-card .study-card-top .study-day-stepper .icon-button{width:28px}.study-card .vocab-button{width:36px;height:36px}}
+@media(max-width:359px){.study-card .study-card-top{gap:3px}.study-card .study-card-top .study-day-stepper{font-size:var(--fs-small)}.study-card .study-card-top .study-stage-switch button,.study-card .study-card-top .study-stage-switch button[aria-pressed=false]{padding:0 7px}.study-card .vocab-button{width:30px;height:30px}.study-card .study-card-top .study-day-stepper .icon-button{width:22px}.study-card .study-card-top .study-stage-switch button,.study-card .study-card-top .study-stage-switch button[aria-pressed=false]{padding:0 5px}}
 
 /* ==================== 点词查义卡片 · 词义标注 ==================== */
 .word-peek-dock{position:sticky;bottom:calc(88px + var(--ion-safe-area-bottom,0px));height:0;z-index:25;pointer-events:none}

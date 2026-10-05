@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { IonAlert } from '@ionic/react'
 import { useReducedMotion } from 'motion/react'
-import { BookOpen, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, Minus, Plus, RotateCcw, Volume2 } from 'lucide-react'
+import { BookOpen, Bookmark, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, Minus, Plus, RotateCcw, Volume2 } from 'lucide-react'
 import { PreviewIcon, RecallIcon } from './icons'
 import { coreGloss } from './gloss'
 import LocalDictionary from './components/LocalDictionary'
-import { bookDays, dayKey, ebbNextLabel, intervalLabel, listReviewOffsets, markLevel, memoryIntervals, wordsForDay, pageFontAttrs, type Store, type WordBook } from './model'
+import { bookDays, dayKey, ebbNextLabel, intervalLabel, listReviewOffsets, markLevel, memoryIntervals, vocabBookId, wordsForDay, pageFontAttrs, type Store, type WordBook } from './model'
 import { currentStudyDraft, dayPlan, dayReviewKey, draftComplete, hasLearned, learningStatistics, newWords, reviewQueue, studyView, studyWordStatus, usesDaySchedule, type StudyAction } from './study'
 import type { LearningState, StudyDraft, StudyKind } from './study-state'
 import ChoiceSheet from './components/ChoiceSheet'
@@ -31,7 +31,7 @@ type Props = {
   onRestart: (kind: StudyKind) => Promise<boolean>;
   onLearning: (learning: LearningState) => Promise<boolean>;
   onDay: (book: WordBook, day: number) => Promise<void>; onOpenWord: (id: string) => void;
-  onUndo: () => void; onBooks: () => void; onImport: () => void;
+  onUndo: () => void; onBooks: () => void; onImport: () => void; onVocab: () => void;
   onLayout: (layout: Store['studyLayout']) => void;
   onSpeak: (text: string) => void; onStop: () => void;
   onCheckIn: () => Promise<boolean>;
@@ -52,11 +52,12 @@ export function CheckInBar({ plan, saving, onCheckIn, onNextDay }: { plan: Retur
       <Check size={16} />{plan.checkin ? '更新打卡' : '打卡'}</button>}
   </div>
 }
-export default function StudyList({ start, store, now, saving, canUndo, onMark, onKnown, onStudy, onRestart, onLearning, onDay, onOpenWord, onUndo, onBooks, onImport, onLayout, onSpeak, onStop, onCheckIn, contextServices }: Props) {
+export default function StudyList({ start, store, now, saving, canUndo, onMark, onKnown, onStudy, onRestart, onLearning, onDay, onOpenWord, onUndo, onBooks, onImport, onVocab, onLayout, onSpeak, onStop, onCheckIn, contextServices }: Props) {
   const reduced = useReducedMotion()
   const [daysOpen, setDaysOpen] = useState(false), [showMeanings, setShowMeanings] = useState(false), [openMeaning, setOpenMeaning] = useState<string | null>(null), [planOpen, setPlanOpen] = useState(false)
   const [replaceKind, setReplaceKind] = useState<StudyKind | null>(null)
   const [knownTarget, setKnownTarget] = useState<{ id: string; word: string } | null>(null), [leaving, setLeaving] = useState<string[]>([]), [showKnown, setShowKnown] = useState(false)
+  const vocabCount = store.books.find(book => book.id === vocabBookId)?.wordIds.length ?? 0
   const previousRows = useRef<{ id: string; word: string; meaning: string; markCount: number; missing: boolean; known: boolean; status: string; forgotten: boolean }[]>([])
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const press = useRef({ x: 0, y: 0, moved: false, held: false })
@@ -183,7 +184,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
   const showTasks = dayMode || mode === 'review' || queue.length > 0
   return <section className={`study-list-view font-scope layout-${store.studyLayout}`} aria-label="列表背词" {...pageFontAttrs(store.appearance.study)}>
     <div className="english-page">
-      {/* Two slim rows: day · 速记/自查 · ⋯, then 当天新学/需要复习 when both exist. The book is chosen in 我的 → 词书管理. */}
+      {/* Two slim rows: day · 速记/自查 · 生词本, then 当天新学/需要复习 when both exist. The book is chosen in 我的 → 词书管理. */}
       <header className="study-card">
         <h1 className="sr-only">学习</h1>
         <div className="study-card-top">
@@ -203,7 +204,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
               { value: 'preview' as const, ariaLabel: '快速记忆', title: '快速记忆：看词和释义', label: <><PreviewIcon size={15} /><span className="stage-text">速记</span></> },
               { value: 'test' as const, ariaLabel: '自己自查', title: '自己自查：先想再核对', label: <><RecallIcon size={15} /><span className="stage-text">自查</span></> },
             ]} />}
-          <button className="icon-button plan-button" aria-label="复习计划" title="复习计划" onClick={() => setPlanOpen(true)}><Clock3 size={20} /></button>
+          <button className="icon-button vocab-button" aria-label={`生词本 · ${vocabCount} 词`} title="生词本" onClick={onVocab}><Bookmark size={20} /></button>
         </div>
         {/* New vs due review only matters when something is due. */}
         {showTasks && <Segmented label="学习任务" className="study-task-tabs" disabled={saving}
@@ -248,7 +249,7 @@ export default function StudyList({ start, store, now, saving, canUndo, onMark, 
           {mode === 'practice' ? <button className="secondary" disabled={saving || practiceDone} onClick={() => void practiceState({ completedAt: new Date(now).toISOString() })}><Check size={17} />练习完成</button> : draft && !completed ? <button className="primary complete-group" disabled={saving || changed} onClick={() => void onStudy(draft, { type: 'submit', token: draft.tokens[currentPage] })}><Check size={17} />本组已检查完</button> : <button className="secondary" disabled={saving} onClick={continueStudy}><CheckCheck size={17} />{continueLabel}</button>}
         </div>}
 </>}
-        <div className="study-pagination"><button className="icon-button" aria-label="上一组" disabled={saving || !currentPage} onClick={() => move(currentPage - 1)}><ChevronLeft size={19} /></button>{groups.length > 1 ? <GlassSlider name="词组" min={1} max={groups.length} value={currentPage + 1} label={page => `${page}`} thumbWidth={42} onCommit={page => { if (!saving) move(page - 1) }} /> : <span className="page-static" aria-label={`第 ${currentPage + 1} 组，共 ${groups.length} 组`}>{currentPage + 1} / {groups.length}</span>}<button className="icon-button" disabled={saving || currentPage >= groups.length - 1} onClick={() => move(currentPage + 1)} aria-label="下一组"><ChevronRight size={19} /></button></div>
+        <div className="study-pagination"><button className="icon-button" aria-label="上一组" disabled={saving || !currentPage} onClick={() => move(currentPage - 1)}><ChevronLeft size={19} /></button>{groups.length > 1 ? <GlassSlider name="词组" min={1} max={groups.length} value={currentPage + 1} label={page => `${page}`} thumbWidth={42} onCommit={page => { if (!saving) move(page - 1) }} /> : <span className="page-static" aria-label={`第 ${currentPage + 1} 组，共 ${groups.length} 组`}>{currentPage + 1} / {groups.length}</span>}<button className="icon-button" disabled={saving || currentPage >= groups.length - 1} onClick={() => move(currentPage + 1)} aria-label="下一组"><ChevronRight size={19} /></button><button className="icon-button plan-trigger" aria-label="复习计划" title="复习计划" onClick={() => setPlanOpen(true)}><Clock3 size={19} /></button></div>
       </>}
     </div>
     <IonAlert isOpen={knownTarget !== null} cssClass="app-alert" animated={!reduced} header={`把 ${knownTarget?.word || ''} 设为熟词？`}

@@ -132,7 +132,7 @@ export default function App() {
               onLearning={learning => commit({ ...storeRef.current, learning })}
               onLayout={studyLayout => { void commit({ ...storeRef.current, studyLayout }) }}
               contextServices={{ busy: ai.busy || saving, generatingKey: ai.contextKey, live: ai.live, error: ai.error, onGenerate: ai.generateContextStory }} onStop={speech.stop}
-              onBooks={() => go({ name: 'books' })} onImport={() => setImportOpen(true)} onSpeak={speech.speak} onCheckIn={doCheckIn} />}
+              onBooks={() => go({ name: 'books' })} onImport={() => setImportOpen(true)} onVocab={() => go({ name: 'vocab' })} onSpeak={speech.speak} onCheckIn={doCheckIn} />}
             {screen.name === 'books' && <BookShelf store={store} catalog={words.catalog} busy={words.bookBusy || saving} error={words.catalogError} onRetry={words.refreshCatalog}
               view={shelfView ?? (store.books.length ? 'mine' : 'catalog')} onView={setShelfView}
               onLibrary={() => go({ name: 'library' })} onFrequency={() => go({ name: 'frequency' })} onActivate={study.activateBook} onInstall={words.installCatalogBook} onWord={openWord} onVocab={() => go({ name: 'vocab' })} />}
