@@ -1,0 +1,77 @@
+name: build
+
+# Every push to master rebuilds both packages and refreshes the moving "latest" release:
+# the Android APK (same build as the server release) and an unsigned iOS IPA.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Assemble debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+      - name: Collect APK
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          mkdir -p out
+          cp android/app/build/outputs/apk/debug/app-debug.apk "out/拾词-${VER}-debug.apk"
+          echo "VER=$VER" >> "$GITHUB_ENV"
+      - name: Publish to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create latest --title "拾词 $VER" --notes "Android APK 与服务器发布一致；iOS 为未签名 IPA，可用 AltStore / Sideloadly 自签安装。" --target "$GITHUB_SHA" || true
+          gh release upload latest out/*.apk --clobber
+
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync ios
+      - name: Archive (unsigned)
+        run: |
+          cd ios/App
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release -destination 'generic/platform=iOS' -archivePath build/App.xcarchive archive CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""
+      - name: Package IPA
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          mkdir -p ios/App/build/Payload
+          cp -R ios/App/build/App.xcarchive/Products/Applications/*.app ios/App/build/Payload/
+          cd ios/App/build
+          zip -qry "拾词-${VER}-ios-unsigned.ipa" Payload
+          cd ../../..
+          echo "VER=$VER" >> "$GITHUB_ENV"
+          echo "IPA=ios/App/build/拾词-${VER}-ios-unsigned.ipa" >> "$GITHUB_ENV"
+      - name: Publish to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create latest --title "拾词 $VER" --notes "未签名 IPA：可用 AltStore / Sideloadly 自签安装；上架 TestFlight 需要苹果开发者账号。" --target "$GITHUB_SHA" || true
+          gh release upload latest "$IPA" --clobber
