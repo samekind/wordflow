@@ -1,7 +1,7 @@
 {
-  "versionCode": 52,
-  "versionName": "0.6.0",
+  "versionCode": 53,
+  "versionName": "0.6.1",
   "url": "https://wordflow.43.134.190.112.sslip.io/releases/wordflow.apk",
-  "notes": "字号和语速全部改为滑块调节：单词、中文、界面、阅读正文字号都可自定义大小，拖动即时预览；朗读速度 0.5x–1.5x 无级可调，松手即试听。学习记录、词书进度和备份格式不变。",
-  "sha256": "C86F518E1A85FA91A0A28CCE96E755B53FD8ACBBA93A7EBEE2F2A17E142DEF0D"
+  "notes": "外观设置合并为一页：主题、字体、字重和字号滑块放在同一张卡片里，去掉了分段的重复设置，更清爽。学习记录、词书进度和备份格式不变。",
+  "sha256": "A45B357A7F77BFE57816ADAA1AE26A54D5DD7B985DF8432658C543BDDCC329E2"
 }

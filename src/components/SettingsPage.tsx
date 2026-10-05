@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { BookOpen, Bookmark, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, GraduationCap, LoaderCircle, Moon, RefreshCw, Settings2, Smile, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
 import { AIIcon } from '../icons'
-import { maxDailyWords, type Appearance, type PageFont } from '../model'
+import { maxDailyWords, type Appearance } from '../model'
 import { installedRelease, loadCloudAccount } from '../cloud'
 import UpdatePage from './UpdatePage'
-import { pageFontAttrs, type Store } from '../model'
+import { type Store } from '../model'
 import { prepareAvatar } from '../profile'
 import AvatarPicker from './AvatarPicker'
 import DailyWordCount, { validDailyCount } from './DailyWordCount'
@@ -229,7 +229,6 @@ const weights: { id: Appearance['weight']; label: string }[] = [
   { id: 'medium', label: '适中' },
   { id: 'bold', label: '稍粗' },
 ]
-const follow = 'follow'
 /** Coarse enums from before the sliders existed, kept so old backups still mean the same size. */
 const enumScale: Record<NonNullable<Appearance['wordSize']>, number> = { small: 90, standard: 100, large: 115, xlarge: 130 }
 const fromScale = (value: number): Appearance['wordSize'] => {
@@ -269,65 +268,31 @@ function RateSlider({ rate, disabled, onChange, onSpeak }: { rate: number; disab
     onChange={setCurrent}
     onCommit={next => { const rate = next / 100; onChange(rate); onSpeak('practice') }} />
 }
-/** Font + weight for one page; "跟随全部" leaves the field unset so it tracks the global choice. */
-function PageFontRows({ name, value, saving, onChange }: { name: string; value: PageFont | undefined; saving: boolean; onChange: (next: PageFont | undefined) => void }) {
-  const set = (patch: PageFont) => {
-    const next = { ...value, ...patch }
-    for (const key of Object.keys(next) as (keyof PageFont)[]) if (next[key] === undefined) delete next[key]
-    onChange(Object.keys(next).length ? next : undefined)
-  }
-  return <>
-    <SettingRow label="字体">
-      <SelectButton label={`${name}字体`} value={value?.font || follow} disabled={saving}
-        options={[{ value: follow, label: '跟随全部' }, ...fonts.map(font => ({ value: font.id, label: font.label }))]}
-        onChange={font => set({ font: font === follow ? undefined : font as Appearance['font'] })} />
-    </SettingRow>
-    <SettingRow label="字重">
-      <Segmented label={`${name}字重`} value={value?.weight || follow} disabled={saving}
-        options={[{ value: follow, label: '跟随' }, ...weights.map(weight => ({ value: weight.id, label: weight.label }))]}
-        onChange={weight => set({ weight: weight === follow ? undefined : weight as Appearance['weight'] })} />
-    </SettingRow>
-  </>
-}
 function AppearanceSettings({ appearance, saving, onChange }: { appearance: Appearance; saving: boolean; onChange: (patch: Partial<Appearance>) => void }) {
   const wordScale = appearance.wordScale ?? (appearance.wordSize ? enumScale[appearance.wordSize] : appearance.size === 'large' ? 115 : 100)
   const meaningScale = appearance.meaningScale ?? (appearance.meaningSize ? enumScale[appearance.meaningSize] : appearance.size === 'large' ? 115 : 100)
   const uiScale = appearance.uiScale ?? (appearance.size === 'large' ? 107 : 100)
-  return <>
-    <section className="settings-section" aria-label="全部页面">
-      <h2>全部页面</h2>
-      <SettingRow label="深色模式">
-        <Segmented label="深色模式" value={appearance.theme} disabled={saving}
-          options={[{ value: 'light', label: '浅色' }, { value: 'dark', label: '深色' }]} onChange={theme => onChange({ theme })} />
-      </SettingRow>
-      <SettingRow label="字体">
-        <Segmented label="字体" value={appearance.font} disabled={saving}
-          options={fonts.map(font => ({ value: font.id, label: font.label }))} onChange={font => onChange({ font })} />
-      </SettingRow>
-      <SettingRow label="字重">
-        <Segmented label="字重" value={appearance.weight} disabled={saving}
-          options={weights.map(weight => ({ value: weight.id, label: weight.label }))} onChange={weight => onChange({ weight })} />
-      </SettingRow>
-      <div className="stacked-rows">
-        <SizeSlider label="单词字号" value={wordScale} min={80} max={150} ends={['小', '特大']} disabled={saving} variable="--word-scale"
-          save={percent => onChange({ wordScale: percent, wordSize: fromScale(percent) })} />
-        <SizeSlider label="中文字号" value={meaningScale} min={80} max={150} ends={['小', '特大']} disabled={saving} variable="--meaning-scale"
-          save={percent => onChange({ meaningScale: percent, meaningSize: fromScale(percent) })} />
-        <SizeSlider label="其他文字" value={uiScale} min={90} max={130} ends={['小', '大']} disabled={saving} variable="--fs-scale"
-          save={percent => onChange({ uiScale: percent })} />
-      </div>
-      <p className="appearance-sample size-sample"><span lang="en" className="english-word">perspective</span><span className="chinese-meaning">观点，看待问题的角度</span><small>其他文字的大小示例</small></p>
-    </section>
-    <section className="settings-section font-scope" aria-label="学习页" {...pageFontAttrs(appearance.study)}>
-      <h2>学习页</h2>
-      <PageFontRows name="学习页" value={appearance.study} saving={saving} onChange={study => onChange({ study })} />
-      <p className="appearance-sample"><span lang="en">resilient</span><span>有韧性的，能迅速恢复的</span></p>
-    </section>
-    <section className="settings-section font-scope" aria-label="阅读页" {...pageFontAttrs(appearance.reading)}>
-      <h2>阅读页</h2>
-      <PageFontRows name="阅读页" value={appearance.reading} saving={saving} onChange={reading => onChange({ reading })} />
-      <p className="appearance-sample"><span lang="en">A library is a place where many books are kept.</span><span>图书馆是收藏许多书的地方。</span></p>
-    </section>
-    <p className="field-note">学习页和阅读页可以单独设置字体和字重，选“跟随”时使用全部页面的设置。中文偏细时，把字重调到“适中”或“稍粗”。</p>
-  </>
+  return <section className="settings-section" aria-label="外观">
+    <SettingRow label="深色模式">
+      <Segmented label="深色模式" value={appearance.theme} disabled={saving}
+        options={[{ value: 'light', label: '浅色' }, { value: 'dark', label: '深色' }]} onChange={theme => onChange({ theme })} />
+    </SettingRow>
+    <SettingRow label="字体">
+      <Segmented label="字体" value={appearance.font} disabled={saving}
+        options={fonts.map(font => ({ value: font.id, label: font.label }))} onChange={font => onChange({ font })} />
+    </SettingRow>
+    <SettingRow label="字重">
+      <Segmented label="字重" value={appearance.weight} disabled={saving}
+        options={weights.map(weight => ({ value: weight.id, label: weight.label }))} onChange={weight => onChange({ weight })} />
+    </SettingRow>
+    <div className="stacked-rows">
+      <SizeSlider label="单词字号" value={wordScale} min={80} max={150} ends={['小', '特大']} disabled={saving} variable="--word-scale"
+        save={percent => onChange({ wordScale: percent, wordSize: fromScale(percent) })} />
+      <SizeSlider label="中文字号" value={meaningScale} min={80} max={150} ends={['小', '特大']} disabled={saving} variable="--meaning-scale"
+        save={percent => onChange({ meaningScale: percent, meaningSize: fromScale(percent) })} />
+      <SizeSlider label="其他文字" value={uiScale} min={90} max={130} ends={['小', '大']} disabled={saving} variable="--fs-scale"
+        save={percent => onChange({ uiScale: percent })} />
+    </div>
+    <p className="appearance-sample size-sample"><span lang="en" className="english-word">perspective</span><span className="chinese-meaning">观点，看待问题的角度</span><small>其他文字的大小示例</small></p>
+  </section>
 }
