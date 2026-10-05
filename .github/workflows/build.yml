@@ -35,13 +35,14 @@ jobs:
         run: |
           VER=$(node -p "require('./package.json').version")
           mkdir -p out
-          cp android/app/build/outputs/apk/debug/app-debug.apk "out/拾词-${VER}-debug.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "out/wordflow-${VER}-debug.apk"
           echo "VER=$VER" >> "$GITHUB_ENV"
       - name: Publish to GitHub Releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create latest --title "拾词 $VER" --notes "Android APK 与服务器发布一致；iOS 为未签名 IPA，可用 AltStore / Sideloadly 自签安装。" --target "$GITHUB_SHA" || true
+          gh release view latest --json assets --jq '.assets[] | select(.name | endswith("-debug.apk")) | .name' | while read -r a; do gh release delete-asset latest "$a" --yes || true; done
           gh release upload latest out/*.apk --clobber
 
   ios:
@@ -65,13 +66,14 @@ jobs:
           mkdir -p ios/App/build/Payload
           cp -R ios/App/build/App.xcarchive/Products/Applications/*.app ios/App/build/Payload/
           cd ios/App/build
-          zip -qry "拾词-${VER}-ios-unsigned.ipa" Payload
+          zip -qry "wordflow-${VER}-ios-unsigned.ipa" Payload
           cd ../../..
           echo "VER=$VER" >> "$GITHUB_ENV"
-          echo "IPA=ios/App/build/拾词-${VER}-ios-unsigned.ipa" >> "$GITHUB_ENV"
+          echo "IPA=ios/App/build/wordflow-${VER}-ios-unsigned.ipa" >> "$GITHUB_ENV"
       - name: Publish to GitHub Releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create latest --title "拾词 $VER" --notes "未签名 IPA：可用 AltStore / Sideloadly 自签安装；上架 TestFlight 需要苹果开发者账号。" --target "$GITHUB_SHA" || true
+          gh release view latest --json assets --jq '.assets[] | select(.name | endswith("unsigned.ipa")) | .name' | while read -r a; do gh release delete-asset latest "$a" --yes || true; done
           gh release upload latest "$IPA" --clobber
