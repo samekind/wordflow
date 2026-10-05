@@ -51,6 +51,11 @@ async function choose(page: Page, label: string, option: string) {
   await nav(page, '我的')
   await page.getByRole('button', { name: section, exact: true }).click()
 }
+/** The usage tutorial pops once after the first-run setup; tests that finish setup dismiss it. */
+async function dismissTutorial(page: Page) {
+  const tutorial = page.locator('.tutorial-overlay')
+  if (await tutorial.isVisible().catch(() => false)) { await tutorial.getByRole('button', { name: '跳过' }).click(); await expect(tutorial).toHaveCount(0) }
+}
 async function selectArticle(page: Page, title: string) {
   await page.getByRole('button', { name: '选择英语文章', exact: true }).click()
   await page.locator('ion-modal .choice-list h3').filter({ hasText: new RegExp(`^${title}(?:\\s|$)`) }).click()
@@ -317,6 +322,7 @@ test('custom daily volumes persist, preserve old plans and marks keep a neutral 
     await page.screenshot({ path: `test-results/daily-count-${width}.png` })
   }
   await page.getByRole('button', { name: '开始学习', exact: true }).click()
+  await dismissTutorial(page)
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.locator('.english-entry')).toHaveCount(17)
   expect((await state(page)).books.find(book => book.id === 'ecdict-cet4')?.dailyCount).toBe(17)
@@ -524,6 +530,7 @@ test('bundled wordbooks install real tagged data, plan days, retain shared progr
   await page.locator('.catalog-book').filter({ hasText: '四级词汇' }).click()
   await page.getByLabel('每天学多少词', { exact: true }).fill('40')
   await page.getByRole('button', { name: '开始学习', exact: true }).click()
+  await dismissTutorial(page)
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.locator('.english-entry')).toHaveCount(20)
   let saved = await state(page)
@@ -544,6 +551,7 @@ test('bundled wordbooks install real tagged data, plan days, retain shared progr
   await page.getByRole('button', { name: '添加词书', exact: true }).click()
   await page.locator('.catalog-book').filter({ hasText: '六级词汇' }).click()
   await page.getByRole('button', { name: '开始学习', exact: true }).click()
+  await dismissTutorial(page)
   await expect(page.getByRole('dialog')).toHaveCount(0)
   saved = await state(page)
   expect(saved.books).toHaveLength(2)
@@ -594,6 +602,7 @@ test('first launch needs a one-time setup before the app opens, and does not rep
   await page.getByRole('button', { name: '上一步' }).click()
   await next.click()
   await page.getByRole('button', { name: '开始学习', exact: true }).click()
+  await dismissTutorial(page)
 
   await expect(page.getByRole('navigation', { name: '主导航' })).toBeVisible()
   await expect(page.locator('.english-entry')).toHaveCount(20)
@@ -796,6 +805,32 @@ test('update page shows the current version, auto-checks, pops new versions and 
   await popup.getByRole('button', { name: '稍后' }).click()
   await expect(popup).toHaveCount(0)
   await expect(page.getByRole('region', { name: '下载安装' })).toBeVisible()
+})
+
+test('usage tutorial walks through the gestures once and reopens from 我的', async ({ page }) => {
+  await seed(page, studied(importToPersonal(emptyStore(), starterRows.slice(0, 10), '教程').store))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await nav(page, '我的')
+  await page.getByRole('button', { name: '使用教程', exact: true }).click()
+  const tutorial = page.locator('.tutorial-overlay')
+  await expect(tutorial).toContainText('每天学一点')
+  await expect(tutorial.locator('.tutorial-dots i')).toHaveCount(4)
+  await tutorial.getByRole('button', { name: '下一步' }).click()
+  await expect(tutorial).toContainText('词表手势')
+  await tutorial.getByRole('button', { name: '下一步' }).click()
+  await expect(tutorial).toContainText('生词本')
+  await tutorial.getByRole('button', { name: '上一步' }).click()
+  await expect(tutorial).toContainText('词表手势')
+  await tutorial.getByRole('button', { name: '下一步' }).click()
+  await tutorial.getByRole('button', { name: '下一步' }).click()
+  await expect(tutorial).toContainText('到期复习')
+  await tutorial.getByRole('button', { name: '开始使用' }).click()
+  await expect(tutorial).toHaveCount(0)
+  await page.reload()
+  await nav(page, '我的')
+  await page.getByRole('button', { name: '使用教程', exact: true }).click()
+  await expect(page.locator('.tutorial-overlay')).toBeVisible()
 })
 
 test('online reading library syncs, recommends, filters by level, reads with translation and stays readable offline', async ({ page }) => {

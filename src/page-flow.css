@@ -78,6 +78,24 @@
 .update-progress-text{font-size: var(--fs-small);color: var(--text-secondary)}
 .update-progress-track{display:block;height:6px;border-radius:3px;background:var(--surface-inset);overflow:hidden}
 .update-progress-track>span{display:block;height:100%;border-radius:3px;background:var(--accent);transition:width .2s ease}
+.tutorial-overlay{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:24px;background:rgba(15,23,32,.42);animation:tutorial-in .2s ease}
+.tutorial-card{position:relative;display:grid;gap:12px;width:min(100%,360px);padding:26px 22px 18px;border-radius:20px;background:var(--glass-card-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-card-shadow);animation:tutorial-rise .26s ease}
+.tutorial-skip{position:absolute;top:12px;right:14px;padding:6px 8px;border-radius:8px;font-size: var(--fs-small);color: var(--text-muted)}
+.tutorial-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:#e8f0ec;color:#3b8270}
+html[data-theme="dark"] .tutorial-icon{background:#22332d;color:#7fc2a8}
+.tutorial-card h2{margin:0;font-size: var(--fs-title);font-weight: var(--fw-semibold);color: var(--text-primary)}
+.tutorial-card ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size: var(--fs-body);color: var(--text-secondary)}
+.tutorial-card li{display:flex;gap:8px;align-items:baseline}
+.tutorial-card li::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent);flex:none;transform:translateY(-2px)}
+.tutorial-dots{display:flex;gap:6px;justify-content:center;padding:2px 0}
+.tutorial-dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.tutorial-dots i[data-on=true]{background:var(--accent)}
+.tutorial-nav{display:flex;gap:10px}
+.tutorial-nav .primary{flex:1}
+.tutorial-nav .secondary{min-width:96px}
+@keyframes tutorial-in{from{opacity:0}}
+@keyframes tutorial-rise{from{opacity:0;transform:translateY(14px) scale(.98)}}
+@media (prefers-reduced-motion: reduce){.tutorial-overlay,.tutorial-card{animation:none}}
 .update-version{font-size: var(--fs-display);line-height:1.15;font-weight: var(--fw-bold);color:var(--text-primary);letter-spacing:-.02em}
 .update-build{display:inline-flex;align-items:center;gap:6px;font-size: var(--fs-meta);color: var(--text-secondary)}
 .update-result{display:flex;align-items:center;gap:8px;margin:0;font-size: var(--fs-body);color:var(--text-primary)}

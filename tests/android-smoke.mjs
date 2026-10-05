@@ -82,6 +82,8 @@ try {
   await page.locator('.catalog-book').filter({ hasText: '四级词汇' }).click()
   const installStarted = Date.now()
   await page.getByRole('button', { name: '开始学习', exact: true }).click()
+  const tutorial = page.locator('.tutorial-overlay')
+  if (await tutorial.isVisible().catch(() => false)) await tutorial.getByRole('button', { name: '跳过' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 20000 })
   console.log(JSON.stringify({ nativeBookInstallMs: Date.now() - installStarted }))
   await expect(page.locator('.english-entry')).toHaveCount(20)

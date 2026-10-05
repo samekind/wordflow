@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { BookOpen, Bookmark, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, LoaderCircle, Moon, RefreshCw, Settings2, Smile, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
+import { BookOpen, Bookmark, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, GraduationCap, LoaderCircle, Moon, RefreshCw, Settings2, Smile, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
 import { AIIcon } from '../icons'
 import { maxDailyWords, type Appearance, type PageFont, type TextSize } from '../model'
 import { installedRelease, loadCloudAccount } from '../cloud'
@@ -22,12 +22,12 @@ type Props = {
   section: SettingsSection; onSection: (section: SettingsSection) => void;
   onSaveAI: (data: { provider: string; model: string; key: string }) => Promise<boolean>;
   onRemoveAI: () => Promise<boolean>; onPreferences: (patch: Partial<Store>) => Promise<boolean>;
-  onBackup: () => void; onRestore: () => void; onSpeak: (text: string) => void; onLicenses: () => void;
+  onBackup: () => void; onRestore: () => void; onSpeak: (text: string) => void; onLicenses: () => void; onTutorial: () => void;
   onBooks: () => void; onLibrary: () => void; onVocab: () => void;
   onCloudCreate: () => Promise<string>; onCloudRecover: (code: string) => Promise<void>;
   onCloudUpload: (force: boolean) => Promise<string>; onCloudRestore: () => Promise<void>;
 }
-export default function SettingsPage({ store, ai, saving, aiBusy, error, section, onSection, onSaveAI, onRemoveAI, onPreferences, onBackup, onRestore, onSpeak, onLicenses, onBooks, onLibrary, onVocab, onCloudCreate, onCloudRecover, onCloudUpload, onCloudRestore }: Props) {
+export default function SettingsPage({ store, ai, saving, aiBusy, error, section, onSection, onSaveAI, onRemoveAI, onPreferences, onBackup, onRestore, onSpeak, onLicenses, onTutorial, onBooks, onLibrary, onVocab, onCloudCreate, onCloudRecover, onCloudUpload, onCloudRestore }: Props) {
   const [provider, setProvider] = useState(ai.provider)
   const [model, setModel] = useState(ai.model)
   const [customModel, setCustomModel] = useState(ai.model !== defaults[ai.provider])
@@ -93,6 +93,7 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
       </div>
       <h2 className="settings-group-title">关于</h2>
       <div className="settings-group">
+      <button onClick={onTutorial} aria-label="使用教程"><GraduationCap size={20} /><span>使用教程</span><ChevronRight size={16} /></button>
       <button onClick={() => onSection('update')} aria-label="检查更新"><RefreshCw size={20} /><span>检查更新</span><small>{appVersion}</small><ChevronRight size={16} /></button>
       <button onClick={onLicenses} aria-label="来源与开源许可"><FileText size={20} /><span>来源与开源许可</span><ChevronRight size={16} /></button>
       </div>

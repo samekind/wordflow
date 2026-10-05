@@ -1,7 +1,7 @@
 {
-  "versionCode": 46,
-  "versionName": "0.5.6",
+  "versionCode": 47,
+  "versionName": "0.5.7",
   "url": "https://wordflow.43.134.190.112.sslip.io/releases/wordflow.apk",
-  "notes": "“我的”页更清爽：菜单只保留当前状态值；“检查更新”显示当前版本号。更新页打开即自动检查，发现新版弹窗提示，下载时显示进度，校验通过后才安装。学习记录、词书进度和备份格式不变。",
-  "sha256": "4E376E902955AB8E29E4AE198C3E150B40FAD309DDABD188937A027EDEEAF4A2"
+  "notes": "新增使用教程：四页图文讲清学习节奏、词表手势、生词本和到期复习。首次装完词书后自动弹出一次，之后在“我的 › 使用教程”随时可看。学习记录、词书进度和备份格式不变。",
+  "sha256": "D68BDD9CF1FD9F667F5FE0DE4FA5F297C14019CAC62D4269384F1A5ECCC99AA7"
 }

@@ -32,6 +32,8 @@ import { useAIServices } from './app/useAIServices'
 import { useBackButton } from './app/useBackButton'
 import { SpeechRateContext } from './components/SpeechRate'
 import BootSplash from './components/BootSplash'
+import Tutorial from './components/Tutorial'
+import { markTutorialSeen, tutorialSeen } from './tutorial-seen'
 
 const tabs = [{ id: 'today', label: '学习', icon: StudyIcon }, { id: 'stats', label: '统计', icon: ChartColumn }, { id: 'story', label: '阅读', icon: ReadIcon }, { id: 'settings', label: '我的', icon: ProfileIcon }] as const
 const titles: Record<string, string> = { stats: '统计', books: '词书管理', story: '阅读', settings: '我的', library: '我的单词', frequency: '考频查询', article: '英语选读', stories: '语境记忆', vocab: '生词本', picks: '每日英语选读' }
@@ -62,6 +64,7 @@ export default function App() {
   const [editWord, setEditWord] = useState<Word | null>(null)
   const [restoreCandidate, setRestoreCandidate] = useState<Store | null>(null)
   const [licensesOpen, setLicensesOpen] = useState(false)
+  const [tutorialOpen, setTutorialOpen] = useState(false)
   const restoreRef = useRef<HTMLInputElement>(null)
   const today = dayKey(new Date(data.clock))
 
@@ -113,11 +116,15 @@ export default function App() {
       {!!store.learning.notice && <div className="save-problem" role="status"><p>{store.learning.notice}</p><button className="text-button" disabled={saving} onClick={() => void commit({ ...storeRef.current, learning: { ...storeRef.current.learning, notice: '' } })}>知道了</button></div>}
       {/* Tabs swap instantly; pushed screens slide in. Nothing ever fades the page out. */}
         {setup ? <Onboarding catalog={words.catalog} catalogError={words.catalogError} busy={words.bookBusy || saving} onRetry={words.refreshCatalog} onRestore={() => restoreRef.current?.click()}
-          onFinish={choice => words.installCatalogBook(choice.book, choice.daily, {
-            profile: { ...storeRef.current.profile, nickname: choice.nickname, avatar: choice.avatar },
-            readingPreferences: { ...storeRef.current.readingPreferences, level: choice.readingLevel },
-            goal: choice.daily, onboarded: true,
-          })} />
+          onFinish={async choice => {
+            const ok = await words.installCatalogBook(choice.book, choice.daily, {
+              profile: { ...storeRef.current.profile, nickname: choice.nickname, avatar: choice.avatar },
+              readingPreferences: { ...storeRef.current.readingPreferences, level: choice.readingLevel },
+              goal: choice.daily, onboarded: true,
+            })
+            if (ok && !tutorialSeen()) setTutorialOpen(true)
+            return ok
+          }} />
         : <div className="view-transition" key={screenKey(screen)} data-enter={reduced ? 'none' : nav.direction > 0 ? 'push' : nav.direction < 0 ? 'pop' : 'tab'}>
           <ScrollTo key={nav.seq} top={nav.scroll} />
           {screen.name !== 'today' && <header className={`topbar${secondary ? '' : ' primary-topbar'}`}>
@@ -155,7 +162,7 @@ export default function App() {
             {(screen.name === 'settings' || screen.name === 'section') && <SettingsPage store={store} ai={ai.config} saving={saving} aiBusy={ai.busy} error={ai.error} onSaveAI={ai.saveConfig} onRemoveAI={ai.removeConfig}
               section={screen.name === 'section' ? screen.section : 'home'} onSection={section => { if (section === 'home') back(); else go({ name: 'section', section }) }}
               onPreferences={patch => commit({ ...storeRef.current, ...patch })} onBackup={downloadBackup} onRestore={() => restoreRef.current?.click()} onSpeak={speech.speak} onLicenses={() => setLicensesOpen(true)}
-              onBooks={() => go({ name: 'books' })} onLibrary={() => go({ name: 'library' })} onVocab={() => go({ name: 'vocab' })}
+              onBooks={() => go({ name: 'books' })} onLibrary={() => go({ name: 'library' })} onVocab={() => go({ name: 'vocab' })} onTutorial={() => setTutorialOpen(true)}
               onCloudCreate={async () => (await createCloudAccount()).recoveryCode}
               onCloudRecover={async code => { await recoverCloudAccount(code) }}
               onCloudUpload={async force => { try { const saved = await uploadCloudState(storeRef.current, force); return `已上传 · ${saved.savedAt}` } catch (error) { if (error instanceof CloudConflict) throw new Error('云端有更新的记录'); throw error } }}
@@ -183,6 +190,7 @@ export default function App() {
       }} />
     <RestoreSheet candidate={restoreCandidate} saving={saving} onClose={() => setRestoreCandidate(null)} onBackup={downloadBackup} onRestore={candidate => void words.restore(candidate)} />
     <LicensesSheet open={licensesOpen} onClose={() => setLicensesOpen(false)} />
+    <Tutorial open={tutorialOpen} onDone={() => { markTutorialSeen(); setTutorialOpen(false) }} />
     <RestorePicker inputRef={restoreRef} onPick={setRestoreCandidate} notify={toast.notify} />
     {confirmDialog}
   </div></SpeechRateContext.Provider></>

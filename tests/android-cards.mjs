@@ -119,6 +119,8 @@ try {
     await page.locator('.catalog-book').filter({ hasText: '考研英语二词汇' }).click()
     await expect(page.getByLabel('本书每日词量', { exact: true })).toHaveValue('5')
     await page.getByRole('button', { name: '开始学习', exact: true }).click()
+    const tutorial = page.locator('.tutorial-overlay')
+    if (await tutorial.isVisible().catch(() => false)) await tutorial.getByRole('button', { name: '跳过' }).click()
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(page.locator('.english-entry')).toHaveCount(5)
     const expected = await page.evaluate(async () => (await (await fetch('/vocabulary/exam-frequency-2022-2026.json')).json()).exams.ky2.words.slice(0, 5).map(word => word.word.toLowerCase()))
