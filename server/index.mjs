@@ -65,7 +65,7 @@ app.put('/api/state', (req, res) => {
       part: z.number().int().nonnegative(), createdAt: z.string().datetime(), model: z.string().max(100),
       targets: z.array(z.object({ id: z.string(), word: z.string().max(100), meaning: z.string().max(2000) })).min(1).max(40),
     })).max(2000).optional(),
-    pronunciation: z.object({ accent: z.enum(['us', 'uk']), rate: z.number().min(.5).max(1.2) }).optional(),
+    pronunciation: z.object({ accent: z.enum(['us', 'uk']), rate: z.number().min(.5).max(1.5) }).optional(),
     studyLayout: z.enum(['preview', 'test']).optional(),
     reviewMethod: z.enum(['ebbinghaus', 'fsrs']).optional(),
     profile: z.object({
@@ -73,13 +73,17 @@ app.put('/api/state', (req, res) => {
       avatar: z.string().max(200000).refine(value => !value || /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(value)),
     }).optional(),
     readingPreferences: z.object({
-      textSize: z.enum(['standard', 'large']), level: z.enum(['auto', 'easy', 'standard']),
+      textSize: z.enum(['standard', 'large']), textScale: z.number().min(50).max(200).optional(), level: z.enum(['auto', 'easy', 'standard']),
     }).optional(),
     appearance: z.object({
       theme: z.enum(['light', 'dark']), font: z.enum(['system', 'serif', 'gothic', 'mono']),
       weight: z.enum(['regular', 'medium', 'bold']), size: z.enum(['standard', 'large']),
       wordSize: z.enum(['small', 'standard', 'large', 'xlarge']).optional(),
       meaningSize: z.enum(['small', 'standard', 'large', 'xlarge']).optional(),
+      // Precise slider sizes as percentages (100 = 标准); optional so older stores stay valid.
+      wordScale: z.number().min(50).max(200).optional(),
+      meaningScale: z.number().min(50).max(200).optional(),
+      uiScale: z.number().min(50).max(200).optional(),
       // Per-page font overrides (study / reading); optional so older stores stay valid.
       study: z.object({ font: z.enum(['system', 'serif', 'gothic', 'mono']).optional(), weight: z.enum(['regular', 'medium', 'bold']).optional() }).optional(),
       reading: z.object({ font: z.enum(['system', 'serif', 'gothic', 'mono']).optional(), weight: z.enum(['regular', 'medium', 'bold']).optional() }).optional(),

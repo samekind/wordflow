@@ -27,7 +27,7 @@ type Props = {
   onVocab?: () => void;
 }
 export default function ReadingPage(props: Props) {
-  return <div className="reading-page font-scope" data-size={props.store.readingPreferences.textSize} {...pageFontAttrs(props.store.appearance.reading)}>
+  return <div className="reading-page font-scope" {...pageFontAttrs(props.store.appearance.reading)}>
     {props.view === 'hub' ? <ReadingEntries {...props} /> : props.view === 'picks' ? <ReadingHub {...props} /> : props.view === 'shelf' && props.scope?.cefr ? <ReadingShelf {...props} scope={{ ...props.scope, cefr: props.scope.cefr }} /> : props.view === 'story' ? <>
       <div className="reading-intro"><p>把当天的词放进一篇短文里，在上下文中记住它们。也可以自己挑词生成。</p>
         {props.onStudy && <button className="text-button" disabled={props.saving} onClick={props.onStudy}>去本组语境记忆<ChevronRight size={15} /></button>}</div>

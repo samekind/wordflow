@@ -1,7 +1,7 @@
 {
-  "versionCode": 51,
-  "versionName": "0.5.11",
+  "versionCode": 52,
+  "versionName": "0.6.0",
   "url": "https://wordflow.43.134.190.112.sslip.io/releases/wordflow.apk",
-  "notes": "教程配色调整：遮罩减淡，暗色模式卡片换成更亮的底色，引导不再显得又暗又闷。学习记录、词书进度和备份格式不变。",
-  "sha256": "7BFD2D9F828CB0F65B14FA5310032A59482A5F8AA6BA209537760C73B93E1078"
+  "notes": "字号和语速全部改为滑块调节：单词、中文、界面、阅读正文字号都可自定义大小，拖动即时预览；朗读速度 0.5x–1.5x 无级可调，松手即试听。学习记录、词书进度和备份格式不变。",
+  "sha256": "C86F518E1A85FA91A0A28CCE96E755B53FD8ACBBA93A7EBEE2F2A17E142DEF0D"
 }

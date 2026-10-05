@@ -1,7 +1,7 @@
 {
   "name": "wordflow",
   "private": true,
-  "version": "0.5.11",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "node --env-file-if-exists=.env server/index.mjs",

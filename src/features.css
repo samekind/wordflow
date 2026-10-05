@@ -29,6 +29,21 @@
 .segment-control{display:inline-flex;background:var(--glass-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-shadow);backdrop-filter:var(--glass-filter);-webkit-backdrop-filter:var(--glass-filter);border-radius: var(--radius-lg);padding:3px;gap:2px;max-width:100%}
 .segment-control button{padding:7px 13px;min-height:34px;font-size: var(--fs-small);white-space:nowrap;border-radius: var(--radius-md);color: var(--text-muted)}
 .segment-control button[aria-pressed=true]{background:var(--glass-selected);box-shadow:var(--glass-selected-shadow);color:var(--accent)}
+/* Slider setting: live value top-right, track with a filled left part, end labels underneath. */
+.range-slider{display:grid;gap:2px;width:100%}
+.range-slider .range-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.range-slider .range-label{font-size:var(--fs-meta);color:var(--text-primary)}
+.range-slider output{font-size:var(--fs-meta);font-weight:var(--fw-semibold);color:var(--accent);font-variant-numeric:tabular-nums}
+.range-slider input[type=range]{-webkit-appearance:none;appearance:none;width:100%;min-height:var(--tap);margin:0;background:transparent;cursor:pointer}
+.range-slider input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(to right, var(--accent) var(--fill, 50%), var(--line-strong) var(--fill, 50%))}
+.range-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;margin-top:-9px;border-radius:50%;background:#fff;border:.5px solid rgba(23,31,50,.12);box-shadow:0 2px 6px rgba(23,31,50,.25)}
+.range-slider input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
+.range-slider input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line-strong)}
+.range-slider input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--accent)}
+.range-slider input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:.5px solid rgba(23,31,50,.12);box-shadow:0 2px 6px rgba(23,31,50,.25)}
+.range-slider.disabled{opacity:.5;pointer-events:none}
+.range-slider .range-ends{display:flex;justify-content:space-between;font-size:var(--fs-caption);color:var(--text-muted)}
+.stacked-rows{display:grid;gap:10px;margin:8px 0}
 .owned-books{display:flex;flex-direction:column}
 .owned-book{display:flex;align-items:center;gap:16px;width:100%;text-align:left;padding:17px 0;border-bottom:1px solid var(--line)}
 .book-cover{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;width:66px;height:88px;border-radius:3px 7px 7px 3px;border-left:4px solid #ffffff38;flex-shrink:0}

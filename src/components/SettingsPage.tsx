@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { BookOpen, Bookmark, Camera, Check, ChevronRight, Cloud, Database, Download, Eye, EyeOff, FileText, GraduationCap, LoaderCircle, Moon, RefreshCw, Settings2, Smile, Trash2, Upload, UserRound, Volume2 } from 'lucide-react'
 import { AIIcon } from '../icons'
-import { maxDailyWords, type Appearance, type PageFont, type TextSize } from '../model'
+import { maxDailyWords, type Appearance, type PageFont } from '../model'
 import { installedRelease, loadCloudAccount } from '../cloud'
 import UpdatePage from './UpdatePage'
 import { pageFontAttrs, type Store } from '../model'
 import { prepareAvatar } from '../profile'
 import AvatarPicker from './AvatarPicker'
 import DailyWordCount, { validDailyCount } from './DailyWordCount'
-import { Segmented, SelectButton, SettingRow } from './Controls'
+import { RangeSlider, Segmented, SelectButton, SettingRow } from './Controls'
 import { setSkipKnownConfirm, skipKnownConfirm } from '../known-confirm'
 
 export type AIConfig = { provider: string; model: string; configured: boolean }
@@ -160,10 +160,10 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
           options={[{ value: 'us', label: '美式' }, { value: 'uk', label: '英式' }]}
           onChange={accent => void onPreferences({ pronunciation: { ...store.pronunciation, accent } })} />
       </SettingRow>
-      <SettingRow label="朗读速度">
-        <SelectButton label="朗读速度" value={String(store.pronunciation.rate)} disabled={saving} options={[...new Set([.7, .85, 1, 1.15, 1.3, store.pronunciation.rate])].sort((a, b) => a - b).map(rate => ({ value: String(rate), label: `${rate}x` }))}
-          onChange={rate => void onPreferences({ pronunciation: { ...store.pronunciation, rate: Number(rate) } })} />
-      </SettingRow>
+      <div className="stacked-rows">
+        <RateSlider rate={store.pronunciation.rate} disabled={saving} onSpeak={onSpeak}
+          onChange={rate => void onPreferences({ pronunciation: { ...store.pronunciation, rate } })} />
+      </div>
       <div className="button-row voice-try">
         <button className="text-button" onClick={() => onSpeak('perspective')}><Volume2 size={17} />试听单词</button>
         <button className="text-button" onClick={() => onSpeak('A little practice every day makes a difference.')}><Volume2 size={17} />试听句子</button>
@@ -173,12 +173,11 @@ export default function SettingsPage({ store, ai, saving, aiBusy, error, section
         <SelectButton label="文章难度" value={store.readingPreferences.level} disabled={saving} options={[{ value: 'auto', label: '跟随目标词书' }, { value: 'easy', label: '基础选读' }, { value: 'standard', label: '进阶选读' }]}
           onChange={level => void onPreferences({ readingPreferences: { ...store.readingPreferences, level: level as Store['readingPreferences']['level'] } })} />
       </SettingRow>
-      <SettingRow label="正文字号">
-        <Segmented label="正文字号" value={store.readingPreferences.textSize} disabled={saving}
-          options={[{ value: 'standard', label: '标准' }, { value: 'large', label: '大字' }]}
-          onChange={textSize => void onPreferences({ readingPreferences: { ...store.readingPreferences, textSize } })} />
-      </SettingRow>
-      <p className="reading-type-sample" data-size={store.readingPreferences.textSize} lang="en">Small steps, taken every day, lead to lasting change.</p>
+      <div className="stacked-rows">
+        <SizeSlider label="正文字号" value={(store.readingPreferences.textScale ?? (store.readingPreferences.textSize === 'large' ? 118 : 100))} min={85} max={140} ends={['小', '大']} disabled={saving} variable="--reading-scale"
+          save={percent => void onPreferences({ readingPreferences: { ...store.readingPreferences, textScale: percent, textSize: percent >= 109 ? 'large' : 'standard' } })} />
+      </div>
+      <p className="reading-type-sample" lang="en">Small steps, taken every day, lead to lasting change.</p>
     </section>}
     {section === 'ai' && <section className="settings-section">
       <div className="section-heading"><h2>生成服务</h2><span className={ai.configured ? 'configured-label' : 'muted'}>{ai.configured ? '使用自己的 Key' : '使用内置 AI'}</span></div>
@@ -231,6 +230,45 @@ const weights: { id: Appearance['weight']; label: string }[] = [
   { id: 'bold', label: '稍粗' },
 ]
 const follow = 'follow'
+/** Coarse enums from before the sliders existed, kept so old backups still mean the same size. */
+const enumScale: Record<NonNullable<Appearance['wordSize']>, number> = { small: 90, standard: 100, large: 115, xlarge: 130 }
+const fromScale = (value: number): Appearance['wordSize'] => {
+  const nearest = [90, 100, 115, 130].reduce((a, b) => Math.abs(b - value) < Math.abs(a - value) ? b : a)
+  return nearest === 90 ? 'small' : nearest === 100 ? 'standard' : nearest === 115 ? 'large' : 'xlarge'
+}
+
+/** One size slider: drags preview live by writing the CSS variable at once, releasing saves. */
+function SizeSlider({ label, value, min, max, ends, disabled, variable, save }: {
+  label: string
+  value: number
+  min: number
+  max: number
+  ends: [string, string]
+  disabled?: boolean
+  /** CSS variable written while dragging for the live preview. */
+  variable: string
+  save: (percent: number) => void
+}) {
+  const [current, setCurrent] = useState(value)
+  useEffect(() => setCurrent(value), [value])
+  const apply = (next: number) => {
+    setCurrent(next)
+    document.documentElement.style.setProperty(variable, String(next / 100))
+  }
+  return <RangeSlider label={label} min={min} max={max} step={5} value={current} format={v => `${v}%`} ends={ends} disabled={disabled}
+    onChange={apply} onCommit={next => { apply(next); save(next) }} />
+}
+
+/** 朗读速度 slider: saved on release, then a sample word is spoken so the change is heard at once. */
+function RateSlider({ rate, disabled, onChange, onSpeak }: { rate: number; disabled?: boolean; onChange: (rate: number) => void; onSpeak: (text: string) => void }) {
+  const [current, setCurrent] = useState(Math.round(rate * 100))
+  useEffect(() => setCurrent(Math.round(rate * 100)), [rate])
+  const describe = (v: number) => v < 70 ? '很慢' : v < 90 ? '稍慢' : v <= 105 ? '正常' : v <= 130 ? '稍快' : '很快'
+  return <RangeSlider label="朗读速度" min={50} max={150} step={5} value={current} disabled={disabled}
+    format={v => `${(v / 100).toFixed(2)}x · ${describe(v)}`} ends={['0.50x 很慢', '1.50x 很快']}
+    onChange={setCurrent}
+    onCommit={next => { const rate = next / 100; onChange(rate); onSpeak('practice') }} />
+}
 /** Font + weight for one page; "跟随全部" leaves the field unset so it tracks the global choice. */
 function PageFontRows({ name, value, saving, onChange }: { name: string; value: PageFont | undefined; saving: boolean; onChange: (next: PageFont | undefined) => void }) {
   const set = (patch: PageFont) => {
@@ -251,8 +289,10 @@ function PageFontRows({ name, value, saving, onChange }: { name: string; value: 
     </SettingRow>
   </>
 }
-const textSizes: { value: TextSize; label: string }[] = [{ value: 'small', label: '小' }, { value: 'standard', label: '标准' }, { value: 'large', label: '大' }, { value: 'xlarge', label: '特大' }]
 function AppearanceSettings({ appearance, saving, onChange }: { appearance: Appearance; saving: boolean; onChange: (patch: Partial<Appearance>) => void }) {
+  const wordScale = appearance.wordScale ?? (appearance.wordSize ? enumScale[appearance.wordSize] : appearance.size === 'large' ? 115 : 100)
+  const meaningScale = appearance.meaningScale ?? (appearance.meaningSize ? enumScale[appearance.meaningSize] : appearance.size === 'large' ? 115 : 100)
+  const uiScale = appearance.uiScale ?? (appearance.size === 'large' ? 107 : 100)
   return <>
     <section className="settings-section" aria-label="全部页面">
       <h2>全部页面</h2>
@@ -268,18 +308,14 @@ function AppearanceSettings({ appearance, saving, onChange }: { appearance: Appe
         <Segmented label="字重" value={appearance.weight} disabled={saving}
           options={weights.map(weight => ({ value: weight.id, label: weight.label }))} onChange={weight => onChange({ weight })} />
       </SettingRow>
-      <SettingRow label="单词字号">
-        <Segmented label="单词字号" value={appearance.wordSize ?? (appearance.size === 'large' ? 'large' : 'standard')} disabled={saving}
-          options={textSizes} onChange={wordSize => onChange({ wordSize })} />
-      </SettingRow>
-      <SettingRow label="中文字号">
-        <Segmented label="中文字号" value={appearance.meaningSize ?? (appearance.size === 'large' ? 'large' : 'standard')} disabled={saving}
-          options={textSizes} onChange={meaningSize => onChange({ meaningSize })} />
-      </SettingRow>
-      <SettingRow label="其他文字">
-        <Segmented label="其他文字" value={appearance.size} disabled={saving}
-          options={[{ value: 'standard', label: '标准' }, { value: 'large', label: '大' }]} onChange={size => onChange({ size })} />
-      </SettingRow>
+      <div className="stacked-rows">
+        <SizeSlider label="单词字号" value={wordScale} min={80} max={150} ends={['小', '特大']} disabled={saving} variable="--word-scale"
+          save={percent => onChange({ wordScale: percent, wordSize: fromScale(percent) })} />
+        <SizeSlider label="中文字号" value={meaningScale} min={80} max={150} ends={['小', '特大']} disabled={saving} variable="--meaning-scale"
+          save={percent => onChange({ meaningScale: percent, meaningSize: fromScale(percent) })} />
+        <SizeSlider label="其他文字" value={uiScale} min={90} max={130} ends={['小', '大']} disabled={saving} variable="--fs-scale"
+          save={percent => onChange({ uiScale: percent })} />
+      </div>
       <p className="appearance-sample size-sample"><span lang="en" className="english-word">perspective</span><span className="chinese-meaning">观点，看待问题的角度</span><small>其他文字的大小示例</small></p>
     </section>
     <section className="settings-section font-scope" aria-label="学习页" {...pageFontAttrs(appearance.study)}>

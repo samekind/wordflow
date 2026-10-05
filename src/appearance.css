@@ -21,19 +21,10 @@ html[data-weight="bold"], .font-scope[data-weight="bold"] { --weight-step: 200; 
 .font-scope[data-font], .font-scope[data-weight] { font-family: var(--app-font); font-weight: var(--fw-regular); }
 .font-scope[data-weight="regular"] { --weight-step: 0; }
 /* ==================== Sizes ====================
-   English words and Chinese meanings scale on their own (data-word-size / data-meaning-size);
-   data-size="large" enlarges every other piece of text through the type tokens. */
-html { --word-scale: 1; --meaning-scale: 1; }
-html[data-word-size="small"] { --word-scale: .9; }
-html[data-word-size="large"] { --word-scale: 1.15; }
-html[data-word-size="xlarge"] { --word-scale: 1.3; }
-html[data-meaning-size="small"] { --meaning-scale: .9; }
-html[data-meaning-size="large"] { --meaning-scale: 1.15; }
-html[data-meaning-size="xlarge"] { --meaning-scale: 1.3; }
-html[data-size="large"] {
-  --fs-tab: 11px; --fs-caption: 12px; --fs-small: 13px; --fs-meta: 14px; --fs-body: 15px;
-  --fs-body-l: 16px; --fs-word: 17px; --fs-title: 19px; --fs-page: 23px; --fs-display: 30px;
-}
+   All sizes are percentages applied on the root element as CSS variables (--fs-scale for every
+   token, --word-scale / --meaning-scale for English words and Chinese meanings, --reading-scale
+   for article text); the sliders in 设置 › 外观 / 发音与阅读 write them live. */
+html { --reading-font: calc(17px * var(--reading-scale, 1)); }
 
 body,
 input,

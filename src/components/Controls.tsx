@@ -1,6 +1,6 @@
 import { IonAlert } from '@ionic/react'
 import { useReducedMotion } from 'motion/react'
-import { useCallback, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import ChoiceSheet from './ChoiceSheet'
 
@@ -57,6 +57,32 @@ export function SettingRow({ label, children, note, stacked = false }: {
     <span className="setting-row-label">{label}</span>
     <div className="setting-row-control">{children}</div>
     {note && <p className="field-note setting-row-note">{note}</p>}
+  </div>
+}
+
+/** Continuous setting (font size, speech rate): a slider with the live value on top and the small
+ * end labels underneath. `onChange` fires while dragging (for live previews), `onCommit` once the
+ * drag ends (for saving / speaking). */
+export function RangeSlider({ label, value, min, max, step = 1, format, ends, disabled, onChange, onCommit }: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step?: number
+  format: (value: number) => string
+  ends?: [string, string]
+  disabled?: boolean
+  onChange: (value: number) => void
+  onCommit?: (value: number) => void
+}) {
+  const percent = ((value - min) / (max - min)) * 100
+  return <div className={`range-slider${disabled ? ' disabled' : ''}`}>
+    <div className="range-head"><span className="range-label">{label}</span><output>{format(value)}</output></div>
+    <input type="range" aria-label={label} min={min} max={max} step={step} value={value} disabled={disabled}
+      style={{ '--fill': `${percent}%` } as CSSProperties}
+      onChange={event => onChange(Number(event.target.value))}
+      onPointerUp={() => onCommit?.(value)} onKeyUp={() => onCommit?.(value)} />
+    {ends && <div className="range-ends" aria-hidden="true"><span>{ends[0]}</span><span>{ends[1]}</span></div>}
   </div>
 }
 

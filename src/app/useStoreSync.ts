@@ -42,13 +42,18 @@ export function useStoreSync(notify: (message: string) => void, onSettings: (set
     try { localStorage.setItem('wordflow-theme', look.theme) } catch { }
     root.dataset.font = look.font
     root.dataset.weight = look.weight
-    root.dataset.size = look.size
-    // Before words and meanings had their own sizes, 大 enlarged exactly those two.
-    root.dataset.wordSize = look.wordSize ?? (look.size === 'large' ? 'large' : 'standard')
-    root.dataset.meaningSize = look.meaningSize ?? (look.size === 'large' ? 'large' : 'standard')
     root.style.colorScheme = look.theme
+    // Sizes are percentages (100 = 标准). The numeric slider values win; the old coarse enums and
+    // the pre-split 大 toggle are honoured when no precise value has been chosen yet.
+    const percent = (value: number | undefined, fallback: number) => String((value ?? fallback) / 100)
+    const coarse = look.wordSize === 'small' ? 90 : look.wordSize === 'large' ? 115 : look.wordSize === 'xlarge' ? 130 : undefined
+    root.style.setProperty('--fs-scale', percent(look.uiScale, look.size === 'large' ? 107 : 100))
+    root.style.setProperty('--word-scale', percent(look.wordScale, coarse ?? (look.size === 'large' ? 115 : 100)))
+    root.style.setProperty('--meaning-scale', percent(look.meaningScale, look.meaningSize === 'small' ? 90 : look.meaningSize === 'large' ? 115 : look.meaningSize === 'xlarge' ? 130 : look.size === 'large' ? 115 : 100))
+    const reading = store.readingPreferences
+    root.style.setProperty('--reading-scale', String((reading.textScale ?? (reading.textSize === 'large' ? 118 : 100)) / 100))
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', look.theme === 'dark' ? '#1c2431' : '#fafbfc')
-  }, [store.appearance])
+  }, [store.appearance, store.readingPreferences.textScale, store.readingPreferences.textSize])
   useEffect(() => {
     if (ready) void syncSystemAppearance(store.appearance.theme).catch(error => console.warn('无法同步系统栏外观', error))
   }, [ready, store.appearance.theme])

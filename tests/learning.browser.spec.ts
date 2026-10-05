@@ -138,7 +138,7 @@ test('all main pages share clear navigation and return to the same study group',
   await nav.getByRole('tab', { name: '我的', exact: true }).click()
   await page.getByRole('button', { name: '外观', exact: true }).click()
   await page.getByRole('button', { name: '深色', exact: true }).click()
-  await page.getByRole('group', { name: '其他文字' }).getByRole('button', { name: '大', exact: true }).click()
+  await page.getByRole('slider', { name: '其他文字' }).fill('110')
   const toastClose = page.locator('ion-toast').getByRole('button', { name: '关闭', exact: true })
   if (await toastClose.isVisible()) await toastClose.click()
   for (const width of [320, 430, 1440]) {

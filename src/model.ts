@@ -38,7 +38,7 @@ export type ContextStory = Omit<DailyStory, 'bookId' | 'day' | 'part'> & {
   taskId: string; kind: 'learn' | 'review'; group: number;
 }
 export type Profile = { nickname: string; avatar: string; goal: string }
-export type ReadingPreferences = { textSize: 'standard' | 'large'; level: 'auto' | 'easy' | 'standard' }
+export type ReadingPreferences = { textSize: 'standard' | 'large'; textScale?: number; level: 'auto' | 'easy' | 'standard' }
 export type Appearance = {
   theme: 'light' | 'dark'
   font: 'system' | 'serif' | 'gothic' | 'mono'
@@ -47,6 +47,10 @@ export type Appearance = {
   size: 'standard' | 'large'
   wordSize?: TextSize
   meaningSize?: TextSize
+  /** Precise sizes as percentages (100 = 标准), set by the sliders; they win over the coarse enums above. */
+  wordScale?: number
+  meaningScale?: number
+  uiScale?: number
   /** Per-page overrides; anything unset follows the global font / weight. */
   study?: PageFont
   reading?: PageFont
@@ -175,7 +179,7 @@ export function validateStore(input: unknown): Store {
       avatar: z.string().max(200000).refine(value => !value || /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(value)),
     }).default({ nickname: '学习者', avatar: '', goal: '' }),
     readingPreferences: z.object({
-      textSize: z.enum(['standard', 'large']), level: z.enum(['auto', 'easy', 'standard']),
+      textSize: z.enum(['standard', 'large']), textScale: z.number().min(50).max(200).optional(), level: z.enum(['auto', 'easy', 'standard']),
     }).default({ textSize: 'standard', level: 'auto' }),
     appearance: z.object({
       theme: z.enum(['light', 'dark']),
@@ -184,6 +188,9 @@ export function validateStore(input: unknown): Store {
       size: z.enum(['standard', 'large']),
       wordSize: z.enum(['small', 'standard', 'large', 'xlarge']).optional(),
       meaningSize: z.enum(['small', 'standard', 'large', 'xlarge']).optional(),
+      wordScale: z.number().min(50).max(200).optional(),
+      meaningScale: z.number().min(50).max(200).optional(),
+      uiScale: z.number().min(50).max(200).optional(),
       study: pageFontSchema.optional(),
       reading: pageFontSchema.optional(),
     }).default(defaultAppearance),

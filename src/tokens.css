@@ -45,17 +45,18 @@
   --sheet-fill: #f8fafd;
   --bar-fill: rgba(247, 248, 251, .96);
 
-  /* Type scale (px): 10 tab / 11 caption / 12 small / 13 meta / 14 body / 15 body-l / 16 word / 18 title / 22 page / 28 display */
-  --fs-tab: 10px;
-  --fs-caption: 11px;
-  --fs-small: 12px;
-  --fs-meta: 13px;
-  --fs-body: 14px;
-  --fs-body-l: 15px;
-  --fs-word: 16px;
-  --fs-title: 18px;
-  --fs-page: 22px;
-  --fs-display: 28px;
+  /* Type scale (px): 10 tab / 11 caption / 12 small / 13 meta / 14 body / 15 body-l / 16 word / 18 title / 22 page / 28 display
+     Everything scales with --fs-scale (100 = 标准, set from the 界面字号 slider). */
+  --fs-tab: calc(10px * var(--fs-scale, 1));
+  --fs-caption: calc(11px * var(--fs-scale, 1));
+  --fs-small: calc(12px * var(--fs-scale, 1));
+  --fs-meta: calc(13px * var(--fs-scale, 1));
+  --fs-body: calc(14px * var(--fs-scale, 1));
+  --fs-body-l: calc(15px * var(--fs-scale, 1));
+  --fs-word: calc(16px * var(--fs-scale, 1));
+  --fs-title: calc(18px * var(--fs-scale, 1));
+  --fs-page: calc(22px * var(--fs-scale, 1));
+  --fs-display: calc(28px * var(--fs-scale, 1));
   /* --fw-* are set in appearance.css from the chosen weight (global or per page). */
 
   /* Shape */

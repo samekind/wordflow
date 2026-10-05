@@ -31,7 +31,7 @@
 
 Android 7.0 及以上。下载 [最新 APK](https://wordflow.43.134.190.112.sslip.io/releases/wordflow.apk) 安装，首次需要在系统设置里允许“安装未知应用”。装好之后，应用内“我的 → 检查更新”会校验 `sha256` 并直接更新。
 
-当前版本：**0.5.11**（versionCode 51，开发签名测试版）。
+当前版本：**0.6.0**（versionCode 52，开发签名测试版）。
 
 ## 技术栈
 
