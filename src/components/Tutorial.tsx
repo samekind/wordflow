@@ -77,6 +77,7 @@ function Practice({ onBack, onNext }: { onBack: () => void; onNext: () => void }
   const [dx, setDx] = useState(0)
   const [open, setOpen] = useState(false)
   const [dict, setDict] = useState(false)
+  const [pressed, setPressed] = useState(false)
   const active = useRef(false)
   const press = useRef({ x: 0, y: 0 })
   const timer = useRef<number | null>(null)
@@ -86,17 +87,23 @@ function Practice({ onBack, onNext }: { onBack: () => void; onNext: () => void }
     if (open) return
     active.current = true
     press.current = { x: event.clientX, y: event.clientY }
+    // Keep the hold alive even if the finger drifts a little; without capture a few pixels of
+    // movement fires pointerleave and kills the long-press.
+    try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* older WebView */ }
+    setPressed(true)
     timer.current = window.setTimeout(() => { timer.current = null; setDict(true); tick(2) }, 480)
   }
   function onMove(event: ReactPointerEvent<HTMLButtonElement>) {
     if (!active.current || open) return
     const shift = event.clientX - press.current.x
     if (Math.abs(shift) > 8 || Math.abs(event.clientY - press.current.y) > 8) clearTimer()
-    setDx(Math.max(-176, Math.min(0, shift)))
+    setDx(shift < -8 ? Math.max(-176, Math.min(0, shift)) : 0)
   }
   function onUp() {
+    if (!active.current) return
     active.current = false
     clearTimer()
+    setPressed(false)
     if (!open && dx < -60) setOpen(true)
     setDx(0)
   }
@@ -104,6 +111,11 @@ function Practice({ onBack, onNext }: { onBack: () => void; onNext: () => void }
     if (open) return
     setDots(current => (current + 1) % 3)
     tick(0)
+  }
+  function onMenu(event: { preventDefault: () => void }) {
+    // Android pops the text-selection menu on a long-press; swallow it and show ours instead.
+    event.preventDefault()
+    if (!open) { setDict(true); tick(2) }
   }
   const all = tasks.every(Boolean)
   return <div className="tutorial-center"><div className="tutorial-card">
@@ -113,8 +125,8 @@ function Practice({ onBack, onNext }: { onBack: () => void; onNext: () => void }
         <button className="demo-action" onClick={() => { tick(1); setOpen(false) }}><Minus size={15} /><span>减标记</span></button>
         <button className="demo-action known" onClick={() => { tick(1); setOpen(false) }}><CheckCheck size={15} /><span>熟词</span></button>
       </div>
-      <button className="tutorial-demo-row" onClick={onTap} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp}
-        style={{ transform: `translateX(${open ? -176 : dx}px)`, transition: active.current ? 'none' : undefined }}>
+      <button className="tutorial-demo-row" data-pressed={pressed && !open} onClick={onTap} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp} onPointerCancel={onUp} onContextMenu={onMenu}
+        style={{ transform: `translateX(${open ? -176 : dx}px) scale(${pressed && !open ? .97 : 1})`, transition: active.current ? 'none' : undefined }}>
         <span className="word-index"><span className="word-number">01</span><MarkDots count={dots} /></span>
         <span className="english-word" lang="en">practice</span>
       </button>
