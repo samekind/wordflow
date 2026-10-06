@@ -155,7 +155,7 @@ export default function App() {
                 const current = storeRef.current
                 if (current.readArticleIds.includes(id)) return Promise.resolve(true)
                 return commit({ ...current, readArticleIds: [...current.readArticleIds, id].slice(-2000) })
-              }} onWord={openWord} onSpeak={speech.speak} onStop={speech.stop}>
+              }} onWord={openWord} onSpeak={speech.speak} onSpeakParts={speech.speakParagraphs} onStop={speech.stop}>
               <DailyReader store={store} busy={ai.busy || saving} live={ai.live} error={ai.error} onGenerate={ai.generateStory}
                 onWord={openWord} onSpeak={speech.speak} onStop={speech.stop} onBooks={() => go({ name: 'books' })} onAddWord={words.collectWord} />
             </ReadingPage>}

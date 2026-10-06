@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type SyntheticEvent } from 'react'
 import { SpeechRatePill } from './SpeechRate'
 import { BookA, BookOpen, BookmarkPlus, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, EyeOff, Languages, LoaderCircle, RefreshCw, SlidersHorizontal, Square, Volume2 } from 'lucide-react'
 import { DailyIcon, EssayIcon } from '../icons'
@@ -22,7 +22,7 @@ type Props = {
   saving: boolean; onRead: (id: string) => Promise<boolean>; onWord: (id: string) => void;
   /** Adds a looked-up word to 我的词本 without leaving the article. */
   onAddWord: (row: ImportRow) => Promise<boolean>;
-  onSpeak: (text: string) => void; onStop: () => void; children?: ReactNode;
+  onSpeak: (text: string) => void; onSpeakParts: (parts: string[], onPart?: (index: number) => void) => void; onStop: () => void; children?: ReactNode;
   onStudy?: () => void;
   onVocab?: () => void;
 }
@@ -228,12 +228,40 @@ function ReadingShelf({ store, scope, onOpen, onShelf }: Props & { scope: Readin
     {matching.length > shown.length && <button className="text-button reading-more" onClick={() => setLimit(value => value + pageSize)}>显示更多（还有 {matching.length - shown.length} 篇）</button>}
   </div>
 }
+/** Segmented article progress: one segment per paragraph. Filled = scrolled past, pulsing = the
+ * paragraph being read aloud. Drag (or arrow keys) jumps the reading position — or the voice
+ * while it is playing. */
+function ArticleProgress({ count, read, spoken, onSeek }: { count: number; read: number; spoken: number | null; onSeek: (index: number) => void }) {
+  const [drag, setDrag] = useState<number | null>(null)
+  const shown = drag ?? (spoken !== null ? spoken : read)
+  function pick(event: ReactPointerEvent<HTMLDivElement>) {
+    const box = event.currentTarget.getBoundingClientRect()
+    if (!box.width) return
+    setDrag(Math.max(0, Math.min(count - 1, Math.floor((event.clientX - box.left) / box.width * count))))
+  }
+  return <div className="article-progress-row">
+    <div className="article-progress" role="slider" tabIndex={0} aria-label="文章进度" aria-valuemin={1} aria-valuemax={count} aria-valuenow={shown + 1}
+      onPointerDown={event => { event.currentTarget.setPointerCapture(event.pointerId); pick(event) }}
+      onPointerMove={event => { if (drag !== null) pick(event) }}
+      onPointerUp={() => { if (drag !== null) { onSeek(drag); setDrag(null) } }}
+      onPointerCancel={() => setDrag(null)}
+      onKeyDown={event => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+        event.preventDefault()
+        setDrag(null)
+        onSeek(Math.max(0, Math.min(count - 1, shown + (event.key === 'ArrowRight' ? 1 : -1))))
+      }}>
+      {Array.from({ length: count }, (_, i) => <i key={i} data-done={i < shown} data-active={spoken === i && drag === null} />)}
+    </div>
+    <span className="article-progress-note" role="status">{spoken !== null ? `朗读 ${Math.min(shown + 1, count)} / ${count} 段` : `已读 ${shown} / ${count} 段`}</span>
+  </div>
+}
 function plainCredit(value: string) {
   const template = document.createElement('template')
   template.innerHTML = value
   return template.content.textContent?.trim() || 'Wikimedia Commons'
 }
-function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, onAddWord, onSpeak, onStop }: Props) {
+function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, onAddWord, onSpeak, onSpeakParts, onStop }: Props) {
   const { articles: catalog, loadError, reload } = useReadingArticles(false)
   const [offset, setOffset] = useState(0)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -243,13 +271,18 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
   const [annotate, setAnnotate] = useState(() => localStorage.getItem('wordflow.reading.annotate') === '1')
   const [glosses, setGlosses] = useState<ReadonlyMap<string, string>>(new Map())
   const [translated, setTranslated] = useState(false)
+  // Progress: `read` = how many paragraphs scrolled past, `spoken` = the paragraph being read aloud.
+  const [spoken, setSpoken] = useState<number | null>(null)
+  const [readIndex, setReadIndex] = useState(0)
+  const blocks = useRef<(HTMLDivElement | null)[]>([])
+  const stop = () => { onStop(); setSpoken(null) }
   const refreshRequest = useRef(0)
   const wanted = useRef(articleId)
   const level = readingLevel(store)
   const date = dayKey(new Date(now))
   useEffect(() => () => { refreshRequest.current++ }, [])
   const scopeKey = scope ? `${scope.cefr ?? ''}:${scope.topic ?? ''}:${scope.length ?? ''}` : ''
-  useEffect(() => { setOffset(0); setTranslated(false); onStop() }, [level, date, scopeKey])
+  useEffect(() => { setOffset(0); setTranslated(false); stop() }, [level, date, scopeKey])
   const choices = useMemo(() => scope ? catalog.filter(article => inScope(article, scope)) : catalog.filter(article => article.level === level), [catalog, level, scopeKey])
   const todayIndex = dailyReadingIndex(choices.length, new Date(now))
   const index = choices.length ? ((todayIndex + offset) % choices.length + choices.length) % choices.length : 0
@@ -296,12 +329,31 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
   async function refresh() {
     if (!base || refreshing) return
     const request = ++refreshRequest.current
-    onStop(); setRefreshing(true); setRefreshError('')
+    stop(); setRefreshing(true); setRefreshError('')
     try { const next = await refreshReadingArticle(base); if (request === refreshRequest.current) setUpdated(next) }
     catch (error) { if (request === refreshRequest.current) setRefreshError((error as Error).message) }
     finally { if (request === refreshRequest.current) setRefreshing(false) }
   }
-  function move(next: number) { onStop(); setOffset(next) }
+  function move(next: number) { stop(); setOffset(next) }
+  // Reading progress: paragraphs whose bottom rose above the middle of the screen count as read.
+  useEffect(() => {
+    if (!article) return
+    blocks.current.length = article.paragraphs.length
+    const scroller = document.querySelector('.main')
+    if (!scroller) return
+    let frame = 0
+    const measure = () => {
+      frame = 0
+      const mid = window.innerHeight / 2
+      let passed = 0
+      for (const block of blocks.current) if (block && block.getBoundingClientRect().bottom < mid) passed++
+      setReadIndex(passed)
+    }
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(measure) }
+    scroller.addEventListener('scroll', onScroll, { passive: true })
+    measure()
+    return () => { scroller.removeEventListener('scroll', onScroll); if (frame) cancelAnimationFrame(frame) }
+  }, [article?.id, article?.paragraphs.length])
   if (loadError) return <div className="empty"><BookOpen size={28} /><p role="alert">{loadError}</p><button className="secondary" onClick={reload}><RefreshCw size={16} />重新加载</button></div>
   if (!article) return <div className="empty" role="status"><LoaderCircle className="spin" size={24} /><p>正在读取选读</p></div>
   const words = englishWordCount(article.paragraphs.join(' '))
@@ -309,7 +361,16 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
   const online = article.id.startsWith('lib-')
   const translations = article.translations ?? articleTranslations(article.id, article.paragraphs.length)
   const highlights = new Set([...knownSet, ...targets])
-  return <LookupProvider title={article.title} known={knownWords} glosses={glosses} annotate={annotate} onSpeak={onSpeak} onStop={onStop} onAdd={onAddWord} onOpenWord={onWord}>
+  // Voice: play the article paragraph by paragraph so the bar can follow and seek.
+  function playFrom(index: number) {
+    if (!article) return
+    onSpeakParts(article.paragraphs.slice(index), part => setSpoken(part === -1 ? null : index + part))
+  }
+  function seek(index: number) {
+    if (spoken === null) { blocks.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return }
+    playFrom(index)
+  }
+  return <LookupProvider title={article.title} known={knownWords} glosses={glosses} annotate={annotate} onSpeak={onSpeak} onStop={stop} onAdd={onAddWord} onOpenWord={onWord}>
   <div className="daily-english" data-article-id={article.id}>
     <div className="daily-article-toolbar">
       <div className="article-picker">
@@ -319,6 +380,7 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
       </div>
       <span>{new Date(now).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}</span>
     </div>
+    <ArticleProgress count={article.paragraphs.length} read={readIndex} spoken={spoken} onSeek={seek} />
     <article className="source-article">
       <p className="magazine-kicker article-kicker">{article.topic}<span>{article.cefr ? `${article.cefr} ${cefrNames[article.cefr]}` : level === 'easy' ? '基础选读' : '进阶选读'}</span></p>
       <h2 lang="en">{article.title}</h2>
@@ -330,14 +392,14 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
         <button className="reader-pill" aria-label="词义标注" aria-pressed={annotate} onClick={toggleAnnotate}><BookA size={16} />{annotate ? '标注中' : '词义标注'}</button>
         <div className="small-tools">
           <SpeechRatePill />
-          <button className="icon-button" aria-label="朗读英语文章" title="朗读文章" onClick={() => onSpeak(article.paragraphs.join('\n'))}><Volume2 size={20} /></button>
-          <button className="icon-button" aria-label="停止英语文章朗读" title="停止朗读" onClick={onStop}><Square size={16} /></button>
+          <button className="icon-button" aria-label="朗读英语文章" title="朗读文章" onClick={() => playFrom(0)}><Volume2 size={20} /></button>
+          <button className="icon-button" aria-label="停止英语文章朗读" title="停止朗读" onClick={stop}><Square size={16} /></button>
           {!online && <button className="icon-button" aria-label="更新英语文章" title="联网更新摘录" disabled={refreshing} onClick={refresh}>{refreshing ? <LoaderCircle size={18} className="spin" /> : <RefreshCw size={18} />}</button>}
         </div>
       </div>
       {refreshError && <p className="error-banner" role="alert">{refreshError}</p>}
       <div className="article-paragraphs">{article.paragraphs.map((paragraph, i) => {
-        return <div className="article-block" key={`${article.id}:${i}`}>
+        return <div className="article-block" key={`${article.id}:${i}`} data-active={spoken === i || undefined} ref={el => { blocks.current[i] = el }}>
           <p lang="en"><ReadableText text={paragraph} keyPrefix={`${i}`} highlight={highlights} /></p>
           {translated && translations && <p className="article-translation">{translations[i]}</p>}
         </div>

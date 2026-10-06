@@ -217,7 +217,7 @@ test('daily English works offline, records reading separately, handles lookup an
   const initial = studied(importToPersonal(emptyStore(), starterRows.slice(0, 40), '阅读测试').store)
   await seed(page, initial)
   const external: string[] = []
-  page.on('request', request => { if (request.url().startsWith('https:') && !request.url().includes('/v1/library')) external.push(request.url()) })
+  page.on('request', request => { if (request.url().startsWith('https:') && !request.url().includes('/v1/library') && !request.url().includes('/v1/tts')) external.push(request.url()) })
   await page.route('https://**/*', route => route.abort())
   await page.route('**/api/settings', route => route.fulfill({ json: { provider: 'deepseek', model: 'fixture-model', configured: true } }))
   await page.setViewportSize({ width: 390, height: 844 })
@@ -227,6 +227,38 @@ test('daily English works offline, records reading separately, handles lookup an
   await expect(page.locator('.source-article')).toBeVisible()
   await selectArticle(page, 'Library')
   await expect(page.locator('.daily-english')).toHaveAttribute('data-article-id', 'simple-library')
+  // Segmented progress: one segment per paragraph, follows scrolling, drag jumps the position.
+  const bar = page.locator('.article-progress')
+  await expect(bar).toBeVisible()
+  const segments = await bar.locator('i').count()
+  expect(segments).toBe(await page.locator('.article-paragraphs .article-block').count())
+  const note = page.locator('.article-progress-note')
+  expect(await note.textContent()).toMatch(new RegExp(`已读 \\d+ / ${segments} 段`))
+  await page.locator('.main').evaluate(el => el.scrollTo({ top: el.scrollHeight }))
+  await expect(note).not.toContainText('已读 0')
+  const box = (await bar.boundingBox())!
+  await page.mouse.move(box.x + box.width * 0.9, box.y + box.height / 2)
+  await page.mouse.down(); await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2, { steps: 2 }); await page.mouse.up()
+  await expect.poll(async () => await page.locator('.main').evaluate(el => el.scrollTop / el.scrollHeight)).toBeLessThan(0.9)
+  // While reading aloud the bar follows the voice; dragging seeks the voice to another paragraph.
+  await page.route('**/v1/tts**', route => route.fulfill({ status: 200, headers: { ...cors, 'content-type': 'audio/wav' }, body: silentWav }))
+  await page.evaluate(() => {
+    const holders: (() => void)[] = []
+    ;(window as any).__releaseSpeech = () => [...holders].splice(0).forEach(release => release())
+    HTMLMediaElement.prototype.play = function () {
+      ;(window as any).__recordings.push(this.src)
+      return new Promise(resolve => holders.push(() => resolve()))
+    }
+  })
+  await page.getByRole('button', { name: '朗读英语文章' }).click()
+  await expect(note).toContainText(`朗读 1 / ${segments} 段`)
+  await expect(page.locator('.article-block[data-active]').first()).toBeVisible()
+  const half = Math.floor(0.5 * segments)
+  const playBox = (await bar.boundingBox())!
+  await page.mouse.move(playBox.x + playBox.width * 0.5, playBox.y + playBox.height / 2)
+  await page.mouse.down(); await page.mouse.up()
+  await expect(note).toContainText(`朗读 ${half + 1} / ${segments} 段`)
+  await page.evaluate(() => (window as any).__releaseSpeech?.())
   await expect(page.locator('.reading-image img')).toBeVisible()
   expect(await page.locator('.reading-image img').evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true)
   expect(external).toEqual([])

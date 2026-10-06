@@ -89,20 +89,40 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
 
   function speak(text: string, accent = storeRef.current.pronunciation.accent) {
     stop()
+    speakOne(text, accent, storeRef.current.pronunciation.rate, sequence.current)
+  }
+
+  /** Speaks paragraphs one after another; onPart reports each paragraph index as playback reaches
+   * it, and -1 when the whole text finished on its own. A new play/stop invalidates the chain. */
+  function speakParagraphs(paragraphs: string[], onPart?: (index: number) => void) {
+    stop()
     const request = sequence.current
+    const accent = storeRef.current.pronunciation.accent
     const rate = storeRef.current.pronunciation.rate
-    liveRate.current = rate
+    void (async () => {
+      for (let index = 0; index < paragraphs.length; index++) {
+        if (request !== sequence.current) return
+        onPart?.(index)
+        await speakOne(paragraphs[index], accent, rate, request)
+      }
+      if (request === sequence.current) onPart?.(-1)
+    })()
+  }
+
+  /** Speaks one text to the end: word recordings sentence by sentence, then cloud voice clips,
+   * then the system voice; resolves when the text finished or the request was superseded. */
+  function speakOne(text: string, accent: 'us' | 'uk', rate: number, request: number): Promise<void> {
     // "朗读本组" sends words joined by ". ": play each recording in turn.
     const parts = text.split(/\.\s+/).map(part => part.trim().replace(/\.$/, '')).filter(Boolean)
-    if (!parts.length || !parts.every(recordable)) { speakProse(text, accent, rate, request); return }
-    void (async () => {
+    if (!parts.length || !parts.every(recordable)) return speakProse(text, accent, rate, request)
+    return (async () => {
       for (let index = 0; index < parts.length; index++) {
         if (request !== sequence.current) return
         try {
           await play(recordingUrl(parts[index], accent), request, rate)
         } catch {
           if (request !== sequence.current) return
-          speakProse(parts.slice(index).join('. '), accent, rate, request)
+          await speakProse(parts.slice(index).join('. '), accent, rate, request)
           return
         }
       }
@@ -110,10 +130,10 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
   }
 
   /** Sentences and articles: cloud voice clip by clip, then the system voice from the failed clip on. */
-  function speakProse(text: string, accent: 'us' | 'uk', rate: number, request: number) {
+  function speakProse(text: string, accent: 'us' | 'uk', rate: number, request: number): Promise<void> {
     const pieces = speechClips(text)
-    if (!pieces.length) { speakSystem(text, accent, rate, request); return }
-    void (async () => {
+    if (!pieces.length) { speakSystem(text, accent, rate, request); return Promise.resolve() }
+    return (async () => {
       let next = clip(pieces[0], accent)
       for (let index = 0; index < pieces.length; index++) {
         if (request !== sequence.current) return
@@ -131,5 +151,5 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
     })()
   }
 
-  return { speak, stop, setRate }
+  return { speak, speakParagraphs, stop, setRate }
 }

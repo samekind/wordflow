@@ -1,7 +1,7 @@
 {
-  "versionCode": 53,
-  "versionName": "0.6.1",
+  "versionCode": 54,
+  "versionName": "0.6.2",
   "url": "https://wordflow.43.134.190.112.sslip.io/releases/wordflow.apk",
-  "notes": "外观设置合并为一页：主题、字体、字重和字号滑块放在同一张卡片里，去掉了分段的重复设置，更清爽。学习记录、词书进度和备份格式不变。",
-  "sha256": "A45B357A7F77BFE57816ADAA1AE26A54D5DD7B985DF8432658C543BDDCC329E2"
+  "notes": "阅读页新增分段进度条：滚动自动记录已读段落，朗读时显示朗读进度并高亮当前段；拖动分段可直接跳到对应段落开始朗读或浏览。学习记录、词书进度和备份格式不变。",
+  "sha256": "D38EED01D8A85F3A03279DB87B6DA28FC26E5E96F3AF58A382307CBA47C65803"
 }
