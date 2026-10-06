@@ -1,5 +1,6 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import type { Store } from '../model'
+import type { ReadingScope } from '../reading'
 import { isAndroidApp, phone } from '../platform'
 import { lookupDictionary, safeExternalUrl } from '../dictionary'
 import { cloudBase } from '../cloud'
@@ -10,12 +11,18 @@ export const recordable = (text: string) => /^[A-Za-z][A-Za-z' -]{0,59}$/.test(t
 /** Youdao's dictionary recordings: real speakers, reachable from mainland China, type 1 = UK, 2 = US. */
 export const recordingUrl = (word: string, accent: 'us' | 'uk') => `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word.trim())}&type=${accent === 'uk' ? 1 : 2}`
 
+/** What the floating speaking pill shows: the article title plus where to jump back to. */
+export type SpeechSession = { title: string; articleId?: string; scope?: ReadingScope }
+
 /** Human recordings for words (Youdao, then the dictionary's own audio); sentences use the cloud voice; system text-to-speech when offline. */
 export function useSpeech(storeRef: { current: Store }, notify: (message: string) => void) {
   const sequence = useRef(0)
   const recording = useRef<HTMLAudioElement | null>(null)
   const clips = useRef(new Map<string, Promise<string>>())
   const liveRate = useRef(storeRef.current.pronunciation.rate)
+  const [reading, setReadingState] = useState<SpeechSession | null>(null)
+  const readingRef = useRef<SpeechSession | null>(null)
+  const setReading = (session: SpeechSession | null) => { readingRef.current = session; setReadingState(session) }
 
   /** Fetches (and keeps) one sentence of cloud speech as a local blob so the next one can load while this one plays. */
   function clip(text: string, accent: 'us' | 'uk') {
@@ -44,8 +51,16 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
 
   function stop() {
     sequence.current++; recording.current?.pause(); recording.current = null
+    setReading(null)
     if (isAndroidApp) { void phone.stopSpeech().catch(() => {}); return }
     if ('speechSynthesis' in window) speechSynthesis.cancel()
+  }
+
+  /** Stops one-shot speech (words, sentences) but lets the article chain keep playing across
+   * screens — that is what the floating pill is for. Navigation uses this instead of stop(). */
+  function stopWords() {
+    if (readingRef.current) return
+    stop()
   }
 
   /** Resolves when the clip ends; rejects if it cannot load or start within a few seconds (offline, unknown word). */
@@ -93,19 +108,21 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
   }
 
   /** Speaks paragraphs one after another; onPart reports each paragraph index as playback reaches
-   * it, and -1 when the whole text finished on its own. A new play/stop invalidates the chain. */
-  function speakParagraphs(paragraphs: string[], onPart?: (index: number) => void) {
+   * it, and -1 when the whole text finished on its own. A new play/stop invalidates the chain.
+   * With a `session` the floating pill follows the voice on every screen until it ends. */
+  function speakParagraphs(paragraphs: string[], onPart?: (index: number) => void, session?: SpeechSession) {
     stop()
     const request = sequence.current
     const accent = storeRef.current.pronunciation.accent
     const rate = storeRef.current.pronunciation.rate
+    if (session) setReading(session)
     void (async () => {
       for (let index = 0; index < paragraphs.length; index++) {
         if (request !== sequence.current) return
         onPart?.(index)
         await speakOne(paragraphs[index], accent, rate, request)
       }
-      if (request === sequence.current) onPart?.(-1)
+      if (request === sequence.current) { onPart?.(-1); setReading(null) }
     })()
   }
 
@@ -151,5 +168,5 @@ export function useSpeech(storeRef: { current: Store }, notify: (message: string
     })()
   }
 
-  return { speak, speakParagraphs, stop, setRate }
+  return { speak, speakParagraphs, stop, stopWords, setRate, reading }
 }

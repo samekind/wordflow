@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { IonLabel, IonTabBar, IonTabButton, IonToast } from '@ionic/react'
 import { modalController } from '@ionic/core'
 import { motion, useReducedMotion } from 'motion/react'
-import { ChartColumn, ChevronLeft, LoaderCircle, Plus } from 'lucide-react'
+import { ChartColumn, ChevronLeft, LoaderCircle, Plus, Square, Volume2 } from 'lucide-react'
 import { ProfileIcon, ReadIcon, StudyIcon } from './icons'
 import { dayKey, needsSetup, validateStore, type Store, type Word } from './model'
 import Onboarding from './components/Onboarding'
@@ -50,7 +50,7 @@ export default function App() {
   const data = useStoreSync(toast.notify, config => aiConfigRef.current(config))
   const { store, storeRef, commit, saving } = data
   const speech = useSpeech(storeRef, toast.notify)
-  const nav = useNavigation(speech.stop)
+  const nav = useNavigation(speech.stopWords)
   const goStudy = () => nav.navigate({ name: 'today' })
   const study = useStudyActions({ storeRef, saving, commit, notify: toast.notify, stopSpeech: speech.stop, onStudyBook: goStudy })
   const words = useWordActions({ storeRef, commit, notify: toast.notify, clearUndo: study.clearUndo, onStudyBook: goStudy, onOpenVocab: () => go({ name: 'vocab' }) })
@@ -151,6 +151,7 @@ export default function App() {
               onStudy={async () => { const current = storeRef.current; const mode = studyView(current); const draft = currentStudyDraft(current, mode === 'review' ? 'review' : 'learn'); if (!draft || await study.changeStudy(draft, { type: 'method', method: 'context' })) goStudy() }}
               onVocab={() => go({ name: 'vocab' })} onOpen={(view, id, scope) => go(view === 'daily' ? { name: 'article', id, scope } : view === 'picks' ? { name: 'picks' } : { name: 'stories' })} onShelf={(cefr, topic) => go({ name: 'shelf', cefr, topic })}
               articleId={screen.name === 'article' ? screen.id : undefined} scope={screen.name === 'article' ? screen.scope : screen.name === 'shelf' ? { cefr: screen.cefr, topic: screen.topic } : undefined} onAddWord={words.collectWord} saving={saving}
+              speakingTitle={speech.reading?.title ?? null}
               onRead={id => {
                 const current = storeRef.current
                 if (current.readArticleIds.includes(id)) return Promise.resolve(true)
@@ -170,6 +171,12 @@ export default function App() {
           </div>
         </div>}
     </main>
+    {!setup && speech.reading && screen.name !== 'article' && <div className="speaking-pill" role="status" aria-label="正在朗读">
+      <button onClick={() => go({ name: 'article', id: speech.reading!.articleId, scope: speech.reading!.scope })} aria-label="跳回正在朗读的文章">
+        <Volume2 size={15} /><span>正在朗读《{speech.reading.title}》</span>
+      </button>
+      <button className="speaking-stop" aria-label="停止朗读" onClick={speech.stop}><Square size={15} /></button>
+    </div>}
     {!setup && <nav className="mobile-nav" id="phone-tabs" aria-label="主导航">
       <motion.div aria-hidden className="tab-glass-selection" initial={false} animate={{ x: `${tabs.findIndex(tab => tab.id === selectedTab) * 100}%` }}
         transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }} />

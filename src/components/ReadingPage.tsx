@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type SyntheticEvent } from 'react'
 import { SpeechRatePill } from './SpeechRate'
+import { TabStrip } from './Controls'
 import { BookA, BookOpen, BookmarkPlus, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, EyeOff, Languages, LoaderCircle, RefreshCw, SlidersHorizontal, Square, Volume2 } from 'lucide-react'
 import { DailyIcon, EssayIcon } from '../icons'
 import { dayKey, normalize, pageFontAttrs, wordsForDay, type ImportRow, type Store } from '../model'
@@ -22,10 +23,17 @@ type Props = {
   saving: boolean; onRead: (id: string) => Promise<boolean>; onWord: (id: string) => void;
   /** Adds a looked-up word to 我的词本 without leaving the article. */
   onAddWord: (row: ImportRow) => Promise<boolean>;
-  onSpeak: (text: string) => void; onSpeakParts: (parts: string[], onPart?: (index: number) => void) => void; onStop: () => void; children?: ReactNode;
+  onSpeak: (text: string) => void; onSpeakParts: (parts: string[], onPart?: (index: number) => void, session?: { title: string; articleId?: string; scope?: ReadingScope }) => void; onStop: () => void; children?: ReactNode;
+  /** Title of the article whose voice is playing right now (null = nothing playing): when the
+   * global speech stops elsewhere, the reader drops its own playback state to match. */
+  speakingTitle?: string | null;
   onStudy?: () => void;
   onVocab?: () => void;
 }
+/** Live wiring between the playing paragraph chain and whichever reader screen is mounted now:
+ * the chain reports parts here, the mounted page subscribes, so leaving and coming back keeps
+ * the progress bar following the voice. */
+const speechFollow = { base: 0, last: -1, tap: null as null | ((part: number) => void) }
 export default function ReadingPage(props: Props) {
   return <div className="reading-page font-scope" {...pageFontAttrs(props.store.appearance.reading)}>
     {props.view === 'hub' ? <ReadingEntries {...props} /> : props.view === 'picks' ? <ReadingHub {...props} /> : props.view === 'shelf' && props.scope?.cefr ? <ReadingShelf {...props} scope={{ ...props.scope, cefr: props.scope.cefr }} /> : props.view === 'story' ? <>
@@ -153,7 +161,8 @@ function ReadingHub({ store, now, onOpen, onShelf }: Props) {
         <SlidersHorizontal size={15} /><span>筛选</span><em>{activeFilters.length ? activeFilters.join(' · ') : '全部文章'}</em><ChevronDown size={15} className="filter-toggle-chevron" />
       </button>
       {filtersOpen && <div className="catalog-filters" id="catalog-filters">
-        <FilterRow label="难度">{chip('全部', !filter.cefr, () => setFilter({ cefr: '' }), '全部难度')}{readingLevels.map(cefr => <Fragment key={cefr}>{chip(cefr, filter.cefr === cefr, () => setFilter({ cefr }), `难度 ${cefr}`)}</Fragment>)}</FilterRow>
+        <FilterRow label="难度"><TabStrip label="难度筛选" value={filter.cefr} onChange={value => setFilter({ cefr: (value || '') as CatalogFilter['cefr'] })}
+          options={[{ value: '', label: '全部', ariaLabel: '全部难度' }, ...readingLevels.map(cefr => ({ value: cefr, label: cefr.toUpperCase(), ariaLabel: `难度 ${cefr}` }))]} /></FilterRow>
         <FilterRow label="篇幅">{chip('全部', !filter.length, () => setFilter({ length: '' }), '全部篇幅')}{readingLengths.map(length => <Fragment key={length}>{chip(readingLengthNames[length], filter.length === length, () => setFilter({ length }), `篇幅 ${readingLengthNames[length]}`)}</Fragment>)}</FilterRow>
         <FilterRow label="状态">{(['all', 'unread', 'read'] as const).map(status => { const name = status === 'all' ? '全部' : status === 'unread' ? '未读' : '已读'; return <Fragment key={status}>{chip(name, filter.status === status, () => setFilter({ status }), `状态 ${name}`)}</Fragment> })}</FilterRow>
         <FilterRow label="主题">{chip('全部', !filter.topic, () => setFilter({ topic: '' }), '全部主题筛选')}{topics.map(([topic, count]) => <Fragment key={topic}>{chip(<>{topic}<i>{count}</i></>, filter.topic === topic, () => setFilter({ topic }), `主题 ${topic}`)}</Fragment>)}</FilterRow>
@@ -261,7 +270,7 @@ function plainCredit(value: string) {
   template.innerHTML = value
   return template.content.textContent?.trim() || 'Wikimedia Commons'
 }
-function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, onAddWord, onSpeak, onSpeakParts, onStop }: Props) {
+function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, onAddWord, onSpeak, onSpeakParts, onStop, speakingTitle }: Props) {
   const { articles: catalog, loadError, reload } = useReadingArticles(false)
   const [offset, setOffset] = useState(0)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -276,13 +285,27 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
   const [readIndex, setReadIndex] = useState(0)
   const blocks = useRef<(HTMLDivElement | null)[]>([])
   const stop = () => { onStop(); setSpoken(null) }
+  // Follow the voice: subscribe this mounted page to the playing chain, and when the reader is
+  // reopened mid-play restore which paragraph the bar shows. A stop elsewhere clears the state.
+  useEffect(() => {
+    speechFollow.tap = part => setSpoken(part === -1 ? null : speechFollow.base + part)
+    if (speakingTitle && speechFollow.last >= 0) setSpoken(speechFollow.base + speechFollow.last)
+    return () => { speechFollow.tap = null }
+  }, [speakingTitle])
+  useEffect(() => { if (!speakingTitle && spoken !== null) setSpoken(null) }, [speakingTitle, spoken !== null])
   const refreshRequest = useRef(0)
   const wanted = useRef(articleId)
   const level = readingLevel(store)
   const date = dayKey(new Date(now))
   useEffect(() => () => { refreshRequest.current++ }, [])
   const scopeKey = scope ? `${scope.cefr ?? ''}:${scope.topic ?? ''}:${scope.length ?? ''}` : ''
-  useEffect(() => { setOffset(0); setTranslated(false); stop() }, [level, date, scopeKey])
+  // Changing the level, day or scope resets the article and stops the voice — but the first run
+  // is the mount itself (e.g. the pill jumping back): the voice must keep playing there.
+  const mountedScope = useRef(false)
+  useEffect(() => {
+    if (!mountedScope.current) { mountedScope.current = true; return }
+    setOffset(0); setTranslated(false); stop()
+  }, [level, date, scopeKey])
   const choices = useMemo(() => scope ? catalog.filter(article => inScope(article, scope)) : catalog.filter(article => article.level === level), [catalog, level, scopeKey])
   const todayIndex = dailyReadingIndex(choices.length, new Date(now))
   const index = choices.length ? ((todayIndex + offset) % choices.length + choices.length) % choices.length : 0
@@ -364,7 +387,8 @@ function DailyEnglish({ store, now, saving, articleId, scope, onRead, onWord, on
   // Voice: play the article paragraph by paragraph so the bar can follow and seek.
   function playFrom(index: number) {
     if (!article) return
-    onSpeakParts(article.paragraphs.slice(index), part => setSpoken(part === -1 ? null : index + part))
+    speechFollow.base = index; speechFollow.last = -1
+    onSpeakParts(article.paragraphs.slice(index), part => { speechFollow.last = part; speechFollow.tap?.(part) }, { title: article.title, articleId: article.id, scope })
   }
   function seek(index: number) {
     if (spoken === null) { blocks.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return }

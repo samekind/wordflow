@@ -290,3 +290,7 @@ html[data-theme="dark"] .boot-splash { background: #111822; color: #e8ebf0; }
 .vocab-drill-actions.two > button { flex: 1; min-height: 48px; }
 @keyframes vocab-reveal { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .vocab-card-meaning { animation: none; } }
+
+/* Liquid glass cost control: flat in-flow materials skip the backdrop blur — it only pays off
+   where chrome floats above moving content (nav, topbar, sheets, pills, menus, sticky bars). */
+input,textarea,select,.secondary,.save-problem,.study-card,.segment-control,.story-ready-card,.story-progress,.profile-avatar,.article-picker{backdrop-filter:none;-webkit-backdrop-filter:none}

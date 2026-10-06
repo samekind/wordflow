@@ -37,7 +37,7 @@
 .settings-section>.setting-row>span:last-child:not(:first-child),.setting-value{font-size: var(--fs-small);flex-shrink:0;color: var(--text-muted)}
 .reading-type-sample{padding:24px 0;margin:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);line-height:1.9;color: var(--text-secondary);font-size:calc(17px * var(--reading-scale, 1))}
 /* Segmented article progress: sticks under the toolbar, one segment per paragraph; draggable. */
-.article-progress-row{position:sticky;top:calc(68px + var(--ion-safe-area-top, 0px));z-index:4;display:flex;align-items:center;gap:10px;margin:0 -18px 14px;padding:8px 18px;background:var(--bar-fill, rgba(247,248,251,.96));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.article-progress-row{position:sticky;top:calc(68px + var(--ion-safe-area-top, 0px));z-index:4;display:flex;align-items:center;gap:10px;margin:0 -18px 14px;padding:8px 18px;background:var(--bar-fill);backdrop-filter:var(--glass-filter);-webkit-backdrop-filter:var(--glass-filter);border-bottom:1px solid var(--line)}
 .article-progress{display:flex;flex:1;gap:4px;height:26px;align-items:center;touch-action:none;cursor:pointer}
 .article-progress i{flex:1;height:5px;border-radius:3px;background:var(--line-strong);transition:background .2s ease,transform .2s ease}
 .article-progress i[data-done]{background:var(--mark-filled)}
@@ -194,6 +194,26 @@
 .paragraph-explain .text-button{margin-top:4px;font-size:var(--fs-caption)}
 .assist-ask{display:flex;gap:8px;margin-top:11px}
 .assist-ask input{flex:1;min-width:0;min-height:38px;padding:0 12px;border-radius:var(--radius-md);border:1px solid var(--line);background:var(--glass-fill);color:var(--text-primary);font-size:var(--fs-small)}
+
+/* Motion polish: selected states ease in instead of popping. */
+.filter-chip{transition:background-color .18s ease,border-color .18s ease,color .18s ease}
+.segment-control button{transition:background .18s ease,color .18s ease,box-shadow .18s ease}
+
+/* Telegram-style filter tabs: one scrollable row with an underline that slides to the active tab. */
+.tab-strip{position:relative;display:flex;flex:1;gap:2px;align-items:center;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line)}
+.tab-strip::-webkit-scrollbar{display:none}
+.tab-strip button{flex-shrink:0;min-height:38px;padding:0 13px;background:none;border:0;color:var(--text-secondary);font-size:var(--fs-meta);font-weight:var(--fw-semibold);transition:color .18s ease}
+.tab-strip button[aria-selected=true]{color:var(--accent)}
+.tab-strip-indicator{position:absolute;bottom:0;left:0;height:3px;border-radius:3px 3px 0 0;background:var(--accent);transition:transform .26s cubic-bezier(.3,.7,.3,1),width .26s cubic-bezier(.3,.7,.3,1)}
+
+/* Floating speaking pill: the article voice keeps playing after leaving the reader; the pill
+   follows on every screen, jumps back on tap and stops with the square button. */
+.speaking-pill{position:absolute;z-index:19;left:12px;right:12px;bottom:calc(74px + var(--ion-safe-area-bottom, 0px));display:flex;align-items:center;gap:8px;padding:6px 10px 6px 8px;border-radius:var(--radius-bar);background:var(--glass-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-shadow);backdrop-filter:var(--glass-filter);-webkit-backdrop-filter:var(--glass-filter);animation:pill-rise .22s ease}
+.speaking-pill>button:first-child{flex:1;display:flex;align-items:center;gap:8px;min-width:0;min-height:40px;padding:0 8px;text-align:left;color:var(--text-primary);font-size:var(--fs-meta);font-weight:var(--fw-semibold)}
+.speaking-pill>button:first-child>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.speaking-pill .speaking-stop{display:grid;place-items:center;width:38px;height:38px;flex-shrink:0;border-radius:999px;background:var(--glass-selected);box-shadow:var(--glass-selected-shadow);color:var(--accent)}
+.speaking-pill svg{color:var(--accent);flex-shrink:0}
+@keyframes pill-rise{from{transform:translateY(10px);opacity:0}}
 .assist-ask .primary{flex:0 0 auto;min-height:38px;padding:0 13px;display:inline-flex;align-items:center;gap:5px}
 .assist-question{margin:0 0 6px!important;color:var(--text-muted)!important}
 .assist-item .text-button{padding:0;min-height:0;font-weight:var(--fw-semibold);color:#397b5a}

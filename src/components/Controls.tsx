@@ -1,6 +1,6 @@
 import { IonAlert } from '@ionic/react'
 import { useReducedMotion } from 'motion/react'
-import { useCallback, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import ChoiceSheet from './ChoiceSheet'
 
@@ -43,6 +43,28 @@ export function Segmented<T extends string>({ label, value, options, onChange, d
     {options.map(option => <button key={option.ariaLabel || option.value} type="button" aria-pressed={value === option.value}
       aria-label={option.ariaLabel} title={option.title} disabled={disabled}
       onClick={() => onChange(option.value)}>{option.label}</button>)}
+  </div>
+}
+
+/** One-of-many filter as a scrollable bar with an underline that slides to the active tab
+ * (Telegram-style tabs). Use for 4+ short options; the indicator measures the active button
+ * and animates to it, so switching never pops. */
+export function TabStrip({ label, value, options, onChange }: {
+  label: string
+  value: string
+  options: { value: string; label: ReactNode; ariaLabel?: string }[]
+  onChange: (value: string) => void
+}) {
+  const listRef = useRef<HTMLDivElement>(null)
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null)
+  useEffect(() => {
+    const active = listRef.current?.querySelector<HTMLButtonElement>('[aria-selected="true"]')
+    setIndicator(active ? { left: active.offsetLeft, width: active.offsetWidth } : null)
+  }, [value, options.length])
+  return <div className="tab-strip" ref={listRef} role="tablist" aria-label={label}>
+    {options.map(option => <button key={option.value} type="button" role="tab" aria-selected={option.value === value}
+      aria-label={option.ariaLabel} onClick={() => { if (option.value !== value) onChange(option.value) }}>{option.label}</button>)}
+    {indicator && <span className="tab-strip-indicator" style={{ width: indicator.width, transform: `translateX(${indicator.left}px)` }} aria-hidden="true" />}
   </div>
 }
 
